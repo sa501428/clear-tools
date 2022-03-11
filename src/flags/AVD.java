@@ -15,7 +15,7 @@ public class AVD {
         ChromosomeHandler handler = ds.getChromosomeHandler();
         NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"KR", "SCALE", "NONE"});
 
-        GenomeWide1DList<Anchor> anchors = GenericLocusParser.loadFromBEDFile(handler, bedfile, 700);
+        GenomeWide1DList<Anchor> anchors = GenericLocusParser.loadFromBEDFile(handler, bedfile, 999);
         System.out.println("Number of anchors: " + anchors.size());
         APA apa = new APA(ds, "apa_result", norm, anchors);
         apa.run();

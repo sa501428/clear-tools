@@ -15,6 +15,7 @@ public class LoopGenerator {
         List<Feature2D> results = new ArrayList<>();
         if (chrom1.getIndex() == chrom2.getIndex()) {
             List<Anchor> aList = anchors.getFeatures("" + chrom1.getIndex());
+            aList = new ArrayList<>(aList);
             aList.sort(Comparator.comparingInt(Anchor::getMid));
             for (int i = 0; i < aList.size(); i++) {
                 for (int j = i + 1; j < aList.size(); j++) {

@@ -43,26 +43,28 @@ public class APARegionStatistics {
 
     public APARegionStatistics(RealMatrix data) {
 
-        int max = data.getColumnDimension();
-        int midPoint = max / 2;
+        int dimension = data.getColumnDimension();
+        int midPoint = dimension / 2;
         double centralVal = data.getEntry(midPoint, midPoint);
 
-        double mean = (MatrixTools.sum(data.getData()) - centralVal) / (data.getRowDimension() * data.getColumnDimension() - 1);
+        int dimMinusWidth = dimension - regionWidth;
+
+        double mean = (MatrixTools.sum(data.getData()) - centralVal) / (dimension * dimension - 1);
         peak2mean = centralVal / mean;
 
         double avgUL = mean(data.getSubMatrix(0, regionWidth - 1, 0, regionWidth - 1).getData());
         peak2UL = centralVal / avgUL;
 
-        avgUR = mean(data.getSubMatrix(0, regionWidth - 1, max - regionWidth, max - 1).getData());
+        avgUR = mean(data.getSubMatrix(0, regionWidth - 1, dimMinusWidth, dimension - 1).getData());
         peak2UR = centralVal / avgUR;
 
-        double avgLL = mean(data.getSubMatrix(max - regionWidth, max - 1, 0, regionWidth - 1).getData());
+        double avgLL = mean(data.getSubMatrix(dimMinusWidth, dimension - 1, 0, regionWidth - 1).getData());
         peak2LL = centralVal / avgLL;
 
-        double avgLR = mean(data.getSubMatrix(max - regionWidth, max - 1, max - regionWidth, max - 1).getData());
+        double avgLR = mean(data.getSubMatrix(dimMinusWidth, dimension - 1, dimMinusWidth, dimension - 1).getData());
         peak2LR = centralVal / avgLR;
 
-        DescriptiveStatistics yStats = statistics(data.getSubMatrix(max - regionWidth, max - 1, 0, regionWidth - 1).getData());
+        DescriptiveStatistics yStats = statistics(data.getSubMatrix(dimMinusWidth, dimension - 1, 0, regionWidth - 1).getData());
         ZscoreLL = (centralVal - yStats.getMean()) / yStats.getStandardDeviation();
     }
 

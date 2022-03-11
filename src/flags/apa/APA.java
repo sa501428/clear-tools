@@ -79,28 +79,38 @@ public class APA {
         APADataStack[] intraDataStacks = DataStackUtils.initialize(handler.getChromosomeArrayWithoutAllByAll(),
                 matrixWidth, outputDirectory, resolution);
 
-        double maxProgressStatus = handler.size();
         final AtomicInteger currentProgressStatus = new AtomicInteger(0);
 
-        Map<Integer, Chromosome[]> chromosomePairs = new ConcurrentHashMap<>();
+        Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
         int pairCounter = 0;
         Chromosome[] chromosomes = handler.getChromosomeArrayWithoutAllByAll();
         for (int i = 0; i < chromosomes.length; i++) {
             for (int j = i; j < chromosomes.length; j++) {
-                Chromosome[] chromosomePair = {chromosomes[i], chromosomes[j]};
-                chromosomePairs.put(pairCounter, chromosomePair);
-                pairCounter++;
+                if (i == j) {
+                    for (int q = 0; q < intraDataStacks.length; q++) {
+                        RegionConfiguration config = new RegionConfiguration(chromosomes[i], chromosomes[j], q);
+                        chromosomePairs.put(pairCounter, config);
+                        pairCounter++;
+                    }
+                } else {
+                    RegionConfiguration config = new RegionConfiguration(chromosomes[i], chromosomes[j], 0);
+                    chromosomePairs.put(pairCounter, config);
+                    pairCounter++;
+                }
             }
         }
         final int chromosomePairCounter = pairCounter;
+        final AtomicInteger maxProgressStatus = new AtomicInteger(pairCounter);
         final AtomicInteger chromosomePair = new AtomicInteger(0);
 
         ParallelizationTools.launchParallelizedCode(() -> {
 
             int threadPair = chromosomePair.getAndIncrement();
             while (threadPair < chromosomePairCounter) {
-                Chromosome chr1 = chromosomePairs.get(threadPair)[0];
-                Chromosome chr2 = chromosomePairs.get(threadPair)[1];
+                RegionConfiguration config = chromosomePairs.get(threadPair);
+                Chromosome chr1 = config.getChr1();
+                Chromosome chr2 = config.getChr2();
+                int distBin = config.getDistIndex();
 
                 MatrixZoomData zd;
                 synchronized (key) {
@@ -109,61 +119,57 @@ public class APA {
 
                 if (zd == null) {
                     threadPair = chromosomePair.getAndIncrement();
+                    //currentProgressStatus.getAndIncrement();
+                    maxProgressStatus.decrementAndGet();
                     continue;
                 }
 
-                if (StrawGlobals.printVerboseComments) {
-                    System.out.println("CHR " + chr1.getName() + " " + chr1.getIndex() + " CHR " + chr2.getName() + " " + chr2.getIndex());
+                // inter only done once
+                if (chr1.getIndex() != chr2.getIndex() && distBin > 0) continue;
+
+                APADataStack accumDataStack;
+                if (chr1.getIndex() == chr2.getIndex()) {
+                    accumDataStack = intraDataStacks[distBin];
+                } else {
+                    accumDataStack = interDataStack;
                 }
 
-                for (int distBin = 0; distBin < intraDataStacks.length; distBin++) {
-                    // inter only done once
-                    if (chr1.getIndex() != chr2.getIndex() && distBin > 0) continue;
+                long minDist = (long) (Math.pow(2, distBin - 1) * 1000000L);
+                long maxDist = (long) (Math.pow(2, distBin) * 1000000L);
+                if (distBin == 0) {
+                    minDist = 200000;
+                }
 
-                    APADataStack accumDataStack;
-                    if (chr1.getIndex() == chr2.getIndex()) {
-                        accumDataStack = intraDataStacks[distBin];
-                    } else {
-                        accumDataStack = interDataStack;
+                List<Feature2D> loops = LoopGenerator.generate(anchors, chr1, chr2, minDist, maxDist);
+                if (loops.size() < 1) {
+                    if (StrawGlobals.printVerboseComments) {
+                        System.out.println("CHR " + chr1.getName() + " CHR " + chr2.getName() + " - no loops, check loop filtering constraints");
                     }
+                    threadPair = chromosomePair.getAndIncrement();
+                    continue;
+                }
 
-                    long minDist = (long) (Math.pow(2, distBin - 1) * 1000000L);
-                    long maxDist = (long) (Math.pow(2, distBin) * 1000000L);
-                    if (distBin == 0) {
-                        minDist = 200000;
-                    }
+                System.out.println("Processing " + chr1.getName() + " " + chr2.getName() + " " + distBin + " num loops " + loops.size());
 
-                    List<Feature2D> loops = LoopGenerator.generate(anchors, chr1, chr2, minDist, maxDist);
-                    if (loops.size() < 1) {
-                        if (StrawGlobals.printVerboseComments) {
-                            System.out.println("CHR " + chr1.getName() + " CHR " + chr2.getName() + " - no loops, check loop filtering constraints");
-                        }
-                        threadPair = chromosomePair.getAndIncrement();
-                        continue;
-                    }
-
-                    APADataStack temp = new APADataStack(matrixWidth, outputDirectory, "temp");
-                    for (Feature2D loop : loops) {
-                        try {
-                            RealMatrix newData;
-                            synchronized (key) {
-                                newData = APAUtils.extractLocalizedData(zd, loop, matrixWidth, resolution, window, norm);
-                            }
-                            temp.addData(newData);
-                        } catch (Exception e) {
-                            System.err.println(e.getMessage());
-                            System.err.println("Unable to find data for loop: " + loop);
-                        }
-                    }
-                    synchronized (key) {
-                        accumDataStack.addData(temp.getData());
+                APADataStack temp = new APADataStack(matrixWidth, outputDirectory, "temp");
+                for (Feature2D loop : loops) {
+                    try {
+                        RealMatrix newData;
+                        //synchronized (key) {
+                        newData = APAUtils.extractLocalizedData(zd, loop, matrixWidth, resolution, window, norm);
+                        //}
+                        temp.addData(newData);
+                    } catch (Exception e) {
+                        System.err.println(e.getMessage());
+                        System.err.println("Unable to find data for loop: " + loop);
                     }
                 }
 
-                if (chr2.getIndex() == chr1.getIndex()) {
-                    System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus)) + "% ");
+                synchronized (key) {
+                    accumDataStack.addData(temp.getData());
                 }
 
+                System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");
                 threadPair = chromosomePair.getAndIncrement();
             }
         });
