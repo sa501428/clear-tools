@@ -10,15 +10,13 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 
 public class AVD {
-
     public AVD(String hicfile, String bedfile) {
-
-
         Dataset ds = HiCFileTools.extractDatasetForCLT(hicfile, false, false);
         ChromosomeHandler handler = ds.getChromosomeHandler();
         NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"KR", "SCALE", "NONE"});
 
-        GenomeWide1DList<Anchor> anchors = GenericLocusParser.loadFromBEDFile(handler, bedfile, 500);
+        GenomeWide1DList<Anchor> anchors = GenericLocusParser.loadFromBEDFile(handler, bedfile, 700);
+        System.out.println("Number of anchors: " + anchors.size());
         APA apa = new APA(ds, "apa_result", norm, anchors);
         apa.run();
     }

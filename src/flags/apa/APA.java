@@ -48,7 +48,6 @@ public class APA {
     private final Dataset ds;
     private final NormalizationType norm;
     private final File outputDirectory;
-    private final int minPeakDist = 30; // distance between two bins, can be changed in opts
     private final int window = 20;
     private final int resolution = 10000;
     private final Object key = new Object();
@@ -95,8 +94,6 @@ public class APA {
         }
         final int chromosomePairCounter = pairCounter;
         final AtomicInteger chromosomePair = new AtomicInteger(0);
-
-        APADataStack.initializeDataSaveFolder(outputDirectory, "" + resolution);
 
         ParallelizationTools.launchParallelizedCode(() -> {
 

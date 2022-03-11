@@ -65,7 +65,6 @@ public class GenericLocusParser {
                 }
 
                 if (score > scoreCutoff) {
-                    System.out.println("---" + nextLine);
                     anchors.add(new Anchor(chr.getName(), chr.getIndex(), start1, end1));
                 }
             }

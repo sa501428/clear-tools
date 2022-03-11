@@ -29,8 +29,6 @@ import javastraw.tools.MatrixTools;
 import org.apache.commons.math3.linear.RealMatrix;
 
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class APADataStack {
 
@@ -45,19 +43,12 @@ public class APADataStack {
         HiCFileTools.createValidDirectory(dataDirectory.getAbsolutePath());
     }
 
-    public static File initializeDataSaveFolder(File outputFolderDirectory, String prefix) {
-        if (prefix.length() < 1) {// no preference specified
-            return new File(outputFolderDirectory,
-                    new SimpleDateFormat("yyyy.MM.dd.HH.mm").format(new Date()));
-        } else {
-            return new File(outputFolderDirectory, prefix);
-        }
-    }
-
     public void exportData() {
         APARegionStatistics stats = new APARegionStatistics(apaMatrix);
         MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, customPrefix + "apa.npy")).getAbsolutePath(),
                 apaMatrix.getData());
+        MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, customPrefix + "stats.npy")).getAbsolutePath(),
+                stats.getAllValues());
     }
 
     public void addData(RealMatrix newData) {
