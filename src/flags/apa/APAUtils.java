@@ -26,12 +26,13 @@ package flags.apa;
 
 
 import javastraw.feature2D.Feature2D;
+import javastraw.reader.block.Block;
+import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationType;
-import javastraw.tools.HiCFileTools;
 import org.apache.commons.math3.linear.RealMatrix;
 
-import java.io.IOException;
+import java.util.List;
 
 /**
  * Created by Muhammad Shamim on 1/21/15.
@@ -46,8 +47,8 @@ public class APAUtils {
         return APARegionStatistics.statistics(matrix.getData()).getMean();
     }
 
-    public static RealMatrix extractLocalizedData(MatrixZoomData zd, Feature2D loop,
-                                                  int L, int resolution, int window, NormalizationType norm) throws IOException {
+    public static void addLocalizedData(double[][] matrix, MatrixZoomData zd, Feature2D loop,
+                                        int L, int resolution, int window, NormalizationType norm, final Object key) {
         long loopX = loop.getMidPt1() / resolution;
         long loopY = loop.getMidPt2() / resolution;
         long binXStart = loopX - window;
@@ -55,6 +56,37 @@ public class APAUtils {
         long binYStart = loopY - window;
         long binYEnd = loopY + (window + 1);
 
-        return HiCFileTools.extractLocalBoundedRegion(zd, binXStart, binXEnd, binYStart, binYEnd, L, L, norm, false);
+        addLocalBoundedRegion(matrix, zd, binXStart, binXEnd, binYStart, binYEnd, L, norm, key);
+    }
+
+    public static void addLocalBoundedRegion(double[][] matrix, MatrixZoomData zd, long binXStart, long binXEnd,
+                                             long binYStart, long binYEnd, int dim,
+                                             NormalizationType normalizationType, final Object key) {
+        List<Block> blocks;
+        synchronized (key) {
+            blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, normalizationType, false);
+        }
+        if (blocks.size() > 0) {
+            for (Block b : blocks) {
+                if (b != null) {
+                    for (ContactRecord rec : b.getContactRecords()) {
+                        if (rec.getCounts() > 0) {
+                            // only called for small regions - should not exceed int
+                            int relativeX = (int) (rec.getBinX() - binXStart);
+                            int relativeY = (int) (rec.getBinY() - binYStart);
+                            if (relativeX >= 0 && relativeX < dim) {
+                                if (relativeY >= 0 && relativeY < dim) {
+                                    matrix[relativeX][relativeY] += rec.getCounts();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // force cleanup
+        blocks.clear();
+        blocks = null;
+        //System.gc();
     }
 }

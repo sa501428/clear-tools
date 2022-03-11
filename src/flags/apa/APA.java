@@ -35,7 +35,6 @@ import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
-import org.apache.commons.math3.linear.RealMatrix;
 
 import java.io.File;
 import java.util.List;
@@ -51,6 +50,7 @@ public class APA {
     private final int window = 20;
     private final int resolution = 10000;
     private final Object key = new Object();
+    private final Object key2 = new Object();
     private final GenomeWide1DList<Anchor> anchors;
 
 
@@ -151,22 +151,18 @@ public class APA {
 
                 System.out.println("Processing " + chr1.getName() + " " + chr2.getName() + " " + distBin + " num loops " + loops.size());
 
-                APADataStack temp = new APADataStack(matrixWidth, outputDirectory, "temp");
+                double[][] output = new double[matrixWidth][matrixWidth];
                 for (Feature2D loop : loops) {
                     try {
-                        RealMatrix newData;
-                        //synchronized (key) {
-                        newData = APAUtils.extractLocalizedData(zd, loop, matrixWidth, resolution, window, norm);
-                        //}
-                        temp.addData(newData);
+                        APAUtils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window, norm, key);
                     } catch (Exception e) {
                         System.err.println(e.getMessage());
                         System.err.println("Unable to find data for loop: " + loop);
                     }
                 }
 
-                synchronized (key) {
-                    accumDataStack.addData(temp.getData());
+                synchronized (key2) {
+                    accumDataStack.addData(output);
                 }
 
                 System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");

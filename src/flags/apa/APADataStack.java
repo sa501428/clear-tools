@@ -26,7 +26,6 @@ package flags.apa;
 
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
-import org.apache.commons.math3.linear.RealMatrix;
 
 import java.io.File;
 
@@ -34,10 +33,12 @@ public class APADataStack {
 
     private final File dataDirectory;
     private final String customPrefix;
-    private RealMatrix apaMatrix;
+    private final int n;
+    private double[][] apaMatrix;
 
     public APADataStack(int n, File outputFolder, String customPrefix) {
-        apaMatrix = MatrixTools.cleanArray2DMatrix(n, n);
+        this.n = n;
+        apaMatrix = new double[n][n];
         dataDirectory = outputFolder;
         this.customPrefix = customPrefix;
         HiCFileTools.createValidDirectory(dataDirectory.getAbsolutePath());
@@ -46,17 +47,20 @@ public class APADataStack {
     public void exportData() {
         APARegionStatistics stats = new APARegionStatistics(apaMatrix);
         MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, customPrefix + "apa.npy")).getAbsolutePath(),
-                apaMatrix.getData());
+                apaMatrix);
         MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, customPrefix + "stats.npy")).getAbsolutePath(),
                 stats.getAllValues());
     }
 
-    public void addData(RealMatrix newData) {
-        MatrixTools.cleanUpNaNs(newData);
-        apaMatrix = apaMatrix.add(newData);
+    public void addData(double[][] newData) {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                apaMatrix[i][j] += newData[i][j];
+            }
+        }
     }
 
-    public RealMatrix getData() {
+    public double[][] getData() {
         return apaMatrix;
     }
 }

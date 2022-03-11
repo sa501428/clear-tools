@@ -25,7 +25,7 @@
 package flags.apa;
 
 import javastraw.tools.MatrixTools;
-import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 /**
@@ -41,31 +41,35 @@ public class APARegionStatistics {
     private final double peak2LR;
     private final double ZscoreLL;
 
-    public APARegionStatistics(RealMatrix data) {
+    public APARegionStatistics(double[][] data) {
 
-        int dimension = data.getColumnDimension();
+        int dimension = data.length;
         int midPoint = dimension / 2;
-        double centralVal = data.getEntry(midPoint, midPoint);
+        double centralVal = data[midPoint][midPoint];
 
         int dimMinusWidth = dimension - regionWidth;
 
-        double mean = (MatrixTools.sum(data.getData()) - centralVal) / (dimension * dimension - 1);
+        double mean = (MatrixTools.sum(data) - centralVal) / (dimension * dimension - 1);
         peak2mean = centralVal / mean;
 
-        double avgUL = mean(data.getSubMatrix(0, regionWidth - 1, 0, regionWidth - 1).getData());
+        double avgUL = mean(getSubMatrix(data, 0, regionWidth - 1, 0, regionWidth - 1));
         peak2UL = centralVal / avgUL;
 
-        avgUR = mean(data.getSubMatrix(0, regionWidth - 1, dimMinusWidth, dimension - 1).getData());
+        avgUR = mean(getSubMatrix(data, 0, regionWidth - 1, dimMinusWidth, dimension - 1));
         peak2UR = centralVal / avgUR;
 
-        double avgLL = mean(data.getSubMatrix(dimMinusWidth, dimension - 1, 0, regionWidth - 1).getData());
+        double avgLL = mean(getSubMatrix(data, dimMinusWidth, dimension - 1, 0, regionWidth - 1));
         peak2LL = centralVal / avgLL;
 
-        double avgLR = mean(data.getSubMatrix(dimMinusWidth, dimension - 1, dimMinusWidth, dimension - 1).getData());
+        double avgLR = mean(getSubMatrix(data, dimMinusWidth, dimension - 1, dimMinusWidth, dimension - 1));
         peak2LR = centralVal / avgLR;
 
-        DescriptiveStatistics yStats = statistics(data.getSubMatrix(dimMinusWidth, dimension - 1, 0, regionWidth - 1).getData());
+        DescriptiveStatistics yStats = statistics(getSubMatrix(data, dimMinusWidth, dimension - 1, 0, regionWidth - 1));
         ZscoreLL = (centralVal - yStats.getMean()) / yStats.getStandardDeviation();
+    }
+
+    private double[][] getSubMatrix(double[][] data, int i, int i1, int i2, int i3) {
+        return new Array2DRowRealMatrix(data).getSubMatrix(i, i1, i2, i3).getData();
     }
 
     public static DescriptiveStatistics statistics(double[][] x) {

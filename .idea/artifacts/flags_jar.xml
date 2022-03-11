@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="flags:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/flags_jar</output-path>
+    <root id="archive" name="flags.jar">
+      <element id="module-output" name="flags" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/java-straw.2.11.1.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
