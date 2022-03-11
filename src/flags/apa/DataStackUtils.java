@@ -7,11 +7,11 @@ import java.io.File;
 public class DataStackUtils {
 
     public static APADataStack[] initialize(Chromosome[] chromosomeArray, int matrixWidth, File outputDirectory,
-                                            int resolution) {
+                                            String prefix) {
         int maxNumIntraStacks = getMaxNumIntraStacks(chromosomeArray);
         APADataStack[] stacks = new APADataStack[maxNumIntraStacks];
         for (int z = 0; z < stacks.length; z++) {
-            stacks[z] = new APADataStack(matrixWidth, outputDirectory, "intra_" + z + "_");
+            stacks[z] = new APADataStack(matrixWidth, outputDirectory, prefix + "intra_" + z + "_");
         }
         return stacks;
     }

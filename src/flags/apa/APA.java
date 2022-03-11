@@ -52,7 +52,8 @@ public class APA {
     private final Object key = new Object();
     private final Object key2 = new Object();
     private final GenomeWide1DList<Anchor> anchors;
-
+    private final int maxNumberForIntraRegion = 1000; // 500 // 1000
+    private final int maxNumberForInterRegion = 500; // 100
 
     public APA(Dataset ds, String outfolder, NormalizationType norm, GenomeWide1DList<Anchor> anchors) {
         this.ds = ds;
@@ -76,14 +77,21 @@ public class APA {
 
 
         APADataStack interDataStack = new APADataStack(matrixWidth, outputDirectory, "inter_");
-        APADataStack[] intraDataStacks = DataStackUtils.initialize(handler.getChromosomeArrayWithoutAllByAll(),
-                matrixWidth, outputDirectory, resolution);
+        APADataStack smallInterDataStack = new APADataStack(matrixWidth, outputDirectory, "small_inter_");
+        APADataStack bigInterDataStack = new APADataStack(matrixWidth, outputDirectory, "big_inter_");
+
+        APADataStack[] intraDataStacks = DataStackUtils.initialize(handler.getAutosomalChromosomesArray(),
+                matrixWidth, outputDirectory, "");
+        APADataStack[] smallIntraDataStacks = DataStackUtils.initialize(handler.getAutosomalChromosomesArray(),
+                matrixWidth, outputDirectory, "small_");
+        APADataStack[] bigIntraDataStacks = DataStackUtils.initialize(handler.getAutosomalChromosomesArray(),
+                matrixWidth, outputDirectory, "big_");
 
         final AtomicInteger currentProgressStatus = new AtomicInteger(0);
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
         int pairCounter = 0;
-        Chromosome[] chromosomes = handler.getChromosomeArrayWithoutAllByAll();
+        Chromosome[] chromosomes = handler.getAutosomalChromosomesArray();
         for (int i = 0; i < chromosomes.length; i++) {
             for (int j = i; j < chromosomes.length; j++) {
                 if (i == j) {
@@ -127,13 +135,6 @@ public class APA {
                 // inter only done once
                 if (chr1.getIndex() != chr2.getIndex() && distBin > 0) continue;
 
-                APADataStack accumDataStack;
-                if (chr1.getIndex() == chr2.getIndex()) {
-                    accumDataStack = intraDataStacks[distBin];
-                } else {
-                    accumDataStack = interDataStack;
-                }
-
                 long minDist = (long) (Math.pow(2, distBin - 1) * 1000000L);
                 long maxDist = (long) (Math.pow(2, distBin) * 1000000L);
                 if (distBin == 0) {
@@ -151,8 +152,18 @@ public class APA {
 
                 System.out.println("Processing " + chr1.getName() + " " + chr2.getName() + " " + distBin + " num loops " + loops.size());
 
+                int linc = 1;
+                if (loops.size() > maxNumberForIntraRegion) {
+                    if (chr1.getIndex() == chr2.getIndex()) {
+                        linc = loops.size() / maxNumberForIntraRegion;
+                    } else {
+                        linc = loops.size() / maxNumberForInterRegion;
+                    }
+                }
+
                 double[][] output = new double[matrixWidth][matrixWidth];
-                for (Feature2D loop : loops) {
+                for (int li = 0; li < loops.size(); li += linc) {
+                    Feature2D loop = loops.get(li);
                     try {
                         APAUtils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window, norm, key);
                     } catch (Exception e) {
@@ -162,7 +173,21 @@ public class APA {
                 }
 
                 synchronized (key2) {
-                    accumDataStack.addData(output);
+                    if (chr1.getIndex() == chr2.getIndex()) {
+                        intraDataStacks[distBin].addData(output);
+                        if (chr1.getIndex() < 9) {
+                            bigIntraDataStacks[distBin].addData(output);
+                        } else if (chr1.getIndex() > 9) {
+                            smallIntraDataStacks[distBin].addData(output);
+                        }
+                    } else {
+                        interDataStack.addData(output);
+                        if (chr1.getIndex() < 9 && chr2.getIndex() < 9) {
+                            bigInterDataStack.addData(output);
+                        } else if (chr1.getIndex() > 9 && chr2.getIndex() > 9) {
+                            smallInterDataStack.addData(output);
+                        }
+                    }
                 }
 
                 System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");
@@ -174,9 +199,17 @@ public class APA {
         for (APADataStack dataStack : intraDataStacks) {
             dataStack.exportData();
         }
+        for (APADataStack dataStack : bigIntraDataStacks) {
+            dataStack.exportData();
+        }
+        for (APADataStack dataStack : smallIntraDataStacks) {
+            dataStack.exportData();
+        }
         interDataStack.exportData();
+        bigInterDataStack.exportData();
+        smallInterDataStack.exportData();
+
         System.out.println("APA complete");
         //if no data return null
     }
-
 }
