@@ -48,18 +48,20 @@ public class APA {
     private final NormalizationType norm;
     private final File outputDirectory;
     private final int window = 20;
-    private final int resolution = 10000;
+    private final int resolution;
     private final Object key = new Object();
     private final Object key2 = new Object();
     private final GenomeWide1DList<Anchor> anchors;
     private final int maxNumberForIntraRegion = 1000; // 500 // 1000
     private final int maxNumberForInterRegion = 500; // 100
 
-    public APA(Dataset ds, String outfolder, NormalizationType norm, GenomeWide1DList<Anchor> anchors) {
+    public APA(Dataset ds, String outfolder, NormalizationType norm, GenomeWide1DList<Anchor> anchors,
+               int resolution) {
         this.ds = ds;
         this.norm = norm;
         this.outputDirectory = HiCFileTools.createValidDirectory(outfolder);
         this.anchors = anchors;
+        this.resolution = resolution;
     }
 
     public void run() {
