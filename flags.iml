@@ -7,6 +7,6 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="juicer_3.25.21_aggNormAPA" level="project" />
+    <orderEntry type="library" name="java-straw.2.11.1" level="project" />
   </component>
 </module>
