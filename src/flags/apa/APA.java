@@ -139,9 +139,7 @@ public class APA {
 
                 long minDist = (long) (Math.pow(2, distBin - 1) * 1000000L);
                 long maxDist = (long) (Math.pow(2, distBin) * 1000000L);
-                if (distBin == 0) {
-                    minDist = 200000;
-                }
+                minDist = Math.max(minDist, 200000);
 
                 List<Feature2D> loops = LoopGenerator.generate(anchors, chr1, chr2, minDist, maxDist);
                 if (loops.size() < 1) {
