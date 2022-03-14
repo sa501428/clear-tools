@@ -96,17 +96,9 @@ public class APA {
         Chromosome[] chromosomes = handler.getAutosomalChromosomesArray();
         for (int i = 0; i < chromosomes.length; i++) {
             for (int j = i; j < chromosomes.length; j++) {
-                if (i == j) {
-                    for (int q = 0; q < intraDataStacks.length; q++) {
-                        RegionConfiguration config = new RegionConfiguration(chromosomes[i], chromosomes[j], q);
-                        chromosomePairs.put(pairCounter, config);
-                        pairCounter++;
-                    }
-                } else {
-                    RegionConfiguration config = new RegionConfiguration(chromosomes[i], chromosomes[j], 0);
-                    chromosomePairs.put(pairCounter, config);
-                    pairCounter++;
-                }
+                RegionConfiguration config = new RegionConfiguration(chromosomes[i], chromosomes[j]);
+                chromosomePairs.put(pairCounter, config);
+                pairCounter++;
             }
         }
         final int chromosomePairCounter = pairCounter;
@@ -120,7 +112,6 @@ public class APA {
                 RegionConfiguration config = chromosomePairs.get(threadPair);
                 Chromosome chr1 = config.getChr1();
                 Chromosome chr2 = config.getChr2();
-                int distBin = config.getDistIndex();
 
                 MatrixZoomData zd;
                 synchronized (key) {
@@ -134,61 +125,64 @@ public class APA {
                     continue;
                 }
 
-                // inter only done once
-                if (chr1.getIndex() != chr2.getIndex() && distBin > 0) continue;
+                for(int distBin = 0; distBin < intraDataStacks.length; distBin++) {
+                    // inter only done once
+                    if (chr1.getIndex() != chr2.getIndex() && distBin > 0) continue;
 
-                long minDist = (long) (Math.pow(2, distBin - 1) * 1000000L);
-                long maxDist = (long) (Math.pow(2, distBin) * 1000000L);
-                minDist = Math.max(minDist, 200000);
+                    long minDist = (long) (Math.pow(2, distBin - 1) * 1000000L);
+                    long maxDist = (long) (Math.pow(2, distBin) * 1000000L);
+                    minDist = Math.max(minDist, 200000);
 
-                List<Feature2D> loops = LoopGenerator.generate(anchors, chr1, chr2, minDist, maxDist);
-                if (loops.size() < 1) {
-                    if (StrawGlobals.printVerboseComments) {
-                        System.out.println("CHR " + chr1.getName() + " CHR " + chr2.getName() + " - no loops, check loop filtering constraints");
-                    }
-                    threadPair = chromosomePair.getAndIncrement();
-                    continue;
-                }
-
-                System.out.println("Processing " + chr1.getName() + " " + chr2.getName() + " " + distBin + " num loops " + loops.size());
-
-                int linc = 1;
-                if (loops.size() > maxNumberForIntraRegion) {
-                    if (chr1.getIndex() == chr2.getIndex()) {
-                        linc = loops.size() / maxNumberForIntraRegion;
-                    } else {
-                        linc = loops.size() / maxNumberForInterRegion;
-                    }
-                }
-
-                double[][] output = new double[matrixWidth][matrixWidth];
-                for (int li = 0; li < loops.size(); li += linc) {
-                    Feature2D loop = loops.get(li);
-                    try {
-                        APAUtils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window, norm, key);
-                    } catch (Exception e) {
-                        System.err.println(e.getMessage());
-                        System.err.println("Unable to find data for loop: " + loop);
-                    }
-                }
-
-                synchronized (key2) {
-                    if (chr1.getIndex() == chr2.getIndex()) {
-                        intraDataStacks[distBin].addData(output);
-                        if (chr1.getIndex() < 9) {
-                            bigIntraDataStacks[distBin].addData(output);
-                        } else if (chr1.getIndex() > 9) {
-                            smallIntraDataStacks[distBin].addData(output);
+                    List<Feature2D> loops = LoopGenerator.generate(anchors, chr1, chr2, minDist, maxDist);
+                    if (loops.size() < 1) {
+                        if (StrawGlobals.printVerboseComments) {
+                            System.out.println("CHR " + chr1.getName() + " CHR " + chr2.getName() + " - no loops, check loop filtering constraints");
                         }
-                    } else {
-                        interDataStack.addData(output);
-                        if (chr1.getIndex() < 9 && chr2.getIndex() < 9) {
-                            bigInterDataStack.addData(output);
-                        } else if (chr1.getIndex() > 9 && chr2.getIndex() > 9) {
-                            smallInterDataStack.addData(output);
+                        continue;
+                    }
+
+                    System.out.println("Processing " + chr1.getName() + " " + chr2.getName() + " " + distBin + " num loops " + loops.size());
+
+                    int linc = 1;
+                    if (loops.size() > maxNumberForIntraRegion) {
+                        if (chr1.getIndex() == chr2.getIndex()) {
+                            linc = loops.size() / maxNumberForIntraRegion;
+                        } else {
+                            linc = loops.size() / maxNumberForInterRegion;
                         }
                     }
+
+                    double[][] output = new double[matrixWidth][matrixWidth];
+                    for (int li = 0; li < loops.size(); li += linc) {
+                        Feature2D loop = loops.get(li);
+                        try {
+                            APAUtils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window, norm, key);
+                        } catch (Exception e) {
+                            System.err.println(e.getMessage());
+                            System.err.println("Unable to find data for loop: " + loop);
+                        }
+                    }
+
+                    synchronized (key2) {
+                        if (chr1.getIndex() == chr2.getIndex()) {
+                            intraDataStacks[distBin].addData(output);
+                            if (chr1.getIndex() < 9) {
+                                bigIntraDataStacks[distBin].addData(output);
+                            } else if (chr1.getIndex() > 9) {
+                                smallIntraDataStacks[distBin].addData(output);
+                            }
+                        } else {
+                            interDataStack.addData(output);
+                            if (chr1.getIndex() < 9 && chr2.getIndex() < 9) {
+                                bigInterDataStack.addData(output);
+                            } else if (chr1.getIndex() > 9 && chr2.getIndex() > 9) {
+                                smallInterDataStack.addData(output);
+                            }
+                        }
+                    }
                 }
+
+                zd.clearCache();
 
                 System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");
                 threadPair = chromosomePair.getAndIncrement();
