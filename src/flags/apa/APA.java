@@ -24,6 +24,7 @@
 
 package flags.apa;
 
+import flags.Main;
 import javastraw.StrawGlobals;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.feature2D.Feature2D;
@@ -67,7 +68,9 @@ public class APA {
     public void run() {
         int matrixWidth = 2 * window + 1;
 
-        System.out.println("Processing APA for resolution " + resolution);
+        if(Main.printVerboseComments) {
+            System.out.println("Processing APA for resolution " + resolution);
+        }
         HiCZoom zoom = new HiCZoom(HiCZoom.HiCUnit.BP, resolution);
 
         ChromosomeHandler handler = ds.getChromosomeHandler();
@@ -135,14 +138,15 @@ public class APA {
 
                     List<Feature2D> loops = LoopGenerator.generate(anchors, chr1, chr2, minDist, maxDist);
                     if (loops.size() < 1) {
-                        if (StrawGlobals.printVerboseComments) {
+                        if (Main.printVerboseComments) {
                             System.out.println("CHR " + chr1.getName() + " CHR " + chr2.getName() + " - no loops, check loop filtering constraints");
                         }
                         continue;
                     }
 
-                    System.out.println("Processing " + chr1.getName() + " " + chr2.getName() + " " + distBin + " num loops " + loops.size());
-
+                    if (Main.printVerboseComments) {
+                        System.out.println("Processing " + chr1.getName() + " " + chr2.getName() + " " + distBin + " num loops " + loops.size());
+                    }
                     int linc = 1;
                     if (loops.size() > maxNumberForIntraRegion) {
                         if (chr1.getIndex() == chr2.getIndex()) {
