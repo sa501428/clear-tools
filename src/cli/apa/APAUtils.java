@@ -48,7 +48,7 @@ public class APAUtils {
     }
 
     public static void addLocalizedData(double[][] matrix, MatrixZoomData zd, Feature2D loop,
-                                        int L, int resolution, int window, NormalizationType norm, final Object key) {
+                                        int matrixWidth, int resolution, int window, NormalizationType norm, final Object key) {
         long loopX = loop.getMidPt1() / resolution;
         long loopY = loop.getMidPt2() / resolution;
         long binXStart = loopX - window;
@@ -56,11 +56,11 @@ public class APAUtils {
         long binYStart = loopY - window;
         long binYEnd = loopY + (window + 1);
 
-        addLocalBoundedRegion(matrix, zd, binXStart, binXEnd, binYStart, binYEnd, L, norm, key);
+        addLocalBoundedRegion(matrix, zd, binXStart, binXEnd, binYStart, binYEnd, matrixWidth, norm, key);
     }
 
     public static void addLocalBoundedRegion(double[][] matrix, MatrixZoomData zd, long binXStart, long binXEnd,
-                                             long binYStart, long binYEnd, int dim,
+                                             long binYStart, long binYEnd, int matrixWidth,
                                              NormalizationType normalizationType, final Object key) {
         List<Block> blocks;
         synchronized (key) {
@@ -74,8 +74,8 @@ public class APAUtils {
                             // only called for small regions - should not exceed int
                             int relativeX = (int) (rec.getBinX() - binXStart);
                             int relativeY = (int) (rec.getBinY() - binYStart);
-                            if (relativeX >= 0 && relativeX < dim) {
-                                if (relativeY >= 0 && relativeY < dim) {
+                            if (relativeX >= 0 && relativeX < matrixWidth) {
+                                if (relativeY >= 0 && relativeY < matrixWidth) {
                                     matrix[relativeX][relativeY] += rec.getCounts();
                                 }
                             }

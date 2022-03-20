@@ -105,13 +105,11 @@ public class Amplifi {
                             if (zd != null) {
                                 try {
                                     APAUtils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window,
-                                            NormalizationHandler.NONE, keys[di]);
+                                            norm, keys[di]);
                                 } catch (Exception e) {
                                     System.err.println(e.getMessage());
                                     System.err.println("Unable to find data for loop: " + loop);
                                 }
-
-                                zd.clearCache();
                             }
                         }
 
@@ -127,7 +125,19 @@ public class Amplifi {
                     }
                 }
 
-                System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");
+                for (int di = 0; di < datasets.length; di++) {
+                    final Dataset ds = datasets[di];
+                    MatrixZoomData zd;
+                    synchronized (ds) {
+                        zd = HiCFileTools.getMatrixZoomData(ds, chr1, chr2, zoom);
+                    }
+
+                    if (zd != null) {
+                        zd.clearCache();
+                    }
+                }
+
+                //System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");
                 threadPair = chromosomePair.getAndIncrement();
             }
         });
