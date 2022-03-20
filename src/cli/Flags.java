@@ -16,19 +16,19 @@ public class Flags {
             Main.printGeneralUsageAndExit();
         }
 
-        String hicfile = args[1];
-        String bedfile = args[2];
-        String outfolder = args[3];
+        String hicFile = args[1];
+        String bedFile = args[2];
+        String outFolder = args[3];
 
-        Dataset ds = HiCFileTools.extractDatasetForCLT(hicfile, false, true);
+        Dataset ds = HiCFileTools.extractDatasetForCLT(hicFile, false, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();
 
         NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{normString, "KR", "SCALE", "NONE"});
         System.out.println("Norm being used: " + norm.getLabel());
 
-        GenomeWide1DList<Anchor> anchors = GenericLocusParser.loadFromBEDFile(handler, bedfile, cutoff);
+        GenomeWide1DList<Anchor> anchors = GenericLocusParser.loadFromBEDFile(handler, bedFile, cutoff);
         System.out.println("Number of anchors: " + anchors.size());
-        APA apa = new APA(ds, outfolder, norm, anchors, resolution);
+        APA apa = new APA(ds, outFolder, norm, anchors, resolution);
         apa.run();
     }
 }

@@ -55,11 +55,11 @@ public class APA {
     private final int maxNumberForIntraRegion = 1000; // 500 // 1000
     private final int maxNumberForInterRegion = 500; // 100
 
-    public APA(Dataset ds, String outfolder, NormalizationType norm, GenomeWide1DList<Anchor> anchors,
+    public APA(Dataset ds, String outFolder, NormalizationType norm, GenomeWide1DList<Anchor> anchors,
                int resolution) {
         this.ds = ds;
         this.norm = norm;
-        this.outputDirectory = HiCFileTools.createValidDirectory(outfolder);
+        this.outputDirectory = HiCFileTools.createValidDirectory(outFolder);
         this.anchors = anchors;
         this.resolution = resolution;
     }

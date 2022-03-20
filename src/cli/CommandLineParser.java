@@ -15,7 +15,7 @@
  *
  *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NON INFRINGEMENT. IN NO EVENT SHALL THE
  *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -25,10 +25,6 @@
 package cli;
 
 import jargs.gnu.CmdLineParser;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Command Line Parser for EMT commands
@@ -62,30 +58,9 @@ public class CommandLineParser extends CmdLineParser {
         return opt == null ?  defaultValue : ((Number) opt).intValue();
     }
 
-    private long optionToLong(Option option) {
+    private String optionToString(Option option) {
         Object opt = getOptionValue(option);
-        return opt == null ? 0L : ((Number) opt).longValue();
-    }
-
-    private List<String> optionToStringList(Option option) {
-        Object opt = getOptionValue(option);
-        return opt == null ? null : new ArrayList<>(Arrays.asList(opt.toString().split(",")));
-    }
-
-    private List<Integer> optionToIntegerList(Option option) {
-        Object opt = getOptionValue(option);
-        if (opt == null) return null;
-        List<String> tempList = new ArrayList<>(Arrays.asList(opt.toString().split(",")));
-        List<Integer> intList = new ArrayList<>();
-        for (String temp : tempList) {
-            intList.add(Integer.parseInt(temp));
-        }
-        return intList;
-    }
-
-    private String optionToString(Option option, String defaultValue) {
-        Object opt = getOptionValue(option);
-        return opt == null ? defaultValue : opt.toString();
+        return opt == null ? Main.DEFAULT_NORMALIZATION : opt.toString();
     }
 
     /*
@@ -113,6 +88,6 @@ public class CommandLineParser extends CmdLineParser {
     }
 
     public String getNormalizationStringOption() {
-        return optionToString(normalizationTypeOption, Main.DEFAULT_NORMALIZATION);
+        return optionToString(normalizationTypeOption);
     }
 }
