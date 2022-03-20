@@ -13,7 +13,7 @@ public class Flags {
     public static void run(String[] args, int resolution, int cutoff, String normString) {
 
         if(args.length != 4){
-            Main.printGeneralUsageAndExit();
+            Main.printGeneralUsageAndExit(4);
         }
 
         String hicFile = args[1];

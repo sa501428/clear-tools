@@ -15,6 +15,7 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
 import javastraw.tools.ParallelizationTools;
+import javastraw.tools.UNIXTools;
 
 import java.io.File;
 import java.util.List;
@@ -24,8 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Amplifi {
     public static void run(String[] args, int resolution, String normString) {
-        if(args.length != 4){
-            Main.printGeneralUsageAndExit();
+        if(args.length < 4){
+            Main.printGeneralUsageAndExit(5);
         }
 
         String outFolder = args[1];
@@ -48,6 +49,8 @@ public class Amplifi {
         Feature2DList loopList = Feature2DParser.loadFeatures(bedpeFile, handler, false, null, false);
 
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
+
+        UNIXTools.makeDir(outFolder);
 
         amplifyLoops(datasets, loopList, handler, resolution, norm, outFolder, keys);
     }
