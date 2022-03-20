@@ -18,7 +18,7 @@ public class Main {
         System.out.println("\t" + "-V, --version print version");
         System.out.println("Usage: \n" +
                 "flags [--cutoff int] [--res int] [--norm string] <hic_file> <bed_file> <out_folder>\n" +
-                "amplifi [--res int] [--norm string] <hic_files> <bedpe_file> <out_folder>");
+                "amplifi [--res int] [--norm string] <out_folder> <bedpe_file> <hic_files>");
         System.exit(0);
     }
 
