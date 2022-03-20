@@ -22,7 +22,7 @@
  *  THE SOFTWARE.
  */
 
-package flags.apa;
+package cli.apa;
 
 import javastraw.tools.MatrixTools;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;

@@ -22,7 +22,7 @@
  *  THE SOFTWARE.
  */
 
-package flags.apa;
+package cli.apa;
 
 
 import javastraw.feature2D.Feature2D;

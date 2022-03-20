@@ -22,7 +22,7 @@
  *  THE SOFTWARE.
  */
 
-package flags.apa;
+package cli.apa;
 
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;

@@ -1,4 +1,4 @@
-package flags.apa;
+package cli.apa;
 
 import javastraw.feature1D.Feature1D;
 

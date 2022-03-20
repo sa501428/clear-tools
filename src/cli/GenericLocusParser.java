@@ -1,6 +1,6 @@
-package flags;
+package cli;
 
-import flags.apa.Anchor;
+import cli.apa.Anchor;
 import javastraw.StrawGlobals;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.reader.basics.Chromosome;

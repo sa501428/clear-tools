@@ -22,11 +22,9 @@
  *  THE SOFTWARE.
  */
 
-package flags;
+package cli;
 
 import jargs.gnu.CmdLineParser;
-import javastraw.reader.type.NormalizationHandler;
-import javastraw.reader.type.NormalizationType;
 
 import java.util.ArrayList;
 import java.util.Arrays;

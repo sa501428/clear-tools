@@ -22,10 +22,9 @@
  *  THE SOFTWARE.
  */
 
-package flags.apa;
+package cli.apa;
 
-import flags.Main;
-import javastraw.StrawGlobals;
+import cli.Main;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.Dataset;
