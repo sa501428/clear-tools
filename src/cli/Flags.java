@@ -9,7 +9,7 @@ import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 
-public class FLAGS {
+public class Flags {
     public static void run(String[] args, int resolution, int cutoff, String normString) {
 
         if(args.length != 4){

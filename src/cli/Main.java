@@ -40,7 +40,7 @@ public class Main {
 
         String command = args[0].toLowerCase();
         if(command.equals("flags")){
-            FLAGS.run(args, parser.getResolutionOption(), parser.getCutoffOption(), parser.getNormalizationStringOption());
+            Flags.run(args, parser.getResolutionOption(), parser.getCutoffOption(), parser.getNormalizationStringOption());
         } else if (command.equals("amplifi") || command.equals("amplify")){
             Amplifi.run(args, parser.getResolutionOption(), parser.getNormalizationStringOption());
         } else {
