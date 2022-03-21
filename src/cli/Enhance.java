@@ -10,7 +10,6 @@ import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
-import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
@@ -23,7 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Amplifi {
+public class Enhance {
     public static void run(String[] args, int resolution, String normString) {
         if(args.length < 4){
             Main.printGeneralUsageAndExit(5);
@@ -119,9 +118,10 @@ public class Amplifi {
 
                         MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + ".npy")).getAbsolutePath(),
                                 output);
-
+                        /*
                         MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_agg_norm.npy")).getAbsolutePath(),
                                 AggNorm.getAggNormedMatrix(output));
+                        */
                     }
                 }
 

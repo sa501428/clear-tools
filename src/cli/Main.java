@@ -42,8 +42,8 @@ public class Main {
         String command = args[0].toLowerCase();
         if(command.equals("flags")){
             Flags.run(args, parser.getResolutionOption(), parser.getCutoffOption(), parser.getNormalizationStringOption());
-        } else if (command.equals("amplifi") || command.equals("amplify")){
-            Amplifi.run(args, parser.getResolutionOption(), parser.getNormalizationStringOption());
+        } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")){
+            Enhance.run(args, parser.getResolutionOption(), parser.getNormalizationStringOption());
         } else {
             printGeneralUsageAndExit(3);
         }
