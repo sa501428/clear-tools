@@ -19,8 +19,8 @@ public class WritingTools {
         for(int i = 0; i < matrix.length; i++){
             for(int j = 0; j < matrix[i].length; j++){
                 if (matrix[i][j] > 0) {
-                    int gx = (i * resolution) + xOrigin;
-                    int gy = (j * resolution) + yOrigin;
+                    long gx = (long) (i + xOrigin) * resolution;
+                    long gy = (long) (j + yOrigin) * resolution;
                     bwMND.write(xChrom + " " + gx + " " + yChrom + " " + gy + " " + matrix[i][j]);
                     bwMND.newLine();
                 }

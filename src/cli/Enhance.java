@@ -104,6 +104,7 @@ public class Enhance {
                             Feature2D loop = loops.get(li);
 
                             int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
+                            window = Math.max(window, 10000/resolution);
                             int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
                             int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
 
