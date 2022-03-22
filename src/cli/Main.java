@@ -43,7 +43,7 @@ public class Main {
         if(command.equals("flags")){
             Flags.run(args, parser.getResolutionOption(), parser.getCutoffOption(), parser.getNormalizationStringOption());
         } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")){
-            Enhance.run(args, parser.getResolutionOption(), parser.getNormalizationStringOption());
+            Enhance.run(args, parser.getResolutionOption(), parser.getNpyOption());
         } else {
             printGeneralUsageAndExit(3);
         }

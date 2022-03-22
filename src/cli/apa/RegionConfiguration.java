@@ -17,4 +17,8 @@ public class RegionConfiguration {
     public Chromosome getChr2() {
         return chrom2;
     }
+
+    public String getPairKey() {
+        return chrom1.getIndex()+"_"+chrom2.getIndex();
+    }
 }

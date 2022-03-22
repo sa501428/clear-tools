@@ -34,6 +34,7 @@ import jargs.gnu.CmdLineParser;
 public class CommandLineParser extends CmdLineParser {
 
     private final Option verboseOption = addBooleanOption('v', "verbose");
+    private final Option npyOption = addBooleanOption("npy");
     private final Option helpOption = addBooleanOption('h', "help");
     private final Option versionOption = addBooleanOption('V', "version");
 
@@ -73,6 +74,10 @@ public class CommandLineParser extends CmdLineParser {
 
     public boolean getVerboseOption() {
         return optionToBoolean(verboseOption);
+    }
+
+    public boolean getNpyOption() {
+        return optionToBoolean(npyOption);
     }
 
     public boolean getVersionOption() {

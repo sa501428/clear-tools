@@ -1,6 +1,9 @@
 package cli;
 
 import cli.apa.*;
+import cli.enhance.EnhanceUtils;
+import cli.enhance.WritingTools;
+import hic.tools.HiCTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -16,14 +19,19 @@ import javastraw.tools.MatrixTools;
 import javastraw.tools.ParallelizationTools;
 import javastraw.tools.UNIXTools;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Enhance {
-    public static void run(String[] args, int resolution, String normString) {
+    public static void run(String[] args, int resolution, boolean exportNPY) {
         if(args.length < 4){
             Main.printGeneralUsageAndExit(5);
         }
@@ -41,9 +49,6 @@ public class Enhance {
         }
 
         ChromosomeHandler handler = datasets[0].getChromosomeHandler();
-        NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(datasets[0],
-                new String[]{normString, "KR", "SCALE", "NONE"});
-        System.out.println("Norm being used: " + norm.getLabel());
 
         Feature2DList loopList = Feature2DParser.loadFeatures(bedpeFile, handler, false, null, false);
 
@@ -51,11 +56,12 @@ public class Enhance {
 
         UNIXTools.makeDir(outFolder);
 
-        amplifyLoops(datasets, loopList, handler, resolution, norm, outFolder, keys);
+        amplifyLoops(datasets, loopList, handler, resolution, outFolder, keys, exportNPY);
     }
 
     private static void amplifyLoops(final Dataset[] datasets, Feature2DList loopList, ChromosomeHandler handler,
-                                     int resolution, NormalizationType norm, String outFolder, Object[] keys) {
+                                     int resolution, String outFolder, Object[] keys,
+                                     boolean exportNPY) {
 
         if(Main.printVerboseComments) {
             System.out.println("Processing AMPLIFI for resolution " + resolution);
@@ -78,6 +84,9 @@ public class Enhance {
         final AtomicInteger maxProgressStatus = new AtomicInteger(pairCounter);
         final AtomicInteger chromosomePair = new AtomicInteger(0);
 
+        final Object mndKey = new Object();
+        List<String> filePaths = Collections.synchronizedList(new ArrayList<>());
+
         ParallelizationTools.launchParallelizedCode(() -> {
 
             int threadPair = chromosomePair.getAndIncrement();
@@ -88,40 +97,60 @@ public class Enhance {
 
                 List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
                 if(loops.size() > 0) {
-                    for (int li = 0; li < loops.size(); li++) {
-                        Feature2D loop = loops.get(li);
-                        int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
-                        int matrixWidth = 2 * window + 1;
-                        double[][] output = new double[matrixWidth][matrixWidth];
+                    String newMND = (new File(outFolder, config.getPairKey() + ".mnd")).getAbsolutePath();
+                    try {
+                        BufferedWriter bwMND = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(newMND)));
+                        for (int li = 0; li < loops.size(); li++) {
+                            Feature2D loop = loops.get(li);
 
-                        for (int di = 0; di < datasets.length; di++) {
-                            final Dataset ds = datasets[di];
-                            MatrixZoomData zd;
-                            synchronized (ds) {
-                                zd = HiCFileTools.getMatrixZoomData(ds, chr1, chr2, zoom);
-                            }
+                            int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
+                            int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
+                            int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
 
-                            if (zd != null) {
-                                try {
-                                    APAUtils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window,
-                                            norm, keys[di]);
-                                } catch (Exception e) {
-                                    System.err.println(e.getMessage());
-                                    System.err.println("Unable to find data for loop: " + loop);
+                            int matrixWidth = 2 * window + 1;
+                            int[][] output = new int[matrixWidth][matrixWidth];
+
+                            for (int di = 0; di < datasets.length; di++) {
+                                final Dataset ds = datasets[di];
+                                MatrixZoomData zd;
+                                synchronized (ds) {
+                                    zd = HiCFileTools.getMatrixZoomData(ds, chr1, chr2, zoom);
+                                }
+
+                                if (zd != null) {
+                                    try {
+                                        EnhanceUtils.addLocalBoundedRegion(output, zd,
+                                                binXStart, binYStart, window, matrixWidth, keys[di]);
+                                    } catch (Exception e) {
+                                        System.err.println(e.getMessage());
+                                        System.err.println("Unable to find data for loop: " + loop);
+                                    }
                                 }
                             }
-                        }
 
-                        String saveString = loop.simpleString();
-                        String[] saveStrings = saveString.split("\\s+");
-                        saveString = String.join("_", saveStrings);
+                            String saveString = loop.simpleString();
+                            String[] saveStrings = saveString.split("\\s+");
+                            saveString = String.join("_", saveStrings);
 
-                        MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + ".npy")).getAbsolutePath(),
-                                output);
-                        /*
-                        MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_agg_norm.npy")).getAbsolutePath(),
+                            if (exportNPY) {
+                                MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + ".npy")).getAbsolutePath(),
+                                        output);
+                            /*
+                            MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_agg_norm.npy")).getAbsolutePath(),
                                 AggNorm.getAggNormedMatrix(output));
-                        */
+                            */
+                            }
+                            WritingTools.writeToMND(output, resolution, chr1.getName(), chr2.getName(),
+                                    binXStart, binYStart, bwMND);
+
+                        }
+                        bwMND.close();
+                    } catch (Exception e){
+                        e.printStackTrace();
+                        System.exit(9);
+                    }
+                    synchronized (mndKey) {
+                        filePaths.add(newMND);
                     }
                 }
 
@@ -142,7 +171,20 @@ public class Enhance {
             }
         });
 
-        System.out.println("Amplifi complete");
+        System.out.println("MND lists complete");
+
+        String mndPath = WritingTools.buildCatScript(filePaths, outFolder);
+        String genomeID = WritingTools.cleanGenome(datasets[0].getGenomeId());
+        String newHiCFile = new File(outFolder, "enhance.hic").getAbsolutePath();
+        String resolutionsToBuild = WritingTools.getResolutionsToBuild(resolution);
+        try {
+            String[] line = new String[]{"pre", "-n", "-r", resolutionsToBuild, mndPath, newHiCFile, genomeID};
+            HiCTools.main(line);
+        } catch (Exception e){
+            e.printStackTrace();
+            System.exit(31);
+        }
+
         //if no data return null
     }
 }
