@@ -1,4 +1,4 @@
-package cli;
+package cli.utils;
 
 import cli.apa.Anchor;
 import javastraw.StrawGlobals;

@@ -1,5 +1,9 @@
 package cli;
 
+import cli.clt.CommandLineParser;
+import cli.clt.Enhance;
+import cli.clt.Flags;
+import cli.clt.Probability;
 import jargs.gnu.CmdLineParser;
 
 public class Main {
@@ -18,7 +22,8 @@ public class Main {
         System.out.println("\t" + "-V, --version print version");
         System.out.println("Commands: \n" +
                 "flags [--cutoff int] [--res int] [--norm string] <hic_file> <bed_file> <out_folder>\n" +
-                "amplifi [--res int] [--norm string] <out_folder> <bedpe_file> <hic_files>");
+                "enhance [--res int] [--norm string] <out_folder> <bedpe_file> <hic_files>\n" +
+                "probability [--res int] <hic_file> <bedpe_file> <out_folder>");
         System.out.println("Exit code "+exitCode);
         System.exit(exitCode);
     }
@@ -44,6 +49,8 @@ public class Main {
             Flags.run(args, parser.getResolutionOption(), parser.getCutoffOption(), parser.getNormalizationStringOption());
         } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")){
             Enhance.run(args, parser.getResolutionOption(), parser.getNpyOption());
+        } else if (command.startsWith("prob")){
+            Probability.run(args, parser.getResolutionOption());
         } else {
             printGeneralUsageAndExit(3);
         }

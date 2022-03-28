@@ -22,8 +22,9 @@
  *  THE SOFTWARE.
  */
 
-package cli;
+package cli.clt;
 
+import cli.Main;
 import jargs.gnu.CmdLineParser;
 
 /**

@@ -1,5 +1,6 @@
-package cli;
+package cli.clt;
 
+import cli.Main;
 import cli.apa.*;
 import cli.enhance.EnhanceUtils;
 import cli.enhance.WritingTools;

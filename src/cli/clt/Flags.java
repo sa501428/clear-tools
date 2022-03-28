@@ -1,5 +1,7 @@
-package cli;
+package cli.clt;
 
+import cli.utils.GenericLocusParser;
+import cli.Main;
 import cli.apa.APA;
 import cli.apa.Anchor;
 import javastraw.feature1D.GenomeWide1DList;
