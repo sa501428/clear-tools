@@ -143,7 +143,7 @@ public class Enhance {
                             }
                             WritingTools.writeToMND(output, resolution, chr1.getName(), chr2.getName(),
                                     binXStart, binYStart, bwMND);
-
+                            output = null;
                         }
                         bwMND.close();
                     } catch (Exception e){
