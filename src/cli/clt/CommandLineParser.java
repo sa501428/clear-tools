@@ -38,6 +38,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option npyOption = addBooleanOption("npy");
     private final Option helpOption = addBooleanOption('h', "help");
     private final Option versionOption = addBooleanOption('V', "version");
+    private final Option logOption = addBooleanOption("log");
 
     private final Option resolutionsOption = addIntegerOption('r', "res");
     private final Option normalizationTypeOption = addStringOption('k', "norm");
@@ -85,6 +86,10 @@ public class CommandLineParser extends CmdLineParser {
         return optionToBoolean(versionOption);
     }
 
+    public boolean getLogOption() {
+        return optionToBoolean(logOption);
+    }
+
     public int getCutoffOption(){
         return optionToInteger(cutoffOption, Main.DEFAULT_CUTOFF);
     }
@@ -96,4 +101,6 @@ public class CommandLineParser extends CmdLineParser {
     public String getNormalizationStringOption() {
         return optionToString(normalizationTypeOption);
     }
+
+
 }

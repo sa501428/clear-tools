@@ -50,7 +50,7 @@ public class Main {
         } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")){
             Enhance.run(args, parser.getResolutionOption(), parser.getNpyOption());
         } else if (command.startsWith("prob")){
-            Probability.run(args, parser.getResolutionOption());
+            Probability.run(args, parser.getResolutionOption(), parser.getLogOption());
         } else {
             printGeneralUsageAndExit(3);
         }
