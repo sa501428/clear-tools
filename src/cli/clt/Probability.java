@@ -10,19 +10,25 @@ import javastraw.reader.Dataset;
 import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.block.Block;
 import javastraw.reader.block.ContactRecord;
+import javastraw.reader.expected.QuickMedian;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
+import javastraw.tools.MatrixTools;
 import javastraw.tools.UNIXTools;
 
+import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 
 public class Probability {
-    private static final int DEFAULT_MAX_DIST = 10000000;
+    private static final int DEFAULT_MAX_DIST = 20000000;
+    private static final int DEFAULT_WINDOW = 1000000;
+
 
     public static void run(String[] args, int resolution, boolean useLog) {
 
@@ -57,6 +63,11 @@ public class Probability {
             if (zd == null) continue;
 
             double[] expected = calculateExpected(zd, norm, DEFAULT_MAX_DIST/resolution, useLog);
+            MatrixTools.saveMatrixTextNumpy((new File(outFolder, "expected.npy")).getAbsolutePath(),
+                    expected);
+            QuickMedian.doRollingMedian(expected, DEFAULT_WINDOW/resolution);
+            MatrixTools.saveMatrixTextNumpy((new File(outFolder, "smooth_expected.npy")).getAbsolutePath(),
+                    expected);
             getPercentages(expected, loopList.get(chromosome.getIndex(), chromosome.getIndex()),
                     zd, resolution, norm);
         }
@@ -70,7 +81,24 @@ public class Probability {
             int dist = getDist(loop, resolution);
             float val = HiCValue.getExactPixel(zd, loop, resolution, norm);
             double proportionLoop = (val - expected[dist])/(expected[1]-expected[dist]);
-            System.out.println("Loop "+i+" "+loop.simpleString()+"  "+proportionLoop);
+            double enrichment = val / expected[dist];
+            double pseudocount = expected[expected.length-1];
+            //double enrichment2 = (val + 1) / (expected[dist] + 1);
+            double enrichment3 = (val + pseudocount) / (expected[dist] + pseudocount);
+            /*
+            System.out.println("Loop "+i+" "+loop.simpleString()+" pL "+proportionLoop +
+                    " O/E "+enrichment +
+                    //" O+1/E+1 "+enrichment2 +
+                    " O+ps/E+ps "+enrichment3 +
+                    " ps "+pseudocount
+            );
+            */
+            System.out.println("Loop "+i+" "+loop.simpleString()+" pL "+proportionLoop +
+                    " O/E "+enrichment +
+                    //" O+1/E+1 "+enrichment2 +
+                    " O+ps/E+ps "+enrichment3 +
+                    " ps "+pseudocount
+            );
         }
     }
 
