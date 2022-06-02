@@ -7,6 +7,7 @@ public class ConvolutionTools {
     public static float[][] sparseConvolution(int[][] image) {
 
         float[][] kernel = getManhattanKernel(getApproxBandWidth(image));
+        float maxK = ArrayTools.getMax(kernel);
 
         float[][] result = new float[image.length][image[0].length];
 
@@ -31,6 +32,9 @@ public class ConvolutionTools {
                 }
             }
         }
+
+        ArrayTools.inPlaceDivideArrayBy(result, maxK);
+
         return result;
     }
 

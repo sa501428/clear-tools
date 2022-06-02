@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.4.0";
+    public static final String VERSION_NUM = "0.4.2";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
@@ -46,7 +46,7 @@ public class Main {
             Flags.run(args, parser.getResolutionOption(), parser.getCutoffOption(), parser.getNormalizationStringOption());
         } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")) {
             Enhance.run(args, parser.getResolutionOption(), parser.getNpyOption());
-        } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")) {
+        } else if (command.equals("pinpoint")) {
             Pinpoint.run(args);
         } else if (command.startsWith("prob")) {
             Probability.run(args, parser.getResolutionOption(), parser.getLogOption());
