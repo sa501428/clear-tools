@@ -1,14 +1,11 @@
 package cli;
 
-import cli.clt.CommandLineParser;
-import cli.clt.Enhance;
-import cli.clt.Flags;
-import cli.clt.Probability;
+import cli.clt.*;
 import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.3.1";
+    public static final String VERSION_NUM = "0.4.0";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
@@ -47,9 +44,11 @@ public class Main {
         String command = args[0].toLowerCase();
         if(command.equals("flags")){
             Flags.run(args, parser.getResolutionOption(), parser.getCutoffOption(), parser.getNormalizationStringOption());
-        } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")){
+        } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")) {
             Enhance.run(args, parser.getResolutionOption(), parser.getNpyOption());
-        } else if (command.startsWith("prob")){
+        } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")) {
+            Pinpoint.run(args);
+        } else if (command.startsWith("prob")) {
             Probability.run(args, parser.getResolutionOption(), parser.getLogOption());
         } else {
             printGeneralUsageAndExit(3);

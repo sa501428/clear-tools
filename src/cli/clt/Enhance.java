@@ -1,9 +1,10 @@
 package cli.clt;
 
 import cli.Main;
-import cli.apa.*;
-import cli.enhance.EnhanceUtils;
-import cli.enhance.WritingTools;
+import cli.apa.APAUtils;
+import cli.apa.RegionConfiguration;
+import cli.utils.HiCUtils;
+import cli.utils.WritingTools;
 import hic.tools.HiCTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -12,9 +13,7 @@ import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.mzd.MatrixZoomData;
-import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
-import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
 import javastraw.tools.ParallelizationTools;
@@ -64,7 +63,7 @@ public class Enhance {
                                      int resolution, String outFolder, Object[] keys,
                                      boolean exportNPY) {
 
-        if(Main.printVerboseComments) {
+        if (Main.printVerboseComments) {
             System.out.println("Processing AMPLIFI for resolution " + resolution);
         }
         HiCZoom zoom = new HiCZoom(HiCZoom.HiCUnit.BP, resolution);
@@ -72,15 +71,9 @@ public class Enhance {
         final AtomicInteger currentProgressStatus = new AtomicInteger(0);
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
-        int pairCounter = 0;
-        Chromosome[] chromosomes = handler.getAutosomalChromosomesArray();
-        for (int i = 0; i < chromosomes.length; i++) {
-            for (int j = i; j < chromosomes.length; j++) {
-                RegionConfiguration config = new RegionConfiguration(chromosomes[i], chromosomes[j]);
-                chromosomePairs.put(pairCounter, config);
-                pairCounter++;
-            }
-        }
+        int pairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
+                handler.getAutosomalChromosomesArray());
+
         final int chromosomePairCounter = pairCounter;
         final AtomicInteger maxProgressStatus = new AtomicInteger(pairCounter);
         final AtomicInteger chromosomePair = new AtomicInteger(0);
@@ -121,7 +114,7 @@ public class Enhance {
 
                                 if (zd != null) {
                                     try {
-                                        EnhanceUtils.addLocalBoundedRegion(output, zd,
+                                        APAUtils.addRawLocalBoundedRegion(output, zd,
                                                 binXStart, binYStart, window, matrixWidth, keys[di]);
                                     } catch (Exception e) {
                                         System.err.println(e.getMessage());

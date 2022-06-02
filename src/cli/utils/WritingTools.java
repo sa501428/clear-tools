@@ -1,15 +1,12 @@
-package cli.enhance;
+package cli.utils;
 
 import hic.tools.utils.ShellCommandRunner;
-import hic.tools.utils.original.MultithreadedPreprocessor;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 public class WritingTools {
 

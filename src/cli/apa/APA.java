@@ -25,6 +25,7 @@
 package cli.apa;
 
 import cli.Main;
+import cli.utils.HiCUtils;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.Dataset;
@@ -94,15 +95,9 @@ public class APA {
         final AtomicInteger currentProgressStatus = new AtomicInteger(0);
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
-        int pairCounter = 0;
-        Chromosome[] chromosomes = handler.getAutosomalChromosomesArray();
-        for (int i = 0; i < chromosomes.length; i++) {
-            for (int j = i; j < chromosomes.length; j++) {
-                RegionConfiguration config = new RegionConfiguration(chromosomes[i], chromosomes[j]);
-                chromosomePairs.put(pairCounter, config);
-                pairCounter++;
-            }
-        }
+        int pairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
+                handler.getAutosomalChromosomesArray());
+
         final int chromosomePairCounter = pairCounter;
         final AtomicInteger maxProgressStatus = new AtomicInteger(pairCounter);
         final AtomicInteger chromosomePair = new AtomicInteger(0);
