@@ -32,8 +32,8 @@ public class Pinpoint {
         }
 
         Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, true);
-        String outFolder = args[2];
-        String bedpeFile = args[3];
+        String bedpeFile = args[2];
+        String outFolder = args[3];
 
         ChromosomeHandler handler = dataset.getChromosomeHandler();
 
