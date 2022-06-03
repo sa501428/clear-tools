@@ -58,6 +58,4 @@ public class Main {
             printGeneralUsageAndExit(3);
         }
     }
-
-
 }
