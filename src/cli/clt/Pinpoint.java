@@ -82,11 +82,10 @@ public class Pinpoint {
 
                 List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
                 if (loops.size() > 0) {
-                    List<Feature2D> pinpointedLoops = new ArrayList<>();
                     MatrixZoomData zd = HiCFileTools.getMatrixZoomData(dataset, chr1, chr2, zoom);
-
                     if (zd != null) {
                         try {
+                            List<Feature2D> pinpointedLoops = new ArrayList<>();
                             for (Feature2D loop : loops) {
 
                                 int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
@@ -117,17 +116,19 @@ public class Pinpoint {
                                     System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                                 }
                             }
+                            zd.clearCache();
+
+                            synchronized (key) {
+                                refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
+                            }
+
+                            System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
                         }
-
-                        synchronized (key) {
-                            refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
-                        }
                     }
-                    System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                 }
-
                 threadPair = currChromPair.getAndIncrement();
             }
         });
