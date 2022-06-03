@@ -18,6 +18,7 @@ import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 import javastraw.tools.UNIXTools;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,24 +31,27 @@ public class Pinpoint {
             Main.printGeneralUsageAndExit(5);
         }
 
-        Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, true);
-        String bedpeFile = args[2];
+        Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, false);
+        String loopListPath = args[2];
         String outFolder = args[3];
 
         ChromosomeHandler handler = dataset.getChromosomeHandler();
 
-        Feature2DList loopList = Feature2DParser.loadFeatures(bedpeFile, handler,
+        Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
                 false, null, false);
 
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
         UNIXTools.makeDir(outFolder);
 
-        amplifyLoops(dataset, loopList, handler, outFolder);
+        Feature2DList refinedLoops = localize(dataset, loopList, handler, outFolder);
+        refinedLoops.exportFeatureList(new File(outFolder, "pinpoint.bedpe"),
+                false, Feature2DList.ListFormat.NA);
+        System.out.println("pinpoint complete");
     }
 
-    private static void amplifyLoops(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
-                                     String outFolder) {
+    private static Feature2DList localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
+                                          String outFolder) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
@@ -60,7 +64,11 @@ public class Pinpoint {
         final int chromosomePairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
                 handler.getAutosomalChromosomesArray());
 
+        int numTotalLoops = loopList.getNumTotalFeatures();
+
         final AtomicInteger currChromPair = new AtomicInteger(0);
+        final AtomicInteger currNumLoops = new AtomicInteger(0);
+
         final Object key = new Object();
         final Feature2DList refinedLoops = new Feature2DList();
 
@@ -104,6 +112,10 @@ public class Pinpoint {
                                         pinpointedLoops, loop, outFolder, saveString);
 
                                 kde = null;
+
+                                if (currNumLoops.incrementAndGet() % 20 == 0) {
+                                    System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+                                }
                             }
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
@@ -113,11 +125,12 @@ public class Pinpoint {
                             refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
                         }
                     }
+                    System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                 }
-                //System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");
+
                 threadPair = currChromPair.getAndIncrement();
             }
         });
-        System.out.println("pinpoint complete");
+        return refinedLoops;
     }
 }
