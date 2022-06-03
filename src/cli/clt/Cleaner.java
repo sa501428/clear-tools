@@ -40,7 +40,7 @@ public class Cleaner {
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
         Feature2DList cleanList = cleanupLoops(dataset, loopList, handler);
-        cleanList.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
+        cleanList.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.FINAL);
     }
 
     private static Feature2DList cleanupLoops(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler) {
@@ -74,7 +74,6 @@ public class Cleaner {
 
                     double[] vector1 = dataset.getNormalizationVector(chr1.getIndex(), zoom, scaleNorm).getData().getValues().get(0);
                     double[] vector1b = dataset.getNormalizationVector(chr1.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-
                     VectorCleanerUtils.inPlaceClean(vector1);
                     VectorCleanerUtils.inPlaceClean(vector1b);
 
@@ -127,6 +126,6 @@ public class Cleaner {
     }
 
     private static boolean valueIsBad(double v) {
-        return Double.isNaN(v);
+        return Double.isNaN(v) && v < 1;
     }
 }
