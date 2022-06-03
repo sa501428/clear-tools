@@ -122,7 +122,7 @@ public class Pinpoint {
                                 refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
                             }
 
-                            System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+                            System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
 
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
