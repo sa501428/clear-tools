@@ -5,6 +5,7 @@ import cli.apa.APAUtils;
 import cli.apa.RegionConfiguration;
 import cli.utils.ConvolutionTools;
 import cli.utils.HiCUtils;
+import cli.utils.cc.ConnectedComponents;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -14,11 +15,9 @@ import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.tools.HiCFileTools;
-import javastraw.tools.MatrixTools;
 import javastraw.tools.ParallelizationTools;
 import javastraw.tools.UNIXTools;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +83,6 @@ public class Pinpoint {
 
                                 int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
 
-
                                 int binXStart = (int) ((loop.getStart1() / resolution) - window);
                                 int binYStart = (int) ((loop.getStart2() / resolution) - window);
 
@@ -97,16 +95,22 @@ public class Pinpoint {
                                 String[] saveStrings = saveString.split("\\s+");
                                 saveString = String.join("_", saveStrings);
 
-                                MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(),
-                                        output);
+                                //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
                                 float[][] kde = ConvolutionTools.sparseConvolution(output);
-                                MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(),
-                                        kde);
+                                output = null; // clear output
+                                //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
 
-                                output = null;
+                                ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
+                                        pinpointedLoops, loop, outFolder, saveString);
+
+                                kde = null;
                             }
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
+                        }
+
+                        synchronized (key) {
+                            refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
                         }
                     }
                 }
