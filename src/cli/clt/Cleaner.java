@@ -3,6 +3,7 @@ package cli.clt;
 import cli.Main;
 import cli.apa.RegionConfiguration;
 import cli.utils.HiCUtils;
+import cli.utils.VectorCleanerUtils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -48,6 +49,8 @@ public class Cleaner {
         HiCZoom zoom = new HiCZoom(resolution);
 
         NormalizationType scaleNorm = dataset.getNormalizationHandler().getNormTypeFromString("SCALE");
+        NormalizationType vcNorm = dataset.getNormalizationHandler().getNormTypeFromString("VC");
+
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
         final int chromosomePairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
@@ -66,19 +69,28 @@ public class Cleaner {
                 Chromosome chr2 = config.getChr2();
 
                 List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
-                if (loops.size() > 0) {
+                if (loops != null && loops.size() > 0) {
                     List<Feature2D> goodLoops = new ArrayList<>();
 
                     double[] vector1 = dataset.getNormalizationVector(chr1.getIndex(), zoom, scaleNorm).getData().getValues().get(0);
+                    double[] vector1b = dataset.getNormalizationVector(chr1.getIndex(), zoom, vcNorm).getData().getValues().get(0);
+
+                    VectorCleanerUtils.inPlaceClean(vector1);
+                    VectorCleanerUtils.inPlaceClean(vector1b);
+
                     double[] vector2 = vector1;
+                    double[] vector2b = vector1b;
                     if (chr1.getIndex() != chr2.getIndex()) {
                         vector2 = dataset.getNormalizationVector(chr2.getIndex(), zoom, scaleNorm).getData().getValues().get(0);
+                        vector2b = dataset.getNormalizationVector(chr2.getIndex(), zoom, vcNorm).getData().getValues().get(0);
+                        VectorCleanerUtils.inPlaceClean(vector2);
+                        VectorCleanerUtils.inPlaceClean(vector2b);
                     }
 
                     try {
                         for (Feature2D loop : loops) {
-                            if (normsAreGood(loop.getStart1(), loop.getWidth1(), resolution, vector1)
-                                    && normsAreGood(loop.getStart2(), loop.getWidth2(), resolution, vector2)) {
+                            if (normsAreGood(loop.getStart1(), loop.getWidth1(), resolution, vector1, vector1b)
+                                    && normsAreGood(loop.getStart2(), loop.getWidth2(), resolution, vector2, vector2b)) {
                                 goodLoops.add(loop);
                             }
                         }
@@ -98,7 +110,7 @@ public class Cleaner {
         return goodLoopsList;
     }
 
-    private static boolean normsAreGood(long start, long width, int resolution, double[] vector) {
+    private static boolean normsAreGood(long start, long width, int resolution, double[] vector1, double[] vector2) {
 
         int x0 = (int) (start / resolution) - 1;
         int window = (int) (width / resolution) + 3;
@@ -106,7 +118,7 @@ public class Cleaner {
         boolean normValuesAreGood = true;
 
         for (int k = x0; k < x0 + window + 1; k++) {
-            if (valueIsBad(vector[k])) {
+            if (valueIsBad(vector1[k]) || valueIsBad(vector2[k])) {
                 normValuesAreGood = false;
             }
         }
@@ -115,6 +127,6 @@ public class Cleaner {
     }
 
     private static boolean valueIsBad(double v) {
-        return Double.isNaN(v) || Double.isInfinite(v) || v < 0.3;
+        return Double.isNaN(v);
     }
 }
