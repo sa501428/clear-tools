@@ -126,6 +126,6 @@ public class Cleaner {
     }
 
     private static boolean valueIsBad(double v) {
-        return Double.isNaN(v) && v < 1;
+        return Double.isNaN(v) && v < 2;
     }
 }

@@ -81,7 +81,7 @@ public class Pinpoint {
                 Chromosome chr2 = config.getChr2();
 
                 List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
-                if (loops.size() > 0) {
+                if (loops != null && loops.size() > 0) {
                     MatrixZoomData zd = HiCFileTools.getMatrixZoomData(dataset, chr1, chr2, zoom);
                     if (zd != null) {
                         try {
