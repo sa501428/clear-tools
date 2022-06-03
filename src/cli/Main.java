@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.5.0";
+    public static final String VERSION_NUM = "0.5.1";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
