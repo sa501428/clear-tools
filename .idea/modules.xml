@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/flags.iml" filepath="$PROJECT_DIR$/flags.iml" />
+      <module fileurl="file://$PROJECT_DIR$/cleartools.iml" filepath="$PROJECT_DIR$/cleartools.iml" />
     </modules>
   </component>
 </project>

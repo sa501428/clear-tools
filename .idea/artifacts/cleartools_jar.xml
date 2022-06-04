@@ -1,8 +1,8 @@
 <component name="ArtifactManager">
-  <artifact type="jar" build-on-make="true" name="flags:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/flags_jar</output-path>
-    <root id="archive" name="flags.jar">
-      <element id="module-output" name="flags" />
+  <artifact type="jar" build-on-make="true" name="cleartools:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/cleartools_jar</output-path>
+    <root id="archive" name="clear-tools.jar">
+      <element id="module-output" name="cleartools" />
       <element id="extracted-dir" path="$PROJECT_DIR$/lib/java-straw.2.11.2.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/lib/jargs.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/lib/hic_tools.3.7.2.jar" path-in-jar="/" />

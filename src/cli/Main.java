@@ -12,7 +12,7 @@ public class Main {
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode) {
-        System.out.println("Hi-C FLAGS Version " + VERSION_NUM);
+        System.out.println("CLEAR Tools Version " + VERSION_NUM);
         System.out.println("Usage:");
         System.out.println("\t" + "-h, --help print help");
         System.out.println("\t" + "-v, --verbose verbose mode");
