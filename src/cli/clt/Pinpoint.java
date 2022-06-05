@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Pinpoint {
-    public static void run(String[] args) {
+    public static void run(String[] args, int resolutionOption) {
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(5);
         }
@@ -44,21 +44,25 @@ public class Pinpoint {
 
         UNIXTools.makeDir(outFolder);
 
-        Feature2DList refinedLoops = localize(dataset, loopList, handler, outFolder);
+        int resolution = resolutionOption;
+        if (resolution < 1) {
+            resolution = HiCUtils.getHighestResolution(dataset.getBpZooms()).getBinSize();
+        }
+
+        Feature2DList refinedLoops = localize(dataset, loopList, handler, outFolder, resolution);
         refinedLoops.exportFeatureList(new File(outFolder, "pinpoint.bedpe"),
                 false, Feature2DList.ListFormat.NA);
         System.out.println("pinpoint complete");
     }
 
     private static Feature2DList localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
-                                          String outFolder) {
+                                          String outFolder, int resolution) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
         }
 
-        HiCZoom zoom = HiCUtils.getHighestResolution(dataset.getBpZooms());
-        int resolution = zoom.getBinSize();
+        HiCZoom zoom = new HiCZoom(resolution);
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
         final int chromosomePairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,

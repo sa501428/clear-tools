@@ -90,12 +90,12 @@ public class CommandLineParser extends CmdLineParser {
         return optionToBoolean(logOption);
     }
 
-    public int getCutoffOption(){
+    public int getCutoffOption() {
         return optionToInteger(cutoffOption, Main.DEFAULT_CUTOFF);
     }
 
-    public int getResolutionOption(){
-        return optionToInteger(resolutionsOption, Main.DEFAULT_RESOLUTION);
+    public int getResolutionOption(int defaultVal) {
+        return optionToInteger(resolutionsOption, defaultVal);
     }
 
     public String getNormalizationStringOption() {
