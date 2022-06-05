@@ -5,6 +5,7 @@
       <element id="module-output" name="cleartools" />
       <element id="extracted-dir" path="$PROJECT_DIR$/lib/java-straw.2.11.2.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/lib/jargs.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/igv.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/lib/hic_tools.3.7.2.jar" path-in-jar="/" />
     </root>
   </artifact>

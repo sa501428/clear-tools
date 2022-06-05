@@ -8,5 +8,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="hic_tools" level="project" />
+    <orderEntry type="library" name="igv" level="project" />
   </component>
 </module>

@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="igv">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/igv.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
