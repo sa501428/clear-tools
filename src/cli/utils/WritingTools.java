@@ -1,7 +1,5 @@
 package cli.utils;
 
-import hic.tools.utils.ShellCommandRunner;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -48,7 +46,8 @@ public class WritingTools {
             finalOutput.println(removeLine);
             finalOutput.close();
 
-            ShellCommandRunner.runShellFile("sh", scriptPath);
+            System.out.println("Run the shell script at: " + scriptPath);
+            //ShellCommandRunner.runShellFile("sh", scriptPath);
 
         } catch (Exception e) {
             e.printStackTrace();

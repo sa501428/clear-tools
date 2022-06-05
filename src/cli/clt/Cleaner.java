@@ -29,7 +29,7 @@ public class Cleaner {
             Main.printGeneralUsageAndExit(5);
         }
 
-        Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, true);
+        Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, true, true);
         String bedpeFile = args[2];
         String outFile = args[3];
 

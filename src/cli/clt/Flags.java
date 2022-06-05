@@ -1,9 +1,9 @@
 package cli.clt;
 
-import cli.utils.GenericLocusParser;
 import cli.Main;
 import cli.apa.APA;
 import cli.apa.Anchor;
+import cli.utils.GenericLocusParser;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.ChromosomeHandler;
@@ -22,7 +22,7 @@ public class Flags {
         String bedFile = args[2];
         String outFolder = args[3];
 
-        Dataset ds = HiCFileTools.extractDatasetForCLT(hicFile, false, true);
+        Dataset ds = HiCFileTools.extractDatasetForCLT(hicFile, false, true, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();
 
         NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{normString, "KR", "SCALE", "NONE"});

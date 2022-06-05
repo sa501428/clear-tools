@@ -2,7 +2,6 @@ package cli.clt;
 
 import cli.HiCValue;
 import cli.Main;
-import cli.apa.APAUtils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -10,7 +9,6 @@ import javastraw.reader.Dataset;
 import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
-import javastraw.reader.block.Block;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.expected.QuickMedian;
 import javastraw.reader.mzd.MatrixZoomData;
@@ -40,7 +38,7 @@ public class Probability {
         String bedpeFile = args[2];
         String outFolder = args[3];
 
-        Dataset ds = HiCFileTools.extractDatasetForCLT(hicFile, false, true);
+        Dataset ds = HiCFileTools.extractDatasetForCLT(hicFile, false, true, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList loopList = Feature2DParser.loadFeatures(bedpeFile, handler, false, null, false);
         UNIXTools.makeDir(outFolder);

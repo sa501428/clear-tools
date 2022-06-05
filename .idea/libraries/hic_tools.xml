@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="hic_tools">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/lib/hic_tools.3.7.2.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

@@ -5,7 +5,6 @@ import cli.apa.APAUtils;
 import cli.apa.RegionConfiguration;
 import cli.utils.HiCUtils;
 import cli.utils.WritingTools;
-import hic.tools.HiCTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -44,7 +43,7 @@ public class Enhance {
         final Object[] keys = new Object[hicFiles.length];
         Dataset[] datasets = new Dataset[hicFiles.length];
         for(int q = 0; q < hicFiles.length; q++){
-            datasets[q] = HiCFileTools.extractDatasetForCLT(hicFiles[q] , false, true);
+            datasets[q] = HiCFileTools.extractDatasetForCLT(hicFiles[q], false, true, true);
             keys[q] = new Object();
         }
 
@@ -173,8 +172,8 @@ public class Enhance {
         String newHiCFile = new File(outFolder, "enhance.hic").getAbsolutePath();
         String resolutionsToBuild = WritingTools.getResolutionsToBuild(resolution);
         try {
-            String[] line = new String[]{"pre", "-n", "-r", resolutionsToBuild, mndPath, newHiCFile, genomeID};
-            HiCTools.main(line);
+            System.out.println("Run HiCTools Pre: \n   pre -n -r" + resolutionsToBuild + " " +
+                    mndPath + " " + newHiCFile + " " + genomeID);
         } catch (Exception e){
             e.printStackTrace();
             System.exit(31);
