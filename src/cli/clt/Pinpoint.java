@@ -2,6 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.apa.APAUtils;
+import cli.apa.RegionConfiguration;
 import cli.utils.ConvolutionTools;
 import cli.utils.HiCUtils;
 import cli.utils.cc.ConnectedComponents;
@@ -14,11 +15,14 @@ import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.tools.HiCFileTools;
+import javastraw.tools.ParallelizationTools;
 import javastraw.tools.UNIXTools;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Pinpoint {
@@ -27,7 +31,7 @@ public class Pinpoint {
             Main.printGeneralUsageAndExit(5);
         }
 
-        Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, true, true);
+        Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, false, true);
         String loopListPath = args[2];
         String outFolder = args[3];
 
@@ -56,78 +60,78 @@ public class Pinpoint {
         HiCZoom zoom = HiCUtils.getHighestResolution(dataset.getBpZooms());
         int resolution = zoom.getBinSize();
 
+        Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
+        final int chromosomePairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
+                handler.getAutosomalChromosomesArray());
+
         int numTotalLoops = loopList.getNumTotalFeatures();
 
+        final AtomicInteger currChromPair = new AtomicInteger(0);
         final AtomicInteger currNumLoops = new AtomicInteger(0);
 
-        final Feature2DList refinedLoops = new Feature2DList();
         final Object key = new Object();
+        final Feature2DList refinedLoops = new Feature2DList();
 
-        long interval1 = 0L, interval2 = 0L, interval3 = 0L;
+        ParallelizationTools.launchParallelizedCode(() -> {
 
-        for (Chromosome chromosome : handler.getChromosomeArrayWithoutAllByAll()) {
-            List<Feature2D> loops = loopList.get(chromosome.getIndex(), chromosome.getIndex());
-            if (loops != null && loops.size() > 0) {
-                MatrixZoomData zd = HiCFileTools.getMatrixZoomData(dataset, chromosome, chromosome, zoom);
-                if (zd != null) {
-                    try {
-                        List<Feature2D> pinpointedLoops = new ArrayList<>();
-                        for (Feature2D loop : loops) {
+            int threadPair = currChromPair.getAndIncrement();
+            while (threadPair < chromosomePairCounter) {
+                RegionConfiguration config = chromosomePairs.get(threadPair);
+                Chromosome chr1 = config.getChr1();
+                Chromosome chr2 = config.getChr2();
 
-                            int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
+                List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
+                if (loops != null && loops.size() > 0) {
+                    MatrixZoomData zd = HiCFileTools.getMatrixZoomData(dataset, chr1, chr2, zoom);
+                    if (zd != null) {
+                        try {
+                            List<Feature2D> pinpointedLoops = new ArrayList<>();
+                            for (Feature2D loop : loops) {
 
-                            int binXStart = (int) ((loop.getStart1() / resolution) - window);
-                            int binYStart = (int) ((loop.getStart2() / resolution) - window);
+                                int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
 
-                            long time0 = System.nanoTime();
-                            int matrixWidth = 3 * window + 1;
-                            int[][] output = new int[matrixWidth][matrixWidth];
-                            APAUtils.addRawLocalBoundedRegion(output, zd,
-                                    binXStart, binYStart, window, matrixWidth, key);
-                            long time1 = System.nanoTime();
+                                int binXStart = (int) ((loop.getStart1() / resolution) - window);
+                                int binYStart = (int) ((loop.getStart2() / resolution) - window);
 
-                            String saveString = loop.simpleString();
-                            String[] saveStrings = saveString.split("\\s+");
-                            saveString = String.join("_", saveStrings);
+                                int matrixWidth = 3 * window + 1;
+                                int[][] output = new int[matrixWidth][matrixWidth];
+                                APAUtils.addRawLocalBoundedRegion(output, zd,
+                                        binXStart, binYStart, window, matrixWidth, key);
 
-                            //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
+                                String saveString = loop.simpleString();
+                                String[] saveStrings = saveString.split("\\s+");
+                                saveString = String.join("_", saveStrings);
 
-                            long time2 = System.nanoTime();
-                            float[][] kde = ConvolutionTools.sparseConvolution(output);
-                            long time3 = System.nanoTime();
-                            output = null; // clear output
-                            //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
+                                //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
+                                float[][] kde = ConvolutionTools.sparseConvolution(output);
+                                output = null; // clear output
+                                //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
 
-                            long time4 = System.nanoTime();
-                            ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
-                                    pinpointedLoops, loop, outFolder, saveString);
-                            long time5 = System.nanoTime();
+                                ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
+                                        pinpointedLoops, loop, outFolder, saveString);
 
-                            kde = null;
+                                kde = null;
 
-                            interval1 += (time1 - time0);
-                            interval2 += (time3 - time2);
-                            interval3 += (time5 - time4);
-
-                            if (currNumLoops.incrementAndGet() % 5 == 0) {
-                                System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
-                                System.out.println("Times " + interval1 + "  " + interval2 + "  " + interval3);
+                                if (currNumLoops.incrementAndGet() % 20 == 0) {
+                                    System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+                                }
                             }
+                            zd.clearCache();
+
+                            synchronized (key) {
+                                refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
+                            }
+
+                            System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+
+                        } catch (Exception e) {
+                            System.err.println(e.getMessage());
                         }
-                        zd.clearCache();
-
-                        synchronized (key) {
-                            refinedLoops.addByKey(Feature2DList.getKey(chromosome, chromosome), pinpointedLoops);
-                        }
-
-                        System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
-
-                    } catch (Exception e) {
-                        System.err.println(e.getMessage());
                     }
                 }
+                threadPair = currChromPair.getAndIncrement();
             }
-        }
+        });
         return refinedLoops;
     }
 }
