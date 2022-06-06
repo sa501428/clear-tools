@@ -24,12 +24,9 @@
 
 package cli.utils.cc;
 
-import cli.Main;
 import cli.utils.ArrayTools;
 import javastraw.feature2D.Feature2D;
-import javastraw.tools.MatrixTools;
 
-import java.io.File;
 import java.util.*;
 
 /**
@@ -41,11 +38,11 @@ public class ConnectedComponents {
     private static final int IN_QUEUE = -1;
 
     public static void extractMaxima(float[][] kde, int binXStart, int binYStart, int resolution,
-                                     Set<Location2D> locations, Feature2D loop, String outFolder,
+                                     Set<Location2D> locations, Feature2D loop,
                                      String saveString) {
         float threshold = ArrayTools.getMax(kde) * 0.85f;
         if (threshold > 10) {
-            List<LocalMaxima> maxima = detect(kde, threshold, outFolder, saveString);
+            List<LocalMaxima> maxima = detect(kde, threshold, saveString);
             for (LocalMaxima max : maxima) {
                 locations.add(new Location2D(loop.getChr1(), loop.getChr2(), binXStart, binYStart, max, resolution));
             }
@@ -53,7 +50,7 @@ public class ConnectedComponents {
         }
     }
 
-    public static List<LocalMaxima> detect(float[][] image, double threshold, String outFolder, String saveString) {
+    public static List<LocalMaxima> detect(float[][] image, double threshold, String saveString) {
         int r = image.length;
         int c = image[0].length;
 
@@ -74,10 +71,10 @@ public class ConnectedComponents {
             }
         }
 
-        if (Main.printVerboseComments) {
-            MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), image);
-            MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_label.npy")).getAbsolutePath(), labels);
-        }
+        //if (Main.printVerboseComments) {
+        //    MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), image);
+        //    MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_label.npy")).getAbsolutePath(), labels);
+        //}
 
         labels = null;
         return results;

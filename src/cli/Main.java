@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.7.2";
+    public static final String VERSION_NUM = "0.7.3";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
@@ -18,11 +18,11 @@ public class Main {
         System.out.println("\t" + "-v, --verbose verbose mode");
         System.out.println("\t" + "-V, --version print version");
         System.out.println("Commands: \n" +
-                "flags [--cutoff int] [--res int] [--norm string] <hic_file> <bed_file> <out_folder>\n" +
-                "enhance [--res int] [--norm string] <out_folder> <bedpe_file> <hic_files>\n" +
-                "probability [--res int] <hic_file> <bedpe_file> <out_folder>\n" +
-                "pinpoint [--res int] <hic_file> <bedpe_file> <out_folder>\n" +
-                "clean <hic_file> <bedpe_file> <out_file>");
+                "flags [--cutoff int] [--res int] [--norm string] <input.hic> <loops.bedpe> <out_folder>\n" +
+                "enhance [--res int] [--norm string] <out_folder> <loops.bedpe> <hic_files>\n" +
+                "probability [--res int] <input.hic> <loops.bedpe> <out_folder>\n" +
+                "pinpoint [--res int] <input.hic> <loops.bedpe> <output.bedpe>\n" +
+                "clean <input.hic> <loops.bedpe> <output.bedpe>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }

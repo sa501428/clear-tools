@@ -17,7 +17,6 @@ import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
-import javastraw.tools.UNIXTools;
 
 import java.io.File;
 import java.util.*;
@@ -32,7 +31,7 @@ public class Pinpoint {
 
         Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, false, true);
         String loopListPath = args[2];
-        String outFolder = args[3];
+        String outFile = args[3];
 
         ChromosomeHandler handler = dataset.getChromosomeHandler();
 
@@ -41,21 +40,18 @@ public class Pinpoint {
 
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
-        UNIXTools.makeDir(outFolder);
-
         int resolution = resolutionOption;
         if (resolution < 1) {
             resolution = HiCUtils.getHighestResolution(dataset.getBpZooms()).getBinSize();
         }
 
-        Feature2DList refinedLoops = localize(dataset, loopList, handler, outFolder, resolution);
-        refinedLoops.exportFeatureList(new File(outFolder, "pinpoint.bedpe"),
-                false, Feature2DList.ListFormat.NA);
+        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution);
+        refinedLoops.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
         System.out.println("pinpoint complete");
     }
 
     private static Feature2DList localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
-                                          String outFolder, int resolution) {
+                                          int resolution) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
@@ -111,7 +107,7 @@ public class Pinpoint {
                                 //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
 
                                 ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
-                                        locations, loop, outFolder, saveString);
+                                        locations, loop, saveString);
 
                                 kde = null;
 
