@@ -116,7 +116,7 @@ public class Pinpoint {
 
                                 kde = null;
 
-                                if (currNumLoops.incrementAndGet() % 20 == 0) {
+                                if (currNumLoops.incrementAndGet() % 100 == 0) {
                                     System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                                 }
                             }

@@ -14,6 +14,10 @@ Examining Neighborhoods at High-resolution by Aggregating Nearby Contact Events
 
 Peak Intensity (or Identification) Near Points Of INTeraction
 
+# RECAP
+
+Ratios and Enrichments Compared Across Phenotypes
+
 ### old name: amplifi
 
 Aggregating Mixed Peaks Leading to Improved Focal Intensity
