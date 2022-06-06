@@ -27,6 +27,9 @@ package cli.utils.cc;
 import cli.utils.ArrayTools;
 import javastraw.feature2D.Feature2D;
 
+import java.awt.*;
+import java.util.List;
+import java.util.Queue;
 import java.util.*;
 
 /**
@@ -37,14 +40,24 @@ public class ConnectedComponents {
     private static final int NOT_SET = 0;
     private static final int IN_QUEUE = -1;
 
-    public static void extractMaxima(float[][] kde, int binXStart, int binYStart, int resolution,
-                                     Set<Location2D> locations, Feature2D loop,
-                                     String saveString) {
+    public static void extractMaxima(float[][] kde, int binXStart, int binYStart, long resolution,
+                                     List<Feature2D> pinpointedLoops, Feature2D loop, String saveString) {
         float threshold = ArrayTools.getMax(kde) * 0.85f;
         if (threshold > 10) {
             List<LocalMaxima> maxima = detect(kde, threshold, saveString);
             for (LocalMaxima max : maxima) {
-                locations.add(new Location2D(loop.getChr1(), loop.getChr2(), binXStart, binYStart, max, resolution));
+                Map<String, String> attributes = new HashMap<>();
+                attributes.put("pinpoint_area", "" + max.area);
+                attributes.put("pinpoint_enrichment", "" + max.maxVal);
+
+                long start1 = resolution * (binXStart + max.maxCoordinate.x);
+                long start2 = resolution * (binYStart + max.maxCoordinate.y);
+                long end1 = start1 + resolution;
+                long end2 = start2 + resolution;
+
+                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
+                        loop.getChr2(), start2, end2, Color.BLACK, attributes);
+                pinpointedLoops.add(feature);
             }
             maxima.clear();
         }

@@ -6,7 +6,6 @@ import cli.apa.RegionConfiguration;
 import cli.utils.ConvolutionTools;
 import cli.utils.HiCUtils;
 import cli.utils.cc.ConnectedComponents;
-import cli.utils.cc.Location2D;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -19,7 +18,9 @@ import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -84,15 +85,15 @@ public class Pinpoint {
                     MatrixZoomData zd = HiCFileTools.getMatrixZoomData(dataset, chr1, chr2, zoom);
                     if (zd != null) {
                         try {
-                            Set<Location2D> locations = new HashSet<>();
+                            List<Feature2D> pinpointedLoops = new ArrayList<>();
                             for (Feature2D loop : loops) {
 
-                                int window = (15000 / resolution + 1);
+                                int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
 
-                                int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
-                                int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
+                                int binXStart = (int) ((loop.getStart1() / resolution) - window);
+                                int binYStart = (int) ((loop.getStart2() / resolution) - window);
 
-                                int matrixWidth = 2 * window + 1;
+                                int matrixWidth = 3 * window + 1;
                                 int[][] output = new int[matrixWidth][matrixWidth];
                                 APAUtils.addRawLocalBoundedRegion(output, zd,
                                         binXStart, binYStart, window, matrixWidth, key);
@@ -107,7 +108,7 @@ public class Pinpoint {
                                 //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
 
                                 ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
-                                        locations, loop, saveString);
+                                        pinpointedLoops, loop, saveString);
 
                                 kde = null;
 
@@ -117,12 +118,9 @@ public class Pinpoint {
                             }
                             zd.clearCache();
 
-                            List<Feature2D> pinpointedLoops = convertToFeature2D(locations);
-                            locations.clear();
                             synchronized (key) {
                                 refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
                             }
-                            pinpointedLoops.clear();
 
                             System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
 
@@ -135,13 +133,5 @@ public class Pinpoint {
             }
         });
         return refinedLoops;
-    }
-
-    private static List<Feature2D> convertToFeature2D(Set<Location2D> locations) {
-        List<Feature2D> features = new ArrayList<>();
-        for (Location2D location : locations) {
-            features.add(location.toFeature2D());
-        }
-        return features;
     }
 }
