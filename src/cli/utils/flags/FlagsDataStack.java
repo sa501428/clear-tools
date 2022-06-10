@@ -34,7 +34,7 @@ public class FlagsDataStack {
     private final File dataDirectory;
     private final String customPrefix;
     private final int n;
-    private double[][] apaMatrix;
+    private final double[][] apaMatrix;
 
     public FlagsDataStack(int n, File outputFolder, String customPrefix) {
         this.n = n;

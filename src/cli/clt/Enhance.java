@@ -20,8 +20,9 @@ import javastraw.tools.UNIXTools;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -92,12 +93,10 @@ public class Enhance {
                 if(loops.size() > 0) {
                     String newMND = (new File(outFolder, config.getPairKey() + ".mnd")).getAbsolutePath();
                     try {
-                        BufferedWriter bwMND = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(newMND)));
-                        for (int li = 0; li < loops.size(); li++) {
-                            Feature2D loop = loops.get(li);
-
+                        BufferedWriter bwMND = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(Paths.get(newMND))));
+                        for (Feature2D loop : loops) {
                             int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
-                            window = Math.max(window, 10000/resolution);
+                            window = Math.max(window, 10000 / resolution);
                             int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
                             int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
 
@@ -148,8 +147,7 @@ public class Enhance {
                     }
                 }
 
-                for (int di = 0; di < datasets.length; di++) {
-                    final Dataset ds = datasets[di];
+                for (final Dataset ds : datasets) {
                     MatrixZoomData zd;
                     synchronized (ds) {
                         zd = HiCFileTools.getMatrixZoomData(ds, chr1, chr2, zoom);

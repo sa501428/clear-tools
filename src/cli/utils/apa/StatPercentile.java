@@ -50,7 +50,7 @@ public class StatPercentile {
         for (int i = 0; i < statsData.length; i++) {
             if (statsData[i] >= val) {
                 if (statsData[i] > val) {
-                    return Math.max(0.0, i / statsData.length);
+                    return Math.max(0.0, i / (double) statsData.length);
                 } else {
                     double percentile = 0;
                     int num = 0;

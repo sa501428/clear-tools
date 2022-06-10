@@ -119,6 +119,7 @@ public class Cleaner {
         for (int k = x0; k < x0 + window + 1; k++) {
             if (valueIsBad(vector1[k]) || valueIsBad(vector2[k])) {
                 normValuesAreGood = false;
+                break;
             }
         }
 

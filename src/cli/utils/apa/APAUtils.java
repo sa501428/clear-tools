@@ -34,8 +34,13 @@ import javastraw.tools.MatrixTools;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,7 +60,7 @@ public class APAUtils {
         APARegionStatistics apaStats = new APARegionStatistics(matrix, currentRegionWidth);
 
         try {
-            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filename), StandardCharsets.UTF_8));
+            writer = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(Paths.get(filename)), StandardCharsets.UTF_8));
             writer.write("P2M" + '\t' + apaStats.getPeak2mean() + '\n');
             writer.write("P2UL" + '\t' + apaStats.getPeak2UL() + '\n');
             writer.write("P2UR" + '\t' + apaStats.getPeak2UR() + '\n');
@@ -77,7 +82,7 @@ public class APAUtils {
     public static void saveListText(String filename, List<Double> array) {
         Writer writer = null;
         try {
-            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filename), StandardCharsets.UTF_8));
+            writer = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(Paths.get(filename)), StandardCharsets.UTF_8));
             for (double val : array) {
                 writer.write(val + " ");
             }
@@ -181,7 +186,7 @@ public class APAUtils {
     }
 
     public static RealMatrix extractLocalizedExpectedData(ExpectedValueFunction df, Chromosome chr, Feature2D loop, int L, int resolution,
-                                                          int window) throws IOException {
+                                                          int window) {
         int loopX = (int) (loop.getMidPt1() / resolution);
         int loopY = (int) (loop.getMidPt2() / resolution);
         int binXStart = loopX - window;
@@ -209,27 +214,6 @@ public class APAUtils {
         vectors.add(HiCFileTools.extractLocalRowSums(zd, binYStart, binYEnd, 0, chrYend, L, norm, false));
 
         return vectors;
-    }
-
-    public static RealMatrix extractLocalizedDataForAFA(MatrixZoomData zd, Feature2D loop,
-                                                        int resolution, int window, NormalizationType norm) throws IOException {
-        long loopX = loop.getMidPt1() / resolution;
-        long loopY = loop.getMidPt2() / resolution;
-        long binXStart = loopY;
-        long binXEnd = loopX + (window + 1);
-        long binYStart = loopY - window;
-        long binYEnd = loopX + 1;
-        int L = (int) (binXStart - binXEnd);
-        int dis = zd.getBinSize();
-        /*int loopX = loop.getMidPt1() / resolution;
-        int loopY = loop.getMidPt2() / resolution;
-        int binXStart = loopX - window;
-        int binXEnd = loopY+1;
-        int binYStart = loopX;
-        int binYEnd = loopY + window;
-        L = binXStart - binXEnd;*/
-
-        return HiCFileTools.extractLocalBoundedRegion(zd, binXStart, binXEnd, binYStart, binYEnd, L, L, norm, false);
     }
 
     public static RealMatrix linearInterpolation(RealMatrix original, int targetNumRows, int targetNumCols) {
@@ -304,29 +288,6 @@ public class APAUtils {
         return newMatrix;
     }
 
-    public static RealMatrix boxSampling(RealMatrix original, int targetNumRows, int targetNumCols) {
-        //This method scale down a matrix using box sampling
-        RealMatrix resizedMatrix = MatrixTools.cleanArray2DMatrix(targetNumRows, targetNumCols);
-        int rowScale = original.getRowDimension() / resizedMatrix.getRowDimension();
-        int colScale = original.getColumnDimension() / resizedMatrix.getColumnDimension();
-        RealMatrix tile = MatrixTools.cleanArray2DMatrix(rowScale, colScale);
-        int r, c, i, j;
-        double value;
-        for (r = 0; r < resizedMatrix.getRowDimension(); r += rowScale) {
-            for (c = 0; c < resizedMatrix.getColumnDimension(); c += colScale) {
-                //add values to entries in tile matrix
-                for (i = 0; i < rowScale; i++) {
-                    for (j = 0; j < colScale; j++) {
-                        tile.addToEntry(i, j, original.getEntry(r + i, c + j));
-                    }
-                }
-                value = maxInMatrix(tile);
-                resizedMatrix.addToEntry(r / rowScale, c / colScale, value);
-            }
-        }
-        return resizedMatrix;
-    }
-
     public static double maxInMatrix(RealMatrix matrix) {
         double result = matrix.getEntry(0, 0);
         int r, c;
@@ -338,25 +299,5 @@ public class APAUtils {
             }
         }
         return result;
-    }
-
-    static int lcm(int a, int b) {
-        return (a * b) / gcd(a, b);
-    }
-
-    static int gcd(int a, int b) {
-        if (a == 0 || b == 0) return 0;
-        if (a == b) return a;
-        if (a > b) return gcd(a - b, b);
-        return gcd(b - a, a);
-    }
-
-    public static RealMatrix matrixScaling(RealMatrix original, int targetNumRows, int targetNumCols) {
-        int intermediateRowDimention = lcm(original.getRowDimension(), targetNumRows);
-        int intermediateColDimention = lcm(original.getColumnDimension(), targetNumCols);
-        RealMatrix intermediateMatrix = linearInterpolation(original, intermediateRowDimention, intermediateColDimention);
-        // scale the intermediate down with box sampling
-        RealMatrix resizedMatrix = boxSampling(intermediateMatrix, targetNumRows, targetNumCols);
-        return resizedMatrix;
     }
 }

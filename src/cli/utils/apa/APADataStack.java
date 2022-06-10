@@ -53,13 +53,13 @@ public class APADataStack {
     private static int matrixSize;
     // chromosome wide variables
     private static boolean chromosomeWideVariablesNotSet = true;
-    private static Map<Integer, RealMatrix> chrAPAMatrices = new HashMap<>();
-    private static Map<Integer, RealMatrix> chrNormedAPAMatrices = new HashMap<>();
-    private static Map<Integer, RealMatrix> chrCenterNormedAPAMatrices = new HashMap<>();
-    private static Map<Integer, RealMatrix> chrRankAPAMatrices = new HashMap<>();
-    private static Map<Integer, List<Double>> chrEnhancements = new ConcurrentHashMap<>();
-    private static Map<Integer, RealMatrix> chrUpstreamAnchorRowSums = new HashMap<>();
-    private static Map<Integer, RealMatrix> chrDownstreamAnchorRowSums = new HashMap<>();
+    private static final Map<Integer, RealMatrix> chrAPAMatrices = new HashMap<>();
+    private static final Map<Integer, RealMatrix> chrNormedAPAMatrices = new HashMap<>();
+    private static final Map<Integer, RealMatrix> chrCenterNormedAPAMatrices = new HashMap<>();
+    private static final Map<Integer, RealMatrix> chrRankAPAMatrices = new HashMap<>();
+    private static final Map<Integer, List<Double>> chrEnhancements = new ConcurrentHashMap<>();
+    private static final Map<Integer, RealMatrix> chrUpstreamAnchorRowSums = new HashMap<>();
+    private static final Map<Integer, RealMatrix> chrDownstreamAnchorRowSums = new HashMap<>();
 
     // aggregate normalization variable
     private static boolean aggregateNormVariablesNotSet = true;
@@ -225,8 +225,6 @@ public class APADataStack {
         MatrixTools.cleanUpNaNs(newVectors.get(1));
         upstreamAnchorRowSums = upstreamAnchorRowSums.add(newVectors.get(0));
         downstreamAnchorRowSums = downstreamAnchorRowSums.add(newVectors.get(1));
-        //System.out.println(MatrixTools.sum(upstreamAnchorRowSums.getData()) + " " + MatrixTools.sum(downstreamAnchorRowSums.getData()) + " " + MatrixTools.sum(newVectors.get(0).getData()) + " " + MatrixTools.sum(newVectors.get(1).getData()));
-        //System.out.println(upstreamAnchorRowSums.transpose().getNorm() + " " + downstreamAnchorRowSums.transpose().getNorm());
     }
 
     public void updateGenomeWideData() {

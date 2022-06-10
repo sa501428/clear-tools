@@ -57,7 +57,7 @@ public class APA {
     private final String loopListPath;
     private final File outputDirectory;
     private final Dataset ds;
-    private final NormalizationType norm;
+    private NormalizationType norm;
     //defaults
     // TODO right now these units are based on n*res/sqrt(2)
     // TODO the sqrt(2) scaling should be removed (i.e. handle scaling internally)
@@ -83,7 +83,13 @@ public class APA {
         loopListPath = args[2];
         outputDirectory = HiCFileTools.createValidDirectory(args[3]);
 
-        norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{parser.getNormalizationStringOption(), "SCALE", "KR", "NONE"});
+        String possibleNorm = parser.getNormalizationStringOption();
+        try {
+            norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+        } catch (Exception e) {
+            norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
+        }
+        System.out.println("Using normalization: " + norm.getLabel());
         window = parser.getWindowSizeOption(10);
         minPeakDist = parser.getMinDistVal(2 * window);
         maxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
@@ -95,9 +101,9 @@ public class APA {
     }
 
     private void printUsageAndExit() {
-        System.out.println("apa [-n minval] [-x maxval] [-w window] [-r resolution(s)] [-c chromosomes]" +
-                " [-k NONE/VC/VC_SQRT/KR] [-q corner_width] [-e include_inter_chr] [-u save_all_data] [--aggnorm]" +
-                " <hicFile(s)> <PeaksFile> <SaveFolder>");
+        System.out.println("apa [--min-dist minval] [--max-dist max_val] [--window window] [-r resolution]" +
+                " [-k NONE/VC/VC_SQRT/KR] [--corner-width corner_width] [--include-inter include_inter_chr] [--ag-norm]" +
+                " <input.hic> <loops.bedpe> <outfolder>");
         System.exit(19);
     }
 
@@ -189,7 +195,7 @@ public class APA {
                                             apaDataStack.addRowSums(newVectors);
                                         }
                                     } catch (Exception e) {
-                                        System.err.println(e);
+                                        System.err.println(e.getLocalizedMessage());
                                         System.err.println("Unable to find data for loop: " + loop);
                                     }
                                 }

@@ -32,15 +32,6 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
  * Created by muhammadsaadshamim on 5/4/15.
  */
 public class APARegionStatistics {
-
-    //public static int regionWidth = 6;
-    //width of boxes
-    //int totWidth = x.getColumnDimension();
-    //float widthp5 = width + .5f;
-    //float half_width = width/2f;
-    //private int mdpt, max;
-    //private double centralVal;
-
     private final double peak2mean;
     private final double peak2UL;
     private final double avgUR;
