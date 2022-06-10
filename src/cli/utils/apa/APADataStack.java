@@ -64,9 +64,6 @@ public class APADataStack {
     // aggregate normalization variable
     private static boolean aggregateNormVariablesNotSet = true;
     private static boolean aggregateNormalization;
-
-    // saving data variables
-    private static int[] axesRange;
     private static File dataDirectory;
     private static RealMatrix upstreamAnchorRowSums;
     private static RealMatrix downstreamAnchorRowSums;
@@ -94,7 +91,6 @@ public class APADataStack {
         initializeGenomeWideVariables(n);
         initializeChromosomeWideVariables(n, nChr);
         initializeAggregateNormalizationVariables(aggNorm);
-        axesRange = new int[]{-n / 2, 1, -n / 2, 1};
     }
 
     /**
@@ -176,10 +172,6 @@ public class APADataStack {
         }
     }
 
-    public static APARegionStatistics retrieveDataStatistics(int currentRegionWidth) {
-        return new APARegionStatistics(gwAPAMatrix, currentRegionWidth);
-    }
-
     private static void saveDataSet(String prefix, RealMatrix[] apaMatrices, String[] apaDataTitles, Integer[] peakNumbers) {
 
         File subFolder = HiCFileTools.createValidDirectory(new File(dataDirectory, prefix).getAbsolutePath());
@@ -201,7 +193,6 @@ public class APADataStack {
     }
 
     public static void clearAllData() {
-        axesRange = null;
         dataDirectory = null;
         genomeWideVariablesNotSet = true;
         gwAPAMatrix = null;
@@ -253,9 +244,5 @@ public class APADataStack {
         synchronized (chrEnhancements) {
             chrEnhancements.get(chrPair).addAll(enhancement);
         }
-    }
-
-    public void thresholdPlots(int val) {
-        MatrixTools.thresholdValues(APAMatrix, val);
     }
 }

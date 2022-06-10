@@ -84,35 +84,7 @@ public class FlagsRegionStatistics {
         return statistics(x).getMean();
     }
 
-    public double getPeak2mean() {
-        return peak2mean;
-    }
-
-    public double getPeak2UL() {
-        return peak2UL;
-    }
-
-    public double getPeak2UR() {
-        return peak2UR;
-    }
-
-    public double getPeak2LL() {
-        return peak2LL;
-    }
-
-    public double getPeak2LR() {
-        return peak2LR;
-    }
-
-    public double getZscoreLL() {
-        return ZscoreLL;
-    }
-
     public double[] getAllValues() {
         return new double[]{peak2mean, avgUR, peak2UL, peak2UR, peak2LL, peak2LR, ZscoreLL};
-    }
-
-    public double getMeanUR() {
-        return avgUR;
     }
 }

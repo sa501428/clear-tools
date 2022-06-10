@@ -26,7 +26,6 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.apa.APADataStack;
-import cli.utils.apa.APARegionStatistics;
 import cli.utils.apa.APAUtils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -53,7 +52,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Various updates by mshamim and suhas-rao
  */
 public class APA {
-    private final Object key = new Object();
     private final String loopListPath;
     private final File outputDirectory;
     private final Dataset ds;
@@ -61,18 +59,13 @@ public class APA {
     //defaults
     // TODO right now these units are based on n*res/sqrt(2)
     // TODO the sqrt(2) scaling should be removed (i.e. handle scaling internally)
-    private int minPeakDist = 30; // distance between two bins, can be changed in opts
-    private int maxPeakDist = Integer.MAX_VALUE;
+    private final int minPeakDist; // distance between two bins, can be changed in opts
+    private final int maxPeakDist;
     private final int window;
     private final int numCPUThreads;
     private final int resolution;
-    private final int regionWidth;
     private final boolean includeInterChr;
     private final boolean aggregateNormalization;
-
-    public static String getBasicUsage() {
-        return "apa <hicFile(s)> <PeaksFile> <SaveFolder>";
-    }
 
     public APA(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
@@ -94,7 +87,6 @@ public class APA {
         minPeakDist = parser.getMinDistVal(2 * window);
         maxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
         includeInterChr = parser.getIncludeInterChromosomal();
-        regionWidth = parser.getCornerRegionDimensionOption(window / 2);
         resolution = parser.getResolutionOption(5000);
         numCPUThreads = parser.getNumThreads(4);
         aggregateNormalization = parser.getAggregateNormalization();
@@ -221,8 +213,6 @@ public class APA {
             }
 
             System.out.println("Exporting APA results...");
-            //save data as int array
-            APARegionStatistics result = APADataStack.retrieveDataStatistics(regionWidth); //should retrieve data
             Integer[] gwPeakNumbersArray = {gwPeakNumbers[0].get(), gwPeakNumbers[1].get(), gwPeakNumbers[2].get()};
             APADataStack.exportGenomeWideData(gwPeakNumbersArray);
             APADataStack.clearAllData();

@@ -31,7 +31,6 @@ import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
-import org.apache.commons.math3.linear.RealMatrix;
 
 import java.util.List;
 
@@ -39,14 +38,6 @@ import java.util.List;
  * Created by Muhammad Shamim on 1/21/15.
  */
 public class Utils {
-
-    public static RealMatrix standardNormalization(RealMatrix matrix) {
-        return matrix.copy().scalarMultiply(1. / Math.max(1., mean(matrix)));
-    }
-
-    public static double mean(RealMatrix matrix) {
-        return FlagsRegionStatistics.statistics(matrix.getData()).getMean();
-    }
 
     public static void addLocalizedData(double[][] matrix, MatrixZoomData zd, Feature2D loop,
                                         int matrixWidth, int resolution, int window, NormalizationType norm, final Object key) {

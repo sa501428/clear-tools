@@ -25,22 +25,15 @@
 package cli.utils.apa;
 
 import javastraw.feature2D.Feature2D;
-import javastraw.reader.basics.Chromosome;
-import javastraw.reader.expected.ExpectedValueFunction;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,60 +41,17 @@ import java.util.List;
  * Created by Muhammad Shamim on 1/21/15.
  */
 public class APAUtils {
-
-    /**
-     * @param filename
-     * @param matrix
-     */
-    public static void saveMeasures(String filename, RealMatrix matrix, int currentRegionWidth) {
-
-        Writer writer = null;
-
-        APARegionStatistics apaStats = new APARegionStatistics(matrix, currentRegionWidth);
-
-        try {
-            writer = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(Paths.get(filename)), StandardCharsets.UTF_8));
-            writer.write("P2M" + '\t' + apaStats.getPeak2mean() + '\n');
-            writer.write("P2UL" + '\t' + apaStats.getPeak2UL() + '\n');
-            writer.write("P2UR" + '\t' + apaStats.getPeak2UR() + '\n');
-            writer.write("P2LL" + '\t' + apaStats.getPeak2LL() + '\n');
-            writer.write("P2LR" + '\t' + apaStats.getPeak2LR() + '\n');
-            writer.write("ZscoreLL" + '\t' + apaStats.getZscoreLL());
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            try {
-                if (writer != null)
-                    writer.close();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
-
-    public static void saveListText(String filename, List<Double> array) {
-        Writer writer = null;
-        try {
-            writer = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(Paths.get(filename)), StandardCharsets.UTF_8));
-            for (double val : array) {
-                writer.write(val + " ");
-            }
-            writer.write("\n");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            try {
-                if (writer != null)
-                    writer.close();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
-
     public static RealMatrix standardNormalization(RealMatrix matrix) {
         return matrix.copy().scalarMultiply(1. /
-                Math.max(1., APARegionStatistics.statistics(matrix.getData()).getMean()));
+                Math.max(1., statistics(matrix.getData()).getMean()));
+    }
+
+    public static DescriptiveStatistics statistics(double[][] x) {
+        DescriptiveStatistics stats = new DescriptiveStatistics();
+        for (double[] row : x)
+            for (double val : row)
+                stats.addValue(val);
+        return stats;
     }
 
 
@@ -147,14 +97,6 @@ public class APAUtils {
         return matrix;
     }
 
-    /**
-     * Size filtering of loops
-     *
-     * @param features
-     * @param minPeakDist
-     * @param maxPeakDist
-     * @return
-     */
     public static ArrayList<Feature2D> filterFeaturesBySize(List<Feature2D> features,
                                                             double minPeakDist, double maxPeakDist, int resolution) {
         ArrayList<Feature2D> sizeFilteredFeatures = new ArrayList<>();
@@ -185,18 +127,6 @@ public class APAUtils {
         return HiCFileTools.extractLocalBoundedRegion(zd, binXStart, binXEnd, binYStart, binYEnd, L, L, norm, false);
     }
 
-    public static RealMatrix extractLocalizedExpectedData(ExpectedValueFunction df, Chromosome chr, Feature2D loop, int L, int resolution,
-                                                          int window) {
-        int loopX = (int) (loop.getMidPt1() / resolution);
-        int loopY = (int) (loop.getMidPt2() / resolution);
-        int binXStart = loopX - window;
-        int binXEnd = loopX + (window + 1);
-        int binYStart = loopY - window;
-        int binYEnd = loopY + (window + 1);
-
-        return HiCFileTools.extractLocalBoundedExpectedRegion(df, chr, binXStart, binYStart, L, L);
-    }
-
     public static List<RealMatrix> extractLocalizedRowSums(MatrixZoomData zd, Feature2D loop,
                                                            int L, int resolution, int window, NormalizationType norm) throws IOException {
         long loopX = loop.getMidPt1() / resolution;
@@ -214,90 +144,5 @@ public class APAUtils {
         vectors.add(HiCFileTools.extractLocalRowSums(zd, binYStart, binYEnd, 0, chrYend, L, norm, false));
 
         return vectors;
-    }
-
-    public static RealMatrix linearInterpolation(RealMatrix original, int targetNumRows, int targetNumCols) {
-        int r, c, i = 0, j = 0; //i is index of  newRPos, j is index of newCPos
-        int[] newRPos = new int[original.getRowDimension()];
-        int[] newCPos = new int[original.getColumnDimension()];
-        int rowFolds, colFolds, cSpan, rSpan; //cSpan is distance of 2 nearby original entries of the same row in resized matrix
-        //rSpan is distance of 2 nearby original entries of the same column in resized matrix
-        double value;
-        //Resizing (magnifying) matrix using linear interpolation
-        // initialize final matrix
-        RealMatrix resizedMatrix = MatrixTools.cleanArray2DMatrix(targetNumRows, targetNumCols);
-        //For every entries in the original matrix add it to the resized matrix
-        rowFolds = targetNumRows / original.getRowDimension();
-        colFolds = targetNumCols / original.getColumnDimension();
-        for (r = 0; r < original.getRowDimension(); r++) {
-            newRPos[r] = r * rowFolds;
-            for (c = 0; c < original.getColumnDimension(); c++) {
-                newCPos[c] = c * colFolds;
-                resizedMatrix.addToEntry(newRPos[r], newCPos[c], original.getEntry(r, c));
-            }
-        }
-        cSpan = newCPos[1] - newCPos[0];
-        rSpan = newRPos[1] - newRPos[0];
-        //For every entry in the row that contains the entries from the original matrix, calculate and add its value using linear interpolation
-        double currentOgEntry = 0;
-        double nextOgEntry = 0;
-        double fraction = 0;
-        for (i = 0; i < newRPos.length; i++) {
-            r = newRPos[i];
-            for (c = 0; c < resizedMatrix.getColumnDimension(); c++) {
-                if (c >= newCPos[newCPos.length - 1]) {
-                    resizedMatrix.addToEntry(r, c, resizedMatrix.getEntry(r, newCPos[newCPos.length - 1]));
-                } else {
-                    currentOgEntry = resizedMatrix.getEntry(r, c - c % cSpan);
-                    nextOgEntry = resizedMatrix.getEntry(r, c + cSpan - c % cSpan);
-                    fraction = (((double) cSpan) - (double) (c % cSpan)) / (double) cSpan;
-                    value = currentOgEntry * fraction + nextOgEntry * (1.0 - fraction);
-                    resizedMatrix.addToEntry(r, c, value);
-                }
-            }
-        }
-        //For every other entry in the resized matrix, calculate its value using linear interpolation
-        i = 0;
-        j = 0;
-        for (r = 0; r < resizedMatrix.getRowDimension(); r++) {
-            if (r != newRPos[i] && r < newRPos[newRPos.length - 1]) {
-                for (c = 0; c < resizedMatrix.getColumnDimension(); c++) {
-                    currentOgEntry = resizedMatrix.getEntry(r - r % rSpan, c);
-                    nextOgEntry = resizedMatrix.getEntry(r + rSpan - r % rSpan, c);
-                    fraction = (double) (r % rSpan) / (double) rSpan;
-                    value = currentOgEntry * (1.0 - fraction) + nextOgEntry * fraction;
-                    resizedMatrix.addToEntry(r, c, value);
-                }
-            } else {
-                for (c = 0; c < resizedMatrix.getColumnDimension(); c++) {
-                    resizedMatrix.addToEntry(r, c, resizedMatrix.getEntry(newRPos[newRPos.length - 1], c));
-                }
-            }
-        }
-        return resizedMatrix;
-    }
-
-    public static RealMatrix expandWithZeros(RealMatrix original, int targetNumRows, int targetNumCols) {
-        int r, c;
-        RealMatrix newMatrix = MatrixTools.cleanArray2DMatrix(targetNumRows, targetNumCols);
-        for (r = 0; r < original.getRowDimension(); r++) {
-            for (c = 0; c < original.getColumnDimension(); c++) {
-                newMatrix.addToEntry(r, c, original.getEntry(r, c));
-            }
-        }
-        return newMatrix;
-    }
-
-    public static double maxInMatrix(RealMatrix matrix) {
-        double result = matrix.getEntry(0, 0);
-        int r, c;
-        double entry;
-        for (r = 0; r < matrix.getRowDimension(); r++) {
-            for (c = 0; c < matrix.getColumnDimension(); c++) {
-                entry = matrix.getEntry(r, c);
-                if (result < entry) result = entry;
-            }
-        }
-        return result;
     }
 }
