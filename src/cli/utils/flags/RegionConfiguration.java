@@ -1,4 +1,4 @@
-package cli.apa;
+package cli.utils.flags;
 
 import javastraw.reader.basics.Chromosome;
 

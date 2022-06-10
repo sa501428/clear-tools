@@ -1,9 +1,9 @@
 package cli.clt;
 
 import cli.Main;
-import cli.apa.RegionConfiguration;
 import cli.utils.HiCUtils;
 import cli.utils.VectorCleanerUtils;
+import cli.utils.flags.RegionConfiguration;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;

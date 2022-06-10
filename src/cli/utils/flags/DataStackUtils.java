@@ -1,4 +1,4 @@
-package cli.apa;
+package cli.utils.flags;
 
 import javastraw.reader.basics.Chromosome;
 
@@ -6,12 +6,12 @@ import java.io.File;
 
 public class DataStackUtils {
 
-    public static APADataStack[] initialize(Chromosome[] chromosomeArray, int matrixWidth, File outputDirectory,
-                                            String prefix) {
+    public static FlagsDataStack[] initialize(Chromosome[] chromosomeArray, int matrixWidth, File outputDirectory,
+                                              String prefix) {
         int maxNumIntraStacks = getMaxNumIntraStacks(chromosomeArray);
-        APADataStack[] stacks = new APADataStack[maxNumIntraStacks];
+        FlagsDataStack[] stacks = new FlagsDataStack[maxNumIntraStacks];
         for (int z = 0; z < stacks.length; z++) {
-            stacks[z] = new APADataStack(matrixWidth, outputDirectory, prefix + "intra_" + z + "_");
+            stacks[z] = new FlagsDataStack(matrixWidth, outputDirectory, prefix + "intra_" + z + "_");
         }
         return stacks;
     }

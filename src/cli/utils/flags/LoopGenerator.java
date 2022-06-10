@@ -1,4 +1,4 @@
-package cli.apa;
+package cli.utils.flags;
 
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.feature2D.Feature2D;

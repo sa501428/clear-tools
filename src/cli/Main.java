@@ -54,6 +54,9 @@ public class Main {
             Cleaner.run(args);
         } else if (command.startsWith("prob")) {
             Probability.run(args, parser.getResolutionOption(Main.DEFAULT_RESOLUTION), parser.getLogOption());
+        } else if (command.startsWith("apa")) {
+            APA apa = new APA(args, parser);
+            apa.run();
         } else {
             printGeneralUsageAndExit(3);
         }

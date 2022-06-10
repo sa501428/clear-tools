@@ -1,11 +1,11 @@
 package cli.clt;
 
 import cli.Main;
-import cli.apa.APAUtils;
-import cli.apa.RegionConfiguration;
 import cli.utils.ConvolutionTools;
 import cli.utils.HiCUtils;
 import cli.utils.cc.ConnectedComponents;
+import cli.utils.flags.RegionConfiguration;
+import cli.utils.flags.Utils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -95,7 +95,7 @@ public class Pinpoint {
 
                                 int matrixWidth = 3 * window + 1;
                                 int[][] output = new int[matrixWidth][matrixWidth];
-                                APAUtils.addRawLocalBoundedRegion(output, zd,
+                                Utils.addRawLocalBoundedRegion(output, zd,
                                         binXStart, binYStart, window, matrixWidth, key);
 
                                 String saveString = loop.simpleString();

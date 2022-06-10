@@ -49,122 +49,48 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Aggregate Peak Analysis developed by mhuntley
- * <p/>
  * Implemented in Juicer by mshamim
- * <p/>
- * ---
- * APA
- * ---
- * The "apa" command takes three required arguments and a number of optional
- * arguments.
- * <p/>
- * apa [-n minval] [-x maxval] [-w window]  [-r resolution(s)] [-c chromosome(s)]
- * [-k NONE/VC/VC_SQRT/KR] <HiC file(s)> <PeaksFile> <SaveFolder> [SavePrefix]
- * <p/>
- * The required arguments are:
- * <p/>
- * <hic file(s)>: Address of HiC File(s) which should end with ".hic". This is the file you will
- * load into Juicebox. URLs or local addresses may be used. To sum multiple HiC Files together,
- * use the '+' symbol between the addresses (no whitespace between addresses)
- * <PeaksFile>: List of peaks in standard 2D feature format (chr1 x1 x2 chr2 y1 y2 color ...)
- * <SaveFolder>: Working directory where outputs will be saved
- * <p/>
- * The optional arguments are:
- * -n <int> minimum distance away from the diagonal. Used to filter peaks too close to the diagonal.
- * Units are in terms of the provided resolution. (e.g. -n 30 @ resolution 5kB will filter loops
- * within 30*(5000/sqrt(2)) units of the diagonal)
- * -x <int> maximum distance away from the diagonal. Used to filter peaks too far from the diagonal.
- * Units are in terms of the provided resolution. (e.g. -n 30 @ resolution 5kB will filter loops
- * further than 30*(5000/sqrt(2)) units of the diagonal)
- * -r <int(s)> resolution for APA; multiple resolutions can be specified using commas (e.g. 5000,10000)
- * -c <String(s)> Chromosome(s) on which APA will be run. The number/letter for the chromosome can be
- * used with or without appending the "chr" string. Multiple chromosomes can be specified using
- * commas (e.g. 1,chr2,X,chrY)
- * -k <NONE/VC/VC_SQRT/KR> Normalizations (case sensitive) that can be selected. Generally,
- * KR (Knight-Ruiz) balancing should be used when available.
- * <p/>
- * Default settings of optional arguments:
- * -n 30
- * -x (infinity)
- * -r 25000,10000
- * -c (all_chromosomes)
- * -k KR
- * <p/>
- * ------------
- * APA Examples
- * ------------
- * <p/>
- * apa HIC006.hic all_loops.txt results1
- * > This command will run APA on HIC006 using loops from the all_loops files
- * > and save them under the results1 folder.
- * <p/>
- * apa https://hicfiles.s3.amazonaws.com/hiseq/gm12878/in-situ/combined.hic
- * all_loops.txt results1
- * > This command will run APA on the GM12878 mega map using loops from the all_loops
- * > files and save them under the results1 folder.
- * <p/>
- * apa -r 10000,5000 -c 17,18 HIC006.hic+HIC007.hic all_loops.txt results
- * > This command will run APA at 50 kB resolution on chromosomes 17 and 18 for the
- * > summed HiC maps (HIC006 and HIC007) using loops from the all_loops files
- * > and save them under the results folder
+ * Various updates by mshamim and suhas-rao
  */
 public class APA {
     private final Object key = new Object();
-    private boolean dontIncludePlots = false;
-    private String loopListPath;
-    private File outputDirectory;
-    private Dataset ds;
-    private NormalizationType norm;
+    private final String loopListPath;
+    private final File outputDirectory;
+    private final Dataset ds;
+    private final NormalizationType norm;
     //defaults
     // TODO right now these units are based on n*res/sqrt(2)
     // TODO the sqrt(2) scaling should be removed (i.e. handle scaling internally)
     private int minPeakDist = 30; // distance between two bins, can be changed in opts
     private int maxPeakDist = Integer.MAX_VALUE;
-    private int window = 10;
-    private int numCPUThreads = 4;
-    private int resolution = 5000;
-    private int regionWidth = 10;
-    private boolean includeInterChr = false;
-    private boolean aggregateNormalization = false;
+    private final int window;
+    private final int numCPUThreads;
+    private final int resolution;
+    private final int regionWidth;
+    private final boolean includeInterChr;
+    private final boolean aggregateNormalization;
 
     public static String getBasicUsage() {
         return "apa <hicFile(s)> <PeaksFile> <SaveFolder>";
     }
 
-    protected void readArguments(String[] args, CommandLineParser parser) {
+    public APA(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
             printUsageAndExit();
         }
 
+        ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, true);
         loopListPath = args[2];
         outputDirectory = HiCFileTools.createValidDirectory(args[3]);
 
-        ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, true);
-
         norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{parser.getNormalizationStringOption(), "SCALE", "KR", "NONE"});
-
-        int potentialWindow = parser.getWindowSizeOption(10);
-        if (potentialWindow > 0)
-            window = potentialWindow;
-
-        int potentialMinPeakDist = parser.getMinDistVal(2 * window);
-        if (potentialMinPeakDist > -1)
-            minPeakDist = potentialMinPeakDist;
-
-        int potentialMaxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
-        if (potentialMaxPeakDist > 0)
-            maxPeakDist = potentialMaxPeakDist;
-
+        window = parser.getWindowSizeOption(10);
+        minPeakDist = parser.getMinDistVal(2 * window);
+        maxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
         includeInterChr = parser.getIncludeInterChromosomal();
-
-        int possibleRegionWidth = parser.getCornerRegionDimensionOption(window / 2);
-        if (possibleRegionWidth > 0)
-            regionWidth = possibleRegionWidth;
-
+        regionWidth = parser.getCornerRegionDimensionOption(window / 2);
         resolution = parser.getResolutionOption(5000);
-
         numCPUThreads = parser.getNumThreads(4);
-
         aggregateNormalization = parser.getAggregateNormalization();
     }
 
@@ -176,7 +102,6 @@ public class APA {
     }
 
     public void run() {
-        APARegionStatistics result = null;
         int L = 2 * window + 1;
 
         AtomicInteger[] gwPeakNumbers = {new AtomicInteger(0), new AtomicInteger(0), new AtomicInteger(0)};
@@ -291,9 +216,9 @@ public class APA {
 
             System.out.println("Exporting APA results...");
             //save data as int array
-            result = APADataStack.retrieveDataStatistics(regionWidth); //should retrieve data
+            APARegionStatistics result = APADataStack.retrieveDataStatistics(regionWidth); //should retrieve data
             Integer[] gwPeakNumbersArray = {gwPeakNumbers[0].get(), gwPeakNumbers[1].get(), gwPeakNumbers[2].get()};
-            APADataStack.exportGenomeWideData(gwPeakNumbersArray, regionWidth, dontIncludePlots);
+            APADataStack.exportGenomeWideData(gwPeakNumbersArray);
             APADataStack.clearAllData();
         } else {
             System.err.println("Loop list is empty or incorrect path provided.");

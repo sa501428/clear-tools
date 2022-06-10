@@ -150,7 +150,7 @@ public class APADataStack {
         }
     }
 
-    public static void exportGenomeWideData(Integer[] peakNumbers, int currentRegionWidth, boolean dontIncludePlots) {
+    public static void exportGenomeWideData(Integer[] peakNumbers) {
         double gwNPeaksUsedInv = 1. / peakNumbers[0];
         gwNormedAPAMatrix = gwNormedAPAMatrix.scalarMultiply(gwNPeaksUsedInv);
         gwCenterNormedAPAMatrix = gwCenterNormedAPAMatrix.scalarMultiply(gwNPeaksUsedInv);

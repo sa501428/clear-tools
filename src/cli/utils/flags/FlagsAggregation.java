@@ -22,7 +22,7 @@
  *  THE SOFTWARE.
  */
 
-package cli.apa;
+package cli.utils.flags;
 
 import cli.Main;
 import cli.utils.HiCUtils;
@@ -43,7 +43,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class APA {
+public class FlagsAggregation {
 
     private final Dataset ds;
     private final NormalizationType norm;
@@ -56,8 +56,8 @@ public class APA {
     private final int maxNumberForIntraRegion = 1000; // 500 // 1000
     private final int maxNumberForInterRegion = 500; // 100
 
-    public APA(Dataset ds, String outFolder, NormalizationType norm, GenomeWide1DList<Anchor> anchors,
-               int resolution) {
+    public FlagsAggregation(Dataset ds, String outFolder, NormalizationType norm, GenomeWide1DList<Anchor> anchors,
+                            int resolution) {
         this.ds = ds;
         this.norm = norm;
         this.outputDirectory = HiCFileTools.createValidDirectory(outFolder);
@@ -81,15 +81,15 @@ public class APA {
         }
 
 
-        APADataStack interDataStack = new APADataStack(matrixWidth, outputDirectory, "inter_");
-        APADataStack smallInterDataStack = new APADataStack(matrixWidth, outputDirectory, "small_inter_");
-        APADataStack bigInterDataStack = new APADataStack(matrixWidth, outputDirectory, "big_inter_");
+        FlagsDataStack interDataStack = new FlagsDataStack(matrixWidth, outputDirectory, "inter_");
+        FlagsDataStack smallInterDataStack = new FlagsDataStack(matrixWidth, outputDirectory, "small_inter_");
+        FlagsDataStack bigInterDataStack = new FlagsDataStack(matrixWidth, outputDirectory, "big_inter_");
 
-        APADataStack[] intraDataStacks = DataStackUtils.initialize(handler.getAutosomalChromosomesArray(),
+        FlagsDataStack[] intraDataStacks = DataStackUtils.initialize(handler.getAutosomalChromosomesArray(),
                 matrixWidth, outputDirectory, "");
-        APADataStack[] smallIntraDataStacks = DataStackUtils.initialize(handler.getAutosomalChromosomesArray(),
+        FlagsDataStack[] smallIntraDataStacks = DataStackUtils.initialize(handler.getAutosomalChromosomesArray(),
                 matrixWidth, outputDirectory, "small_");
-        APADataStack[] bigIntraDataStacks = DataStackUtils.initialize(handler.getAutosomalChromosomesArray(),
+        FlagsDataStack[] bigIntraDataStacks = DataStackUtils.initialize(handler.getAutosomalChromosomesArray(),
                 matrixWidth, outputDirectory, "big_");
 
         final AtomicInteger currentProgressStatus = new AtomicInteger(0);
@@ -154,7 +154,7 @@ public class APA {
                     for (int li = 0; li < loops.size(); li += linc) {
                         Feature2D loop = loops.get(li);
                         try {
-                            APAUtils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window, norm, key);
+                            Utils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window, norm, key);
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
                             System.err.println("Unable to find data for loop: " + loop);
@@ -188,13 +188,13 @@ public class APA {
         });
 
         System.out.println("Exporting APA results...");
-        for (APADataStack dataStack : intraDataStacks) {
+        for (FlagsDataStack dataStack : intraDataStacks) {
             dataStack.exportData();
         }
-        for (APADataStack dataStack : bigIntraDataStacks) {
+        for (FlagsDataStack dataStack : bigIntraDataStacks) {
             dataStack.exportData();
         }
-        for (APADataStack dataStack : smallIntraDataStacks) {
+        for (FlagsDataStack dataStack : smallIntraDataStacks) {
             dataStack.exportData();
         }
         interDataStack.exportData();

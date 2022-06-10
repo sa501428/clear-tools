@@ -22,21 +22,21 @@
  *  THE SOFTWARE.
  */
 
-package cli.apa;
+package cli.utils.flags;
 
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
 
 import java.io.File;
 
-public class APADataStack {
+public class FlagsDataStack {
 
     private final File dataDirectory;
     private final String customPrefix;
     private final int n;
     private double[][] apaMatrix;
 
-    public APADataStack(int n, File outputFolder, String customPrefix) {
+    public FlagsDataStack(int n, File outputFolder, String customPrefix) {
         this.n = n;
         apaMatrix = new double[n][n];
         dataDirectory = outputFolder;
@@ -45,7 +45,7 @@ public class APADataStack {
     }
 
     public void exportData() {
-        APARegionStatistics stats = new APARegionStatistics(apaMatrix);
+        FlagsRegionStatistics stats = new FlagsRegionStatistics(apaMatrix);
         MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, customPrefix + "apa.npy")).getAbsolutePath(),
                 apaMatrix);
         MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, customPrefix + "stats.npy")).getAbsolutePath(),
@@ -58,9 +58,5 @@ public class APADataStack {
                 apaMatrix[i][j] += newData[i][j];
             }
         }
-    }
-
-    public double[][] getData() {
-        return apaMatrix;
     }
 }

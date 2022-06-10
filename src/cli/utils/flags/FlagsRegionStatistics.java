@@ -22,7 +22,7 @@
  *  THE SOFTWARE.
  */
 
-package cli.apa;
+package cli.utils.flags;
 
 import javastraw.tools.MatrixTools;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
@@ -31,7 +31,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 /**
  * Created by muhammadsaadshamim on 5/4/15.
  */
-public class APARegionStatistics {
+public class FlagsRegionStatistics {
     private static final int regionWidth = 10;
     private final double peak2mean;
     private final double peak2UL;
@@ -41,7 +41,7 @@ public class APARegionStatistics {
     private final double peak2LR;
     private final double ZscoreLL;
 
-    public APARegionStatistics(double[][] data) {
+    public FlagsRegionStatistics(double[][] data) {
 
         int dimension = data.length;
         int midPoint = dimension / 2;

@@ -1,9 +1,9 @@
 package cli.clt;
 
 import cli.Main;
-import cli.apa.APA;
-import cli.apa.Anchor;
 import cli.utils.GenericLocusParser;
+import cli.utils.flags.Anchor;
+import cli.utils.flags.FlagsAggregation;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.ChromosomeHandler;
@@ -30,7 +30,7 @@ public class Flags {
 
         GenomeWide1DList<Anchor> anchors = GenericLocusParser.loadFromBEDFile(handler, bedFile, cutoff);
         System.out.println("Number of anchors: " + anchors.size());
-        APA apa = new APA(ds, outFolder, norm, anchors, resolution);
+        FlagsAggregation apa = new FlagsAggregation(ds, outFolder, norm, anchors, resolution);
         apa.run();
     }
 }

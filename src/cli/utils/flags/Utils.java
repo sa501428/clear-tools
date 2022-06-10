@@ -22,7 +22,7 @@
  *  THE SOFTWARE.
  */
 
-package cli.apa;
+package cli.utils.flags;
 
 
 import javastraw.feature2D.Feature2D;
@@ -38,14 +38,14 @@ import java.util.List;
 /**
  * Created by Muhammad Shamim on 1/21/15.
  */
-public class APAUtils {
+public class Utils {
 
     public static RealMatrix standardNormalization(RealMatrix matrix) {
         return matrix.copy().scalarMultiply(1. / Math.max(1., mean(matrix)));
     }
 
     public static double mean(RealMatrix matrix) {
-        return APARegionStatistics.statistics(matrix.getData()).getMean();
+        return FlagsRegionStatistics.statistics(matrix.getData()).getMean();
     }
 
     public static void addLocalizedData(double[][] matrix, MatrixZoomData zd, Feature2D loop,

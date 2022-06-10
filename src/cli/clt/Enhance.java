@@ -1,10 +1,10 @@
 package cli.clt;
 
 import cli.Main;
-import cli.apa.APAUtils;
-import cli.apa.RegionConfiguration;
 import cli.utils.HiCUtils;
 import cli.utils.WritingTools;
+import cli.utils.flags.RegionConfiguration;
+import cli.utils.flags.Utils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -113,7 +113,7 @@ public class Enhance {
 
                                 if (zd != null) {
                                     try {
-                                        APAUtils.addRawLocalBoundedRegion(output, zd,
+                                        Utils.addRawLocalBoundedRegion(output, zd,
                                                 binXStart, binYStart, window, matrixWidth, keys[di]);
                                     } catch (Exception e) {
                                         System.err.println(e.getMessage());

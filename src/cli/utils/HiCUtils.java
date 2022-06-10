@@ -1,6 +1,6 @@
 package cli.utils;
 
-import cli.apa.RegionConfiguration;
+import cli.utils.flags.RegionConfiguration;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.type.HiCZoom;
 
