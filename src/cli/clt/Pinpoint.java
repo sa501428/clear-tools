@@ -62,10 +62,9 @@ public class Pinpoint {
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
         final int chromosomePairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
-                handler.getAutosomalChromosomesArray());
+                handler.getChromosomeArrayWithoutAllByAll(), true);
 
         int numTotalLoops = loopList.getNumTotalFeatures();
-
         final AtomicInteger currChromPair = new AtomicInteger(0);
         final AtomicInteger currNumLoops = new AtomicInteger(0);
 

@@ -72,7 +72,7 @@ public class Enhance {
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
         int pairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
-                handler.getAutosomalChromosomesArray());
+                handler.getChromosomeArrayWithoutAllByAll(), true);
 
         final int chromosomePairCounter = pairCounter;
         final AtomicInteger maxProgressStatus = new AtomicInteger(pairCounter);

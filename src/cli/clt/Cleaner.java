@@ -54,7 +54,7 @@ public class Cleaner {
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
         final int chromosomePairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
-                handler.getAutosomalChromosomesArray());
+                handler.getChromosomeArrayWithoutAllByAll(), true);
 
         final AtomicInteger currChromPair = new AtomicInteger(0);
         final Object key = new Object();

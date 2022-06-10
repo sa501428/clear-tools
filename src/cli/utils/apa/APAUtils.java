@@ -145,4 +145,42 @@ public class APAUtils {
 
         return vectors;
     }
+
+
+    public static void inPlaceSumVectors(double[] globalSum, double[] vector) {
+        for (int j = 0; j < globalSum.length; j++) {
+            if (vector[j] > 0) {
+                globalSum[j] += vector[j];
+            }
+        }
+    }
+
+    public static void inPlaceSumMatrices(int[][] globalSum, int[][] matrix) {
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[i].length; j++) {
+                if (matrix[i][j] > 0) {
+                    globalSum[i][j] += matrix[i][j];
+                }
+            }
+        }
+    }
+
+    public static void inPlaceSumMatrices(double[][] globalSum, double[][] matrix) {
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[i].length; j++) {
+                if (matrix[i][j] > 0) {
+                    globalSum[i][j] += matrix[i][j];
+                }
+            }
+        }
+    }
+
+    public static void addLocalRowSums(double[] sums, double[] vector, int binStart) {
+        for (int i = 0; i < sums.length; i++) {
+            double val = vector[binStart + i];
+            if (val > 0) {
+                sums[i] += val;
+            }
+        }
+    }
 }

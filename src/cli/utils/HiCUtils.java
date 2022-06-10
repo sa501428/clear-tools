@@ -8,11 +8,18 @@ import java.util.List;
 import java.util.Map;
 
 public class HiCUtils {
-    public static int populateChromosomePairs(Map<Integer, RegionConfiguration> chromosomePairs, Chromosome[] chromosomes) {
+    public static int populateChromosomePairs(Map<Integer, RegionConfiguration> chromosomePairs,
+                                              Chromosome[] chromosomes, boolean includeInter) {
         int pairCounter = 0;
         for (int i = 0; i < chromosomes.length; i++) {
-            for (int j = i; j < chromosomes.length; j++) {
-                RegionConfiguration config = new RegionConfiguration(chromosomes[i], chromosomes[j]);
+            if (includeInter) {
+                for (int j = i; j < chromosomes.length; j++) {
+                    RegionConfiguration config = new RegionConfiguration(chromosomes[i], chromosomes[j]);
+                    chromosomePairs.put(pairCounter, config);
+                    pairCounter++;
+                }
+            } else {
+                RegionConfiguration config = new RegionConfiguration(chromosomes[i], chromosomes[i]);
                 chromosomePairs.put(pairCounter, config);
                 pairCounter++;
             }
