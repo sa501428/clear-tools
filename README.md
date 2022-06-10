@@ -22,6 +22,10 @@ Aggregating Mixed Peaks Leading to Improved Focal Intensity
 
 Ratios and Enrichments Compared Across Phenotypes
 
+## COMPILE
+
+COMParing Interactions and Loops across Experiments
+
 ## additional tools
 
 probability

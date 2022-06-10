@@ -44,6 +44,16 @@ public class CommandLineParser extends CmdLineParser {
     private final Option normalizationTypeOption = addStringOption('k', "norm");
     private final Option cutoffOption = addIntegerOption("cutoff");
 
+    private final Option threadsOption = addIntegerOption("threads");
+
+    // APA
+    private final Option windowOption = addIntegerOption("window");
+    private final Option minDisValOption = addIntegerOption("min-dist");
+    private final Option maxDistValOption = addIntegerOption("max-dist");
+    private final Option cornerRegionDimensionsOption = addIntegerOption("corner-width");
+    private final Option interChromosomalOption = addBooleanOption("include-inter");
+    private final Option aggregateNormalization = addBooleanOption("ag-norm");
+
     public CommandLineParser() {
     }
 
@@ -103,4 +113,31 @@ public class CommandLineParser extends CmdLineParser {
     }
 
 
+    public boolean getAggregateNormalization() {
+        return optionToBoolean(aggregateNormalization);
+    }
+
+    public int getMinDistVal(int val) {
+        return optionToInteger(minDisValOption, val);
+    }
+
+    public int getMaxDistVal(int val) {
+        return optionToInteger(maxDistValOption, val);
+    }
+
+    public int getWindowSizeOption(int val) {
+        return optionToInteger(windowOption, val);
+    }
+
+    public boolean getIncludeInterChromosomal() {
+        return optionToBoolean(interChromosomalOption);
+    }
+
+    public int getCornerRegionDimensionOption(int val) {
+        return optionToInteger(cornerRegionDimensionsOption, val);
+    }
+
+    public int getNumThreads(int val) {
+        return optionToInteger(threadsOption, val);
+    }
 }
