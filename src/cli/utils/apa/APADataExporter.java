@@ -48,10 +48,10 @@ public class APADataExporter {
             normalizeBySum(globalRowSum);
             normalizeBySum(globalColSum);
             float[][] gwAggNormAPAMatrix = normedCopyFloats(globalOutput, globalRowSum, globalColSum);
-            MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, "gw_apa_agg_norm_" + title + ".txt")).getAbsolutePath(),
+            MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, "gw_apa_agg_norm_" + title + ".npy")).getAbsolutePath(),
                     gwAggNormAPAMatrix);
         } else {
-            MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, "gw_apa_" + title + ".txt")).getAbsolutePath(),
+            MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, "gw_apa_" + title + ".npy")).getAbsolutePath(),
                     globalNormalizedOutput);
         }
     }
