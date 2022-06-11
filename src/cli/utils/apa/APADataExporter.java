@@ -40,19 +40,20 @@ public class APADataExporter {
                                             double[] globalRowSum, double[] globalColSum) {
 
         Integer[] peakNumbers = {gwPeakNumbers[0].get(), gwPeakNumbers[1].get(), gwPeakNumbers[2].get()};
-        String title = "N=" + peakNumbers[0] + "_(filtered)_" + peakNumbers[1] + "_(unique)_" +
-                peakNumbers[2] + "_(total)";
+        System.out.println("\nFiltered = " + peakNumbers[0]);
+        System.out.println("Unique = " + peakNumbers[1]);
+        System.out.println("Total = " + peakNumbers[2]);
 
+        float[][] finalResult;
         if (useAgNorm) {
             normalizeBySum(globalRowSum);
             normalizeBySum(globalColSum);
-            float[][] gwAggNormAPAMatrix = normedCopyFloats(globalOutput, globalRowSum, globalColSum);
-            MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, "gw_apa_agg_norm_" + title + ".npy")).getAbsolutePath(),
-                    gwAggNormAPAMatrix);
+            finalResult = normedCopyFloats(globalOutput, globalRowSum, globalColSum);
         } else {
-            MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, "gw_apa_" + title + ".npy")).getAbsolutePath(),
-                    globalOutput);
+            finalResult = globalOutput;
         }
+        MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, "apa.npy")).getAbsolutePath(),
+                finalResult);
     }
 
     private static void normalizeBySum(double[] globalSum) {
