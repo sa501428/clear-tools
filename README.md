@@ -24,7 +24,7 @@ Ratios and Enrichments Compared Across Phenotypes
 
 ## COMPILE
 
-COMParing Interactions and Loops across Experiments
+COMParing Interactions from Loops across Experiments
 
 ## additional tools
 

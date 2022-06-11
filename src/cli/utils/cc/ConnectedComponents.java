@@ -40,10 +40,12 @@ public class ConnectedComponents {
     private static final int NOT_SET = 0;
     private static final int IN_QUEUE = -1;
 
+    public static float ABSOLUTE_CUTOFF = 10f;
+
     public static void extractMaxima(float[][] kde, int binXStart, int binYStart, long resolution,
                                      List<Feature2D> pinpointedLoops, Feature2D loop, String saveString) {
         float threshold = ArrayTools.getMax(kde) * 0.85f;
-        if (threshold > 10) {
+        if (threshold > ABSOLUTE_CUTOFF) {
             List<LocalMaxima> maxima = detect(kde, threshold, saveString);
             for (LocalMaxima max : maxima) {
                 Map<String, String> attributes = new HashMap<>();

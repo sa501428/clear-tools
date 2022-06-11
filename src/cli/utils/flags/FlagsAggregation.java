@@ -150,7 +150,7 @@ public class FlagsAggregation {
                         }
                     }
 
-                    double[][] output = new double[matrixWidth][matrixWidth];
+                    float[][] output = new float[matrixWidth][matrixWidth];
                     for (int li = 0; li < loops.size(); li += linc) {
                         Feature2D loop = loops.get(li);
                         try {

@@ -2,9 +2,11 @@ package cli.utils;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
+import java.util.BitSet;
+
 public class ConvolutionTools {
 
-    public static float[][] sparseConvolution(int[][] image) {
+    public static float[][] sparseConvolution(float[][] image) {
 
         float[][] kernel = getManhattanKernel(getApproxBandWidth(image));
         float maxK = ArrayTools.getMax(kernel);
@@ -60,33 +62,37 @@ public class ConvolutionTools {
         return kernel;
     }
 
-    private static int getApproxBandWidth(int[][] image) {
+    private static int getApproxBandWidth(float[][] image) {
         int bw = Math.max(getApproxRowBandWidth(image), getApproxColBandWidth(image));
         return 4 * bw + 1; // empirically sized
     }
 
-    private static int getApproxColBandWidth(int[][] image) {
-        int[] colHistogram = new int[image[0].length];
-        for (int[] ints : image) {
-            for (int c = 0; c < ints.length; c++) {
-                colHistogram[c] += ints[c];
+    private static int getApproxColBandWidth(float[][] image) {
+        BitSet colHistogram = new BitSet(image[0].length);
+        for (float[] row : image) {
+            for (int c = 0; c < row.length; c++) {
+                if (row[c] > 0) {
+                    colHistogram.set(c);
+                }
             }
         }
         return getApproxBandWidthFromHist(colHistogram);
     }
 
-    private static int getApproxRowBandWidth(int[][] image) {
-        int[] rowHistogram = new int[image.length];
+    private static int getApproxRowBandWidth(float[][] image) {
+        BitSet rowHistogram = new BitSet(image.length);
         for (int r = 0; r < image.length; r++) {
             for (int c = 0; c < image[r].length; c++) {
-                rowHistogram[r] += image[r][c];
+                if (image[r][c] > 0) {
+                    rowHistogram.set(r);
+                }
             }
         }
         return getApproxBandWidthFromHist(rowHistogram);
     }
 
-    private static int getApproxBandWidthFromHist(int[] histogram) {
-        int n = ArrayTools.getSum(histogram);
+    private static int getApproxBandWidthFromHist(BitSet histogram) {
+        double n = histogram.cardinality();
         DescriptiveStatistics stats = createStatsFromHist(histogram);
         double iqr = stats.getPercentile(75) - stats.getPercentile(25);
         double sigma = stats.getStandardDeviation();
@@ -94,10 +100,10 @@ public class ConvolutionTools {
         return (int) (h) + 1;
     }
 
-    private static DescriptiveStatistics createStatsFromHist(int[] histogram) {
+    private static DescriptiveStatistics createStatsFromHist(BitSet histogram) {
         DescriptiveStatistics stats = new DescriptiveStatistics();
-        for (int i = 0; i < histogram.length; i++) {
-            for (int z = 0; z < histogram[i]; z++) {
+        for (int i = 0; i < histogram.length(); i++) {
+            if (histogram.get(i)) {
                 stats.addValue(i);
             }
         }

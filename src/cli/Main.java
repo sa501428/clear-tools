@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.9.0";
+    public static final String VERSION_NUM = "0.9.5";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
@@ -22,7 +22,9 @@ public class Main {
                 "enhance [--res int] [--norm string] <out_folder> <loops.bedpe> <hic_files>\n" +
                 "probability [--res int] <input.hic> <loops.bedpe> <out_folder>\n" +
                 "pinpoint [--res int] <input.hic> <loops.bedpe> <output.bedpe>\n" +
-                "clean <input.hic> <loops.bedpe> <output.bedpe>");
+                "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
+                "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
+                "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
@@ -49,7 +51,7 @@ public class Main {
         } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")) {
             Enhance.run(args, parser.getResolutionOption(Main.DEFAULT_RESOLUTION), parser.getNpyOption());
         } else if (command.equals("pinpoint")) {
-            Pinpoint.run(args, parser.getResolutionOption(-1));
+            Pinpoint.run(args, parser);
         } else if (command.startsWith("clean")) {
             Cleaner.run(args);
         } else if (command.startsWith("prob")) {
@@ -57,6 +59,8 @@ public class Main {
         } else if (command.startsWith("apa")) {
             APA apa = new APA(args, parser);
             apa.run();
+        } else if (command.startsWith("recap") || command.startsWith("compile")) {
+            new Recap(args, parser);
         } else {
             printGeneralUsageAndExit(3);
         }

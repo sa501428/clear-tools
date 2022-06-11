@@ -8,15 +8,16 @@ import java.util.List;
 
 public class WritingTools {
 
-    public static void writeToMND(int[][] matrix, int resolution,
+    public static void writeToMND(float[][] matrix, int resolution,
                                   String xChrom, String yChrom,
                                   int xOrigin, int yOrigin, BufferedWriter bwMND) throws IOException {
-        for(int i = 0; i < matrix.length; i++){
-            for(int j = 0; j < matrix[i].length; j++){
-                if (matrix[i][j] > 0) {
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[i].length; j++) {
+                int val = Math.round(matrix[i][j]);
+                if (val > 0) {
                     long gx = (long) (i + xOrigin) * resolution;
                     long gy = (long) (j + yOrigin) * resolution;
-                    bwMND.write(xChrom + " " + gx + " " + yChrom + " " + gy + " " + matrix[i][j]);
+                    bwMND.write(xChrom + " " + gx + " " + yChrom + " " + gy + " " + val);
                     bwMND.newLine();
                 }
             }

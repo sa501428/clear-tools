@@ -73,10 +73,9 @@ public class APA {
     private final boolean includeInterChr;
     private final boolean useAgNorm;
 
-    private final int[][] globalOutput;
+    private final float[][] globalAPAMatrix;
     private final double[] globalRowSum;
     private final double[] globalColSum;
-    private final double[][] globalNormalizedOutput;
 
     public APA(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
@@ -107,14 +106,11 @@ public class APA {
         numCPUThreads = parser.getNumThreads(4);
 
         matrixWidthL = 2 * window + 1;
+        globalAPAMatrix = new float[matrixWidthL][matrixWidthL];
         if (useAgNorm) {
-            globalOutput = new int[matrixWidthL][matrixWidthL];
             globalRowSum = new double[matrixWidthL];
             globalColSum = new double[matrixWidthL];
-            globalNormalizedOutput = null;
         } else {
-            globalNormalizedOutput = new double[matrixWidthL][matrixWidthL];
-            globalOutput = null;
             globalRowSum = null;
             globalColSum = null;
         }
@@ -154,17 +150,13 @@ public class APA {
 
         ParallelizationTools.launchParallelizedCode(() -> {
 
-            int[][] output = null;
+            float[][] output = new float[matrixWidthL][matrixWidthL];
             double[] rowSum = null;
             double[] colSum = null;
-            double[][] normalizedOutput = null;
 
             if (useAgNorm) {
-                output = new int[matrixWidthL][matrixWidthL];
                 rowSum = new double[matrixWidthL];
                 colSum = new double[matrixWidthL];
-            } else {
-                normalizedOutput = new double[matrixWidthL][matrixWidthL];
             }
 
             int threadPair = currChromPair.getAndIncrement();
@@ -192,14 +184,13 @@ public class APA {
                     if (zd != null) {
                         try {
                             for (Feature2D loop : loops) {
+
+                                Utils.addLocalizedData(output, zd, loop, matrixWidthL, resolution, window, norm, key);
                                 if (useAgNorm) {
                                     int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
                                     int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
-                                    Utils.addRawLocalBoundedRegion(output, zd, binXStart, binYStart, window, matrixWidthL, key);
                                     APAUtils.addLocalRowSums(rowSum, vector1, binXStart);
                                     APAUtils.addLocalRowSums(colSum, vector2, binYStart);
-                                } else {
-                                    Utils.addLocalizedData(normalizedOutput, zd, loop, matrixWidthL, resolution, window, norm, key);
                                 }
 
                                 if (currNumLoops.incrementAndGet() % 100 == 0) {
@@ -219,19 +210,17 @@ public class APA {
             }
 
             synchronized (key) {
+                APAUtils.inPlaceSumMatrices(globalAPAMatrix, output);
                 if (useAgNorm) {
-                    APAUtils.inPlaceSumMatrices(globalOutput, output);
                     APAUtils.inPlaceSumVectors(globalRowSum, rowSum);
                     APAUtils.inPlaceSumVectors(globalColSum, colSum);
-                } else {
-                    APAUtils.inPlaceSumMatrices(globalNormalizedOutput, normalizedOutput);
                 }
             }
         });
 
         System.out.println("Exporting APA results...");
-        APADataExporter.exportGenomeWideData(gwPeakNumbers, outputDirectory, useAgNorm, globalOutput,
-                globalRowSum, globalColSum, globalNormalizedOutput);
+        APADataExporter.exportGenomeWideData(gwPeakNumbers, outputDirectory, useAgNorm, globalAPAMatrix,
+                globalRowSum, globalColSum);
         System.out.println("APA complete");
     }
 

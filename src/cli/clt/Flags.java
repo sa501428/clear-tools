@@ -25,7 +25,16 @@ public class Flags {
         Dataset ds = HiCFileTools.extractDatasetForCLT(hicFile, false, true, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();
 
-        NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{normString, "KR", "SCALE", "NONE"});
+        NormalizationType norm;
+        if (normString != null && normString.length() > 0) {
+            try {
+                norm = ds.getNormalizationHandler().getNormTypeFromString(normString);
+            } catch (Exception e) {
+                norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{normString, "SCALE", "KR", "NONE"});
+            }
+        } else {
+            norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "KR", "NONE"});
+        }
         System.out.println("Norm being used: " + norm.getLabel());
 
         GenomeWide1DList<Anchor> anchors = GenericLocusParser.loadFromBEDFile(handler, bedFile, cutoff);

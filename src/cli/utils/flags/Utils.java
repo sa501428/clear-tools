@@ -29,7 +29,6 @@ import javastraw.feature2D.Feature2D;
 import javastraw.reader.block.Block;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
-import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 
 import java.util.List;
@@ -39,74 +38,30 @@ import java.util.List;
  */
 public class Utils {
 
-    public static void addLocalizedData(double[][] matrix, MatrixZoomData zd, Feature2D loop,
+    public static void addLocalizedData(float[][] matrix, MatrixZoomData zd, Feature2D loop,
                                         int matrixWidth, int resolution, int window, NormalizationType norm, final Object key) {
-        long loopX = loop.getMidPt1() / resolution;
-        long loopY = loop.getMidPt2() / resolution;
-        long binXStart = loopX - window;
-        long binXEnd = loopX + (window + 1);
-        long binYStart = loopY - window;
-        long binYEnd = loopY + (window + 1);
-
-        addLocalBoundedRegion(matrix, zd, binXStart, binXEnd, binYStart, binYEnd, matrixWidth, norm, key);
+        long binXStart = (loop.getMidPt1() / resolution) - window;
+        long binYStart = (loop.getMidPt2() / resolution) - window;
+        addLocalBoundedRegion(matrix, zd, binXStart, binYStart, matrixWidth, norm, key);
     }
 
-    public static void addLocalBoundedRegion(double[][] matrix, MatrixZoomData zd, long binXStart, long binXEnd,
-                                             long binYStart, long binYEnd, int matrixWidth,
-                                             NormalizationType normalizationType, final Object key) {
+    public static void addLocalBoundedRegion(float[][] matrix, MatrixZoomData zd, long binXStart, long binYStart,
+                                             int matrixWidth, NormalizationType norm, final Object key) {
+
+        long binXEnd = binXStart + (matrixWidth + 1);
+        long binYEnd = binYStart + (matrixWidth + 1);
         List<Block> blocks;
         synchronized (key) {
-            blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, normalizationType, false);
+            blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
+                    binXEnd, binYEnd, norm, false);
         }
 
         fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart, matrixWidth);
-        // force cleanup
         blocks.clear();
         blocks = null;
-        //System.gc();
     }
 
-    public static void addRawLocalBoundedRegion(int[][] matrix, MatrixZoomData zd, long binXStart, long binYStart,
-                                                int window, int matrixWidth, final Object key) {
-
-        long binXEnd = binXStart + (window + 1);
-        long binYEnd = binYStart + (window + 1);
-
-        List<Block> blocks;
-        synchronized (key) {
-            blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd,
-                    NormalizationHandler.NONE, false);
-        }
-
-        fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart, matrixWidth);
-        // force cleanup
-        blocks.clear();
-        blocks = null;
-        //System.gc();
-    }
-
-    public static void fillInMatrixFromBlocks(double[][] matrix, List<Block> blocks, long binXStart, long binYStart, int matrixWidth) {
-        if (blocks.size() > 0) {
-            for (Block b : blocks) {
-                if (b != null) {
-                    for (ContactRecord rec : b.getContactRecords()) {
-                        if (rec.getCounts() > 0) {
-                            // only called for small regions - should not exceed int
-                            int relativeX = (int) (rec.getBinX() - binXStart);
-                            int relativeY = (int) (rec.getBinY() - binYStart);
-                            if (relativeX >= 0 && relativeX < matrixWidth) {
-                                if (relativeY >= 0 && relativeY < matrixWidth) {
-                                    matrix[relativeX][relativeY] += rec.getCounts();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    public static void fillInMatrixFromBlocks(int[][] matrix, List<Block> blocks, long binXStart, long binYStart, int matrixWidth) {
+    public static void fillInMatrixFromBlocks(float[][] matrix, List<Block> blocks, long binXStart, long binYStart, int matrixWidth) {
         if (blocks.size() > 0) {
             for (Block b : blocks) {
                 if (b != null) {

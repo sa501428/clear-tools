@@ -13,6 +13,7 @@ import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
+import javastraw.reader.type.NormalizationHandler;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
 import javastraw.tools.ParallelizationTools;
@@ -101,7 +102,7 @@ public class Enhance {
                             int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
 
                             int matrixWidth = 2 * window + 1;
-                            int[][] output = new int[matrixWidth][matrixWidth];
+                            float[][] output = new float[matrixWidth][matrixWidth];
 
                             for (int di = 0; di < datasets.length; di++) {
                                 final Dataset ds = datasets[di];
@@ -112,8 +113,9 @@ public class Enhance {
 
                                 if (zd != null) {
                                     try {
-                                        Utils.addRawLocalBoundedRegion(output, zd,
-                                                binXStart, binYStart, window, matrixWidth, keys[di]);
+                                        Utils.addLocalBoundedRegion(output, zd,
+                                                binXStart, binYStart, matrixWidth,
+                                                NormalizationHandler.NONE, keys[di]);
                                     } catch (Exception e) {
                                         System.err.println(e.getMessage());
                                         System.err.println("Unable to find data for loop: " + loop);

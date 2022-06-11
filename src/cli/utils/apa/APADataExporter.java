@@ -36,9 +36,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class APADataExporter {
 
     public static void exportGenomeWideData(AtomicInteger[] gwPeakNumbers, File dataDirectory,
-                                            boolean useAgNorm, int[][] globalOutput,
-                                            double[] globalRowSum, double[] globalColSum,
-                                            double[][] globalNormalizedOutput) {
+                                            boolean useAgNorm, float[][] globalOutput,
+                                            double[] globalRowSum, double[] globalColSum) {
 
         Integer[] peakNumbers = {gwPeakNumbers[0].get(), gwPeakNumbers[1].get(), gwPeakNumbers[2].get()};
         String title = "N=" + peakNumbers[0] + "_(filtered)_" + peakNumbers[1] + "_(unique)_" +
@@ -52,7 +51,7 @@ public class APADataExporter {
                     gwAggNormAPAMatrix);
         } else {
             MatrixTools.saveMatrixTextNumpy((new File(dataDirectory, "gw_apa_" + title + ".npy")).getAbsolutePath(),
-                    globalNormalizedOutput);
+                    globalOutput);
         }
     }
 
@@ -65,15 +64,7 @@ public class APADataExporter {
         }
     }
 
-    private static void saveDataSet(String prefix, float[][] apaMatrix, Integer[] peakNumbers, File dataDirectory) {
-
-    }
-
-    private static void saveDataSet(String prefix, double[][] apaMatrix, Integer[] peakNumbers, File dataDirectory) {
-
-    }
-
-    public static float[][] normedCopyFloats(int[][] original, double[] v1, double[] v2) {
+    public static float[][] normedCopyFloats(float[][] original, double[] v1, double[] v2) {
         int n = original.length;
         float[][] matrix = new float[n][n];
 
@@ -81,7 +72,7 @@ public class APADataExporter {
             for (int c = 0; c < n; ++c) {
                 double normVal = (v1[r] * v2[c]);
                 if (normVal > 0.0) {
-                    matrix[r][c] = (float) ((double) original[r][c] / normVal);
+                    matrix[r][c] = (float) (original[r][c] / normVal);
                 } else {
                     matrix[r][c] = 0.0F;
                 }

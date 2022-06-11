@@ -73,7 +73,7 @@ public class CommandLineParser extends CmdLineParser {
 
     private String optionToString(Option option) {
         Object opt = getOptionValue(option);
-        return opt == null ? Main.DEFAULT_NORMALIZATION : opt.toString();
+        return opt == null ? null : opt.toString();
     }
 
     /*

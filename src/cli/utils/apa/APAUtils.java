@@ -155,17 +155,7 @@ public class APAUtils {
         }
     }
 
-    public static void inPlaceSumMatrices(int[][] globalSum, int[][] matrix) {
-        for (int i = 0; i < matrix.length; i++) {
-            for (int j = 0; j < matrix[i].length; j++) {
-                if (matrix[i][j] > 0) {
-                    globalSum[i][j] += matrix[i][j];
-                }
-            }
-        }
-    }
-
-    public static void inPlaceSumMatrices(double[][] globalSum, double[][] matrix) {
+    public static void inPlaceSumMatrices(float[][] globalSum, float[][] matrix) {
         for (int i = 0; i < matrix.length; i++) {
             for (int j = 0; j < matrix[i].length; j++) {
                 if (matrix[i][j] > 0) {

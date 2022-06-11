@@ -13,14 +13,6 @@ public class ArrayTools {
         return (float) total;
     }
 
-    public static int getSum(int[] histogram) {
-        int total = 0;
-        for (int val : histogram) {
-            total += val;
-        }
-        return total;
-    }
-
     public static float getMax(float[][] matrix) {
         float max = matrix[0][0];
         for (float[] row : matrix) {

@@ -13,7 +13,10 @@ import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.mzd.MatrixZoomData;
+import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
+import javastraw.reader.type.NormalizationHandler;
+import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
@@ -25,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Pinpoint {
-    public static void run(String[] args, int resolutionOption) {
+    public static void run(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(5);
         }
@@ -41,18 +44,29 @@ public class Pinpoint {
 
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
-        int resolution = resolutionOption;
+        NormalizationType norm = NormalizationHandler.NONE;
+        String possibleNorm = parser.getNormalizationStringOption();
+        if (possibleNorm != null && possibleNorm.length() > 0) {
+            try {
+                norm = dataset.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+            } catch (Exception e) {
+                norm = NormalizationPicker.getFirstValidNormInThisOrder(dataset, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
+            }
+        }
+        System.out.println("Normalization being used: " + norm.getLabel());
+
+        int resolution = parser.getResolutionOption(-1);
         if (resolution < 1) {
             resolution = HiCUtils.getHighestResolution(dataset.getBpZooms()).getBinSize();
         }
 
-        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution);
+        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution, norm);
         refinedLoops.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
         System.out.println("pinpoint complete");
     }
 
     private static Feature2DList localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
-                                          int resolution) {
+                                          int resolution, NormalizationType norm) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
@@ -93,9 +107,9 @@ public class Pinpoint {
                                 int binYStart = (int) ((loop.getStart2() / resolution) - window);
 
                                 int matrixWidth = 3 * window + 1;
-                                int[][] output = new int[matrixWidth][matrixWidth];
-                                Utils.addRawLocalBoundedRegion(output, zd,
-                                        binXStart, binYStart, window, matrixWidth, key);
+                                float[][] output = new float[matrixWidth][matrixWidth];
+
+                                Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm, key);
 
                                 String saveString = loop.simpleString();
                                 String[] saveStrings = saveString.split("\\s+");

@@ -52,7 +52,7 @@ public class FlagsDataStack {
                 stats.getAllValues());
     }
 
-    public void addData(double[][] newData) {
+    public void addData(float[][] newData) {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 apaMatrix[i][j] += newData[i][j];
