@@ -3,6 +3,7 @@ package cli.clt;
 import cli.Main;
 import cli.utils.HiCUtils;
 import cli.utils.flags.RegionConfiguration;
+import cli.utils.flags.Utils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -15,6 +16,7 @@ import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
+import javastraw.tools.UNIXTools;
 
 import java.io.File;
 import java.util.List;
@@ -35,7 +37,7 @@ public class Recap {
 
         // recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>
         String loopListPath = args[1];
-        String outFile = args[2];
+        File outFolder = UNIXTools.makeDir(new File(args[2]));
 
         String[] filepaths = args[3].split(",");
         String[] names = args[4].split(",");
@@ -51,9 +53,11 @@ public class Recap {
         try {
             if (possibleNorm != null && possibleNorm.length() > 0) {
                 norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+            } else {
+                norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "KR"});
             }
         } catch (Exception e) {
-            norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "KR", "NONE"});
+            norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "KR", "VC_SQRT", "VC"});
         }
         System.out.println("Using normalization: " + norm.getLabel());
 
@@ -76,7 +80,7 @@ public class Recap {
         System.out.println("Using resolution: " + resolution);
 
         Feature2DList refinedLoops = localize(filepaths, names, loopList, handler, resolution, window, norm);
-        refinedLoops.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
+        refinedLoops.exportFeatureList(new File(outFolder, "recap.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("pinpoint complete");
     }
 
@@ -123,8 +127,10 @@ public class Recap {
                                 for (Feature2D loop : loops) {
                                     int binXStart = (int) (loop.getMidPt1() / resolution);
                                     int binYStart = (int) (loop.getMidPt2() / resolution);
+                                    int L = 1 + 2 * window;
                                     float[][] output = new float[1][1];
-                                    // Utils.addLocalizedData(output, zd, loop, 1, resolution, 0, norm, key);
+
+                                    Utils.addLocalizedData(output, zd, loop, 1, resolution, window, norm, key);
 
                                     // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
