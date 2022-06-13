@@ -85,6 +85,7 @@ public class Recap {
 
         Feature2DList refinedLoops = localize(filepaths, names, loopList, handler, resolution, window, norm);
         refinedLoops.exportFeatureList(new File(outFolder, "recap.bedpe"), false, Feature2DList.ListFormat.NA);
+        RecapTools.exportAllMatrices(refinedLoops, names, outFolder);
         System.out.println("pinpoint complete");
     }
 
@@ -108,10 +109,9 @@ public class Recap {
 
         for (int di = 0; di < filepaths.length; di++) {
 
-            Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[di], false, false,
+            final Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[di], false, false,
                     true);
             String prefix = names[di] + "_";
-
 
             final AtomicInteger currChromPair = new AtomicInteger(0);
             final AtomicInteger currNumLoops = new AtomicInteger(0);
@@ -155,8 +155,8 @@ public class Recap {
 
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
-                                Map<String, String> attributes = RecapTools.getStats(loop, obsMatrix, eMatrix,
-                                        resolution, window, df, superDiagonal, pseudoCount);
+                                Map<String, String> attributes = RecapTools.getStats(obsMatrix, eMatrix,
+                                        window, superDiagonal, pseudoCount);
                                 for (String akey : attributes.keySet()) {
                                     loop.addStringAttribute(prefix + akey, attributes.get(akey));
                                 }
@@ -176,6 +176,7 @@ public class Recap {
                     threadPair = currChromPair.getAndIncrement();
                 }
             });
+            ds.clearCache(false);
         }
 
         return loopList;

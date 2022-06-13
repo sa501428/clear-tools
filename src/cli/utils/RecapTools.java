@@ -1,23 +1,40 @@
 package cli.utils;
 
 import javastraw.feature2D.Feature2D;
+import javastraw.feature2D.Feature2DList;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.expected.ExpectedValueFunction;
+import javastraw.tools.MatrixTools;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class RecapTools {
 
-    public static Map<String, String> getStats(Feature2D loop,
-                                               float[][] obsMatrix, float[][] eMatrix,
-                                               int resolution, int window, ExpectedValueFunction df,
-                                               double superDiagonal, float pseudoCount) {
-        long binXStart = (loop.getMidPt1() / resolution) - window;
-        long binYStart = (loop.getMidPt2() / resolution) - window;
+    public static List<String> getCategories() {
+        List<String> categories = new ArrayList<>();
 
+        String[] properties = new String[]{"VAL", "STD_DEV", "KURTOSIS", "SKEWNESS", "MEAN_ENRICHMENT",
+                "MEDIAN_ENRICHMENT", "GEO_ENRICHMENT", "MAX_ENRICHMENT", "MIN_ENRICHMENT", "DECAY_A", "DECAY_k"};
+
+        categories.add("PRESENCE");
+        categories.add("PRESENCE_INF");
+        for (String stem : new String[]{"OBS_", "OE_"}) {
+            for (String property : properties) {
+                categories.add(stem + property);
+            }
+        }
+        return categories;
+    }
+
+    public static Map<String, String> getStats(float[][] obsMatrix, float[][] eMatrix,
+                                               int window, double superDiagonal, float pseudoCount) {
         float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
 
         Map<String, String> loopAttributes = new HashMap<>();
@@ -129,5 +146,36 @@ public class RecapTools {
         int y = rec.getBinY();
         int dist = Math.abs(x - y);
         return df.getExpectedValue(chrIndex, dist);
+    }
+
+    public static void exportAllMatrices(Feature2DList refinedLoops, String[] names, File outFolder) {
+        int n = refinedLoops.getNumTotalFeatures();
+        int m = names.length;
+
+        List<String> categories = getCategories();
+
+        List<float[][]> outputs = new ArrayList<>();
+        for (int k = 0; k < categories.size(); k++) {
+            outputs.add(new float[n][m]);
+        }
+
+        AtomicInteger loopIndex = new AtomicInteger(0);
+        refinedLoops.processLists((s, list) -> {
+            for (Feature2D loop : list) {
+                int currIndex = loopIndex.getAndIncrement();
+                for (int k = 0; k < categories.size(); k++) {
+                    for (int w = 0; w < names.length; w++) {
+                        String key = names[w] + "_" + categories.get(k);
+                        outputs.get(k)[currIndex][w] = Float.parseFloat(loop.getAttribute(key));
+                    }
+                }
+            }
+        });
+
+        for (int k = 0; k < categories.size(); k++) {
+            MatrixTools.saveMatrixTextNumpy((new File(outFolder, categories.get(k) + ".npy")).getAbsolutePath(),
+                    outputs.get(k));
+        }
+        outputs.clear();
     }
 }
