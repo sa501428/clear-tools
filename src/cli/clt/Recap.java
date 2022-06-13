@@ -2,6 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.HiCUtils;
+import cli.utils.RecapTools;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
 import javastraw.feature2D.Feature2D;
@@ -10,6 +11,8 @@ import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.expected.ExpectedValueFunction;
+import javastraw.reader.expected.QuickMedian;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
@@ -19,6 +22,7 @@ import javastraw.tools.ParallelizationTools;
 import javastraw.tools.UNIXTools;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -93,10 +97,11 @@ public class Recap {
         }
 
         HiCZoom zoom = new HiCZoom(resolution);
+        int matrixWidth = 1 + 2 * window;
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
         final int chromosomePairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
-                handler.getChromosomeArrayWithoutAllByAll(), true);
+                handler.getChromosomeArrayWithoutAllByAll(), false);
 
         int numTotalLoops = loopList.getNumTotalFeatures();
         final Object key = new Object();
@@ -105,7 +110,7 @@ public class Recap {
 
             Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[di], false, false,
                     true);
-            String prefix = names[di];
+            String prefix = names[di] + "_";
 
 
             final AtomicInteger currChromPair = new AtomicInteger(0);
@@ -116,37 +121,56 @@ public class Recap {
                 int threadPair = currChromPair.getAndIncrement();
                 while (threadPair < chromosomePairCounter) {
                     RegionConfiguration config = chromosomePairs.get(threadPair);
-                    Chromosome chr1 = config.getChr1();
-                    Chromosome chr2 = config.getChr2();
+                    Chromosome chrom1 = config.getChr1();
+                    Chromosome chrom2 = config.getChr2();
 
-                    List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
+                    List<Feature2D> loops = loopList.get(chrom1.getIndex(), chrom2.getIndex());
                     if (loops != null && loops.size() > 0) {
-                        MatrixZoomData zd = HiCFileTools.getMatrixZoomData(ds, chr1, chr2, zoom);
-                        if (zd != null) {
-                            try {
-                                for (Feature2D loop : loops) {
-                                    int binXStart = (int) (loop.getMidPt1() / resolution);
-                                    int binYStart = (int) (loop.getMidPt2() / resolution);
-                                    int L = 1 + 2 * window;
-                                    float[][] output = new float[1][1];
+                        MatrixZoomData zd = HiCFileTools.getMatrixZoomData(ds, chrom1, chrom2, zoom);
 
-                                    Utils.addLocalizedData(output, zd, loop, 1, resolution, window, norm, key);
+                        if (zd == null) {
+                            System.err.println("ZD is null " + chrom1.getName() + "_" + chrom2.getName());
+                            System.exit(9);
+                        }
 
-                                    // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
+                        ExpectedValueFunction df = ds.getExpectedValuesOrExit(zd.getZoom(), norm, chrom1, true, false);
 
-                                    loop.addFloatAttribute(prefix + "_oe", 4f);
+                        if (df == null) {
+                            System.err.println("Expected is null " + chrom1.getName() + "_" + chrom2.getName());
+                            System.exit(10);
+                        }
 
-                                    if (currNumLoops.incrementAndGet() % 100 == 0) {
-                                        System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
-                                    }
+                        float pseudoCount = getMedianExpectedAt(9000000 / resolution,
+                                window, chrom1.getIndex(), df);
+                        double superDiagonal = df.getExpectedValue(chrom1.getIndex(), 1);
+
+                        try {
+                            for (Feature2D loop : loops) {
+                                float[][] obsMatrix = new float[matrixWidth][matrixWidth];
+                                float[][] eMatrix = new float[matrixWidth][matrixWidth];
+
+                                Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm, key);
+                                Utils.fillInExpectedMatrix(eMatrix, loop, matrixWidth, df, chrom1.getIndex(),
+                                        resolution, window);
+
+                                // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
+
+                                Map<String, String> attributes = RecapTools.getStats(loop, obsMatrix, eMatrix,
+                                        resolution, window, df, superDiagonal, pseudoCount);
+                                for (String akey : attributes.keySet()) {
+                                    loop.addStringAttribute(prefix + akey, attributes.get(akey));
                                 }
-                                zd.clearCache();
 
-                                System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
-
-                            } catch (Exception e) {
-                                System.err.println(e.getMessage());
+                                if (currNumLoops.incrementAndGet() % 100 == 0) {
+                                    System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+                                }
                             }
+                            zd.clearCache();
+
+                            System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+
+                        } catch (Exception e) {
+                            System.err.println(e.getMessage());
                         }
                     }
                     threadPair = currChromPair.getAndIncrement();
@@ -155,5 +179,18 @@ public class Recap {
         }
 
         return loopList;
+    }
+
+    private static float getMedianExpectedAt(int d0, int dx, int chromIndex, ExpectedValueFunction df) {
+        List<Double> values = new ArrayList<>();
+        for (int dist = d0 - dx; dist < d0 + dx; dist++) {
+            double expected = df.getExpectedValue(chromIndex, dist);
+            if (expected > 0) {
+                values.add(expected);
+            }
+        }
+        float median = QuickMedian.fastMedian(values);
+        if (median > 0) return median;
+        return 0f;
     }
 }

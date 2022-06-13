@@ -28,6 +28,7 @@ package cli.utils.flags;
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.block.Block;
 import javastraw.reader.block.ContactRecord;
+import javastraw.reader.expected.ExpectedValueFunction;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationType;
 
@@ -78,6 +79,51 @@ public class Utils {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    public static void fillInOEMatrixFromBlocks(float[][] matrix, List<Block> blocks,
+                                                long binXStart, long binYStart, int matrixWidth,
+                                                ExpectedValueFunction df, int chrIndex, double pseudocount) {
+        if (blocks.size() > 0) {
+            for (Block b : blocks) {
+                if (b != null) {
+                    for (ContactRecord rec : b.getContactRecords()) {
+                        if (rec.getCounts() > 0) {
+                            // only called for small regions - should not exceed int
+
+                            int relativeX = (int) (rec.getBinX() - binXStart);
+                            int relativeY = (int) (rec.getBinY() - binYStart);
+                            if (relativeX >= 0 && relativeX < matrixWidth) {
+                                if (relativeY >= 0 && relativeY < matrixWidth) {
+                                    int dist = Math.abs(rec.getBinX() - rec.getBinY());
+                                    double expected = df.getExpectedValue(chrIndex, dist);
+                                    matrix[relativeX][relativeY] = (float) ((rec.getCounts() + pseudocount) /
+                                            (expected + pseudocount));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static void fillInExpectedMatrix(float[][] matrix, Feature2D loop,
+                                            int matrixWidth, ExpectedValueFunction df, int chrIndex,
+                                            int resolution, int window) {
+
+        long binXStart = (loop.getMidPt1() / resolution) - window;
+        long binYStart = (loop.getMidPt2() / resolution) - window;
+
+        for (int relativeX = 0; relativeX < matrixWidth; relativeX++) {
+            for (int relativeY = 0; relativeY < matrixWidth; relativeY++) {
+                long X = relativeX + binXStart;
+                long Y = relativeY + binYStart;
+                long dist = Math.abs(X - Y);
+                double expected = df.getExpectedValue(chrIndex, dist);
+                matrix[relativeX][relativeY] = (float) expected;
             }
         }
     }
