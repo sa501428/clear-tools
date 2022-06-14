@@ -17,15 +17,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class RecapTools {
 
-    public static List<String> getCategories() {
+    public static List<String> getCategories(boolean useOE) {
         List<String> categories = new ArrayList<>();
 
         String[] properties = new String[]{"VAL", "STD_DEV", "KURTOSIS", "SKEWNESS", "MEAN_ENRICHMENT",
                 "MEDIAN_ENRICHMENT", "GEO_ENRICHMENT", "MAX_ENRICHMENT", "MIN_ENRICHMENT", "DECAY_A", "DECAY_k"};
+        String[] types = new String[]{"OBS_"};
 
-        categories.add("PRESENCE");
-        categories.add("PRESENCE_INF");
-        for (String stem : new String[]{"OBS_", "OE_"}) {
+        if (useOE) {
+            categories.add("PRESENCE");
+            categories.add("PRESENCE_INF");
+            types = new String[]{"OBS_", "OE_"};
+        }
+        for (String stem : types) {
             for (String property : properties) {
                 categories.add(stem + property);
             }
@@ -35,17 +39,18 @@ public class RecapTools {
 
     public static Map<String, String> getStats(float[][] obsMatrix, float[][] eMatrix,
                                                int window, double superDiagonal, float pseudoCount) {
-        float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
 
         Map<String, String> loopAttributes = new HashMap<>();
         float obs = obsMatrix[window][window];
-        float expected = eMatrix[window][window];
-
-        loopAttributes.put("PRESENCE", String.valueOf(getP(obs, expected, superDiagonal)));
-        loopAttributes.put("PRESENCE_INF", String.valueOf(getP(obs, pseudoCount, superDiagonal)));
-
         addAttributes(loopAttributes, "OBS_", obsMatrix, window);
-        addAttributes(loopAttributes, "OE_", oeMatrix, window);
+
+        if (eMatrix != null) {
+            float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
+            float expected = eMatrix[window][window];
+            loopAttributes.put("PRESENCE", String.valueOf(getP(obs, expected, superDiagonal)));
+            loopAttributes.put("PRESENCE_INF", String.valueOf(getP(obs, pseudoCount, superDiagonal)));
+            addAttributes(loopAttributes, "OE_", oeMatrix, window);
+        }
 
         return loopAttributes;
     }
@@ -148,11 +153,11 @@ public class RecapTools {
         return df.getExpectedValue(chrIndex, dist);
     }
 
-    public static void exportAllMatrices(Feature2DList refinedLoops, String[] names, File outFolder) {
+    public static void exportAllMatrices(Feature2DList refinedLoops, String[] names, File outFolder, boolean useOE) {
         int n = refinedLoops.getNumTotalFeatures();
         int m = names.length;
 
-        List<String> categories = getCategories();
+        List<String> categories = getCategories(useOE);
 
         List<float[][]> outputs = new ArrayList<>();
         for (int k = 0; k < categories.size(); k++) {

@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Recap {
@@ -82,16 +83,17 @@ public class Recap {
         }
 
         System.out.println("Using resolution: " + resolution);
+        AtomicBoolean useOE = new AtomicBoolean(true);
 
-        Feature2DList refinedLoops = localize(filepaths, names, loopList, handler, resolution, window, norm);
+        Feature2DList refinedLoops = recapStats(filepaths, names, loopList, handler, resolution, window, norm, useOE);
         refinedLoops.exportFeatureList(new File(outFolder, "recap.bedpe"), false, Feature2DList.ListFormat.NA);
-        RecapTools.exportAllMatrices(refinedLoops, names, outFolder);
+        RecapTools.exportAllMatrices(refinedLoops, names, outFolder, useOE.get());
         System.out.println("pinpoint complete");
     }
 
-    private static Feature2DList localize(String[] filepaths, String[] names, Feature2DList loopList,
-                                          ChromosomeHandler handler, int resolution, int window,
-                                          NormalizationType norm) {
+    private static Feature2DList recapStats(String[] filepaths, String[] names, Feature2DList loopList,
+                                            ChromosomeHandler handler, int resolution, int window,
+                                            NormalizationType norm, AtomicBoolean useOE) {
 
         if (Main.printVerboseComments) {
             System.out.println("Start Recap/Compile process");
@@ -133,26 +135,29 @@ public class Recap {
                             System.exit(9);
                         }
 
-                        ExpectedValueFunction df = ds.getExpectedValuesOrExit(zd.getZoom(), norm, chrom1, true, false);
+                        ExpectedValueFunction df = ds.getExpectedValues(zoom, norm, false);
+                        boolean doOE = df != null && useOE.get();
 
-                        if (df == null) {
-                            System.err.println("Expected is null " + chrom1.getName() + "_" + chrom2.getName());
-                            System.exit(10);
+                        double superDiagonal = 0;
+                        float pseudoCount = 0;
+                        if (doOE) {
+                            pseudoCount = getMedianExpectedAt(9000000 / resolution, window, chrom1.getIndex(), df);
+                            superDiagonal = df.getExpectedValue(chrom1.getIndex(), 1);
+                        } else {
+                            useOE.set(false);
                         }
-
-                        float pseudoCount = getMedianExpectedAt(9000000 / resolution,
-                                window, chrom1.getIndex(), df);
-                        double superDiagonal = df.getExpectedValue(chrom1.getIndex(), 1);
 
                         try {
                             for (Feature2D loop : loops) {
                                 float[][] obsMatrix = new float[matrixWidth][matrixWidth];
-                                float[][] eMatrix = new float[matrixWidth][matrixWidth];
+                                float[][] eMatrix = null;
 
                                 Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm, key);
-                                Utils.fillInExpectedMatrix(eMatrix, loop, matrixWidth, df, chrom1.getIndex(),
-                                        resolution, window);
-
+                                if (doOE) {
+                                    eMatrix = new float[matrixWidth][matrixWidth];
+                                    Utils.fillInExpectedMatrix(eMatrix, loop, matrixWidth, df, chrom1.getIndex(),
+                                            resolution, window);
+                                }
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
                                 Map<String, String> attributes = RecapTools.getStats(obsMatrix, eMatrix,
