@@ -18,21 +18,28 @@ import java.util.List;
 
 public class ATA {
 
+    private final String inputBigWig;
+    private final String bedFile;
+    private final String outFile;
+    private final String genome;
+    private final ChromosomeHandler handler;
+    private final int resolution;
 
-    public static void run(String[] args, int resolution, boolean exportNPY) {
+    public ATA(String[] args, CommandLineParser parser) {
         if (args.length != 5) {
             Main.printGeneralUsageAndExit(5);
         }
 
         // signal.bw peaks.bed outfile.npy
+        inputBigWig = args[1];
+        bedFile = args[2];
+        outFile = args[3];
+        genome = args[4];
+        handler = ChromosomeTools.loadChromosomes(genome);
+        resolution = parser.getResolutionOption(1);
+    }
 
-        String inputBigWig = args[1];
-        String bedFile = args[2];
-        String outFile = args[3];
-        String genome = args[4];
-
-        ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genome);
-
+    public void run() {
         try {
             aggregate(inputBigWig, bedFile, handler, resolution, outFile, genome);
         } catch (IOException | TribbleIndexNotFoundException e) {

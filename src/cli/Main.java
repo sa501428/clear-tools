@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.11.1";
+    public static final String VERSION_NUM = "0.11.2";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
@@ -24,6 +24,7 @@ public class Main {
                 "pinpoint [--res int] <input.hic> <loops.bedpe> <output.bedpe>\n" +
                 "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
                 "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
+                "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
                 "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
@@ -59,6 +60,9 @@ public class Main {
         } else if (command.startsWith("apa")) {
             APA apa = new APA(args, parser);
             apa.run();
+        } else if (command.startsWith("ata")) {
+            ATA ata = new ATA(args, parser);
+            ata.run();
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
         } else {
