@@ -51,7 +51,8 @@ public class ATA {
         int peakCounter = 0;
 
         for (Chromosome chrom : handler.getAutosomalChromosomesArray()) {
-            Iterator<?> iter = bedFile.getFeatures("chr10", 0, (int) handler.getChromosomeFromName("chr10").getLength());
+            System.out.println("Handling " + chrom.getName());
+            Iterator<?> iter = bedFile.getFeatures(chrom.getName(), 0, (int) chrom.getLength());
             while (iter.hasNext()) {
                 IGVFeature feature = (IGVFeature) iter.next();
                 //System.out.println(feature.getStart() + " " + feature.getEnd() + " " + feature.getScore());
@@ -77,6 +78,15 @@ public class ATA {
         MatrixTools.saveMatrixTextNumpy(outFile + ".npy", accumulation);
     }
 
+    public void run() {
+        try {
+            aggregate(inputBigWig, bedFile, handler, resolution, outFile, window);
+        } catch (IOException | TribbleIndexNotFoundException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
     private static void normalizeInPlace(double[] vector, int peakCounter) {
         for (int k = 0; k < vector.length; k++) {
             vector[k] /= peakCounter;
@@ -85,14 +95,5 @@ public class ATA {
 
     private static int getIntervalMidpoint(IGVFeature feature) {
         return (feature.getStart() + feature.getEnd()) / 2;
-    }
-
-    public void run() {
-        try {
-            aggregate(inputBigWig, bedFile, handler, resolution, outFile, window);
-        } catch (IOException | TribbleIndexNotFoundException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
     }
 }
