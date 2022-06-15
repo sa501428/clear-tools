@@ -47,21 +47,42 @@ public class ConnectedComponents {
         float threshold = ArrayTools.getMax(kde) * 0.85f;
         if (threshold > ABSOLUTE_CUTOFF) {
             List<LocalMaxima> maxima = detect(kde, threshold, saveString);
-            for (LocalMaxima max : maxima) {
-                Map<String, String> attributes = new HashMap<>();
-                attributes.put("pinpoint_area", "" + max.area);
-                attributes.put("pinpoint_enrichment", "" + max.maxVal);
 
-                long start1 = resolution * (binXStart + max.maxCoordinate.x);
-                long start2 = resolution * (binYStart + max.maxCoordinate.y);
+            if (maxima.size() > 0) {
+                LocalMaxima best = maxima.get(0);
+
+                for (LocalMaxima max : maxima) {
+                    Map<String, String> attributes = new HashMap<>();
+                    attributes.put("pinpoint_area", "" + max.area);
+                    attributes.put("pinpoint_enrichment", "" + max.maxVal);
+
+                    if (best.maxVal < max.maxVal) {
+                        best = max;
+                    }
+
+                    long start1 = resolution * (binXStart + max.maxCoordinate.x);
+                    long start2 = resolution * (binYStart + max.maxCoordinate.y);
+                    long end1 = start1 + resolution;
+                    long end2 = start2 + resolution;
+
+                    Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
+                            loop.getChr2(), start2, end2, Color.BLACK, attributes);
+                    pinpointedLoops.add(feature);
+                }
+
+
+                long start1 = resolution * (binXStart + best.maxCoordinate.x);
+                long start2 = resolution * (binYStart + best.maxCoordinate.y);
                 long end1 = start1 + resolution;
                 long end2 = start2 + resolution;
+                loop.addStringAttribute("pinpoint_start1", "" + start1);
+                loop.addStringAttribute("pinpoint_start2", "" + start2);
+                loop.addStringAttribute("pinpoint_end1", "" + end1);
+                loop.addStringAttribute("pinpoint_end2", "" + end2);
 
-                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
-                        loop.getChr2(), start2, end2, Color.BLACK, attributes);
-                pinpointedLoops.add(feature);
+                best = null;
+                maxima.clear();
             }
-            maxima.clear();
         }
     }
 

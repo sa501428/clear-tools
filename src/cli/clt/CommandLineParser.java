@@ -39,14 +39,10 @@ public class CommandLineParser extends CmdLineParser {
     private final Option helpOption = addBooleanOption('h', "help");
     private final Option versionOption = addBooleanOption('V', "version");
     private final Option logOption = addBooleanOption("log");
-
     private final Option resolutionsOption = addIntegerOption('r', "res");
     private final Option normalizationTypeOption = addStringOption('k', "norm");
     private final Option cutoffOption = addIntegerOption("cutoff");
-
     private final Option threadsOption = addIntegerOption("threads");
-
-    // APA
     private final Option windowOption = addIntegerOption("window");
     private final Option minDisValOption = addIntegerOption("min-dist");
     private final Option maxDistValOption = addIntegerOption("max-dist");

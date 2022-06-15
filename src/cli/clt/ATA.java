@@ -6,6 +6,7 @@ import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 import javastraw.tools.MatrixTools;
+import javastraw.tools.ParallelizationTools;
 import org.broad.igv.feature.IGVFeature;
 import org.broad.igv.feature.LocusScore;
 import org.broad.igv.feature.tribble.TribbleIndexNotFoundException;
@@ -16,6 +17,7 @@ import org.broad.igv.track.WindowFunction;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ATA {
 
@@ -25,6 +27,26 @@ public class ATA {
     private final String genome;
     private final ChromosomeHandler handler;
     private final int resolution, window;
+
+    public static void main(String[] args) {
+        // test
+        ChromosomeHandler handler = ChromosomeTools.loadChromosomes("hg38");
+        String inputBigWig = "/Users/muhammad/Desktop/ATA/S3_w73_lvent_signal.bw";
+        DataTrack bigWig = IGVUtils.loadBigWig(inputBigWig, handler);
+
+        Chromosome chrom = handler.getChromosomeFromName("chr1");
+        int gStart = 1000000;
+        int gEnd = 1001000;
+        int resolution = 1;
+
+
+        List<LocusScore> loci = IGVUtils.getLocusScores(bigWig, chrom, gStart, gEnd, resolution, WindowFunction.count);
+        if (loci.size() > 0) {
+            for (LocusScore locus : loci) {
+                System.out.println(locus.getStart() + " " + locus.getEnd() + " " + locus.getScore());
+            }
+        }
+    }
 
     public ATA(String[] args, CommandLineParser parser) {
         if (args.length != 5) {
@@ -43,39 +65,71 @@ public class ATA {
 
     private static void aggregate(String inputBigWig, String inputBedFile, ChromosomeHandler handler, int resolution,
                                   String outFile, int window) throws IOException, TribbleIndexNotFoundException {
-        int width = 2 * window + 1;
-        double[] accumulation = new double[width];
+        final int width = 2 * window + 1;
+        final double[] totalAccumulation = new double[width];
+        final long[] totalNumber = new long[1];
+        final int gWindow = window * resolution;
+        final int gWidth = width * resolution;
 
         TribbleFeatureSource bedFile = IGVUtils.loadBed(inputBedFile, handler);
         DataTrack bigWig = IGVUtils.loadBigWig(inputBigWig, handler);
-        int peakCounter = 0;
 
-        for (Chromosome chrom : handler.getAutosomalChromosomesArray()) {
-            System.out.println("Handling " + chrom.getName());
-            Iterator<?> iter = bedFile.getFeatures(chrom.getName(), 0, (int) chrom.getLength());
-            while (iter.hasNext()) {
-                IGVFeature feature = (IGVFeature) iter.next();
-                //System.out.println(feature.getStart() + " " + feature.getEnd() + " " + feature.getScore());
+        AtomicInteger cIndex = new AtomicInteger(0);
 
-                int midPoint = getIntervalMidpoint(feature);
-                int gStart = midPoint - window;
-                int gEnd = gStart + width + 1;
+        Chromosome[] chromosomes = handler.getAutosomalChromosomesArray();
+        ParallelizationTools.launchParallelizedCode(() -> {
+            double[] accumulation = new double[width];
+            int peakCounter = 0;
 
-                List<LocusScore> loci = IGVUtils.getLocusScores(bigWig, chrom, gStart, gEnd, resolution, WindowFunction.count);
-                if (loci.size() > 0) {
-                    peakCounter++;
-                    for (LocusScore locus : loci) {
-                        int relativeX = locus.getStart() - gStart;
-                        if (relativeX >= 0 && relativeX < width) {
-                            accumulation[relativeX] += locus.getScore();
+            int currIndex = cIndex.getAndIncrement();
+            while (currIndex < chromosomes.length) {
+
+                try {
+                    Chromosome chrom = chromosomes[currIndex];
+                    System.out.println("Handling " + chrom.getName());
+                    Iterator<?> iter = bedFile.getFeatures(chrom.getName(), 0, (int) chrom.getLength());
+                    while (iter.hasNext()) {
+                        IGVFeature feature = (IGVFeature) iter.next();
+                        //System.out.println(feature.getStart() + " " + feature.getEnd() + " " + feature.getScore());
+
+                        int midPoint = getIntervalMidpoint(feature);
+                        int gStart = midPoint - gWindow;
+                        int gEnd = gStart + gWidth + 1;
+
+                        List<LocusScore> loci = IGVUtils.getLocusScores(bigWig, chrom, gStart, gEnd, 1, WindowFunction.count);
+                        if (loci.size() > 0) {
+                            peakCounter++;
+                            for (LocusScore locus : loci) {
+                                if (locus.getScore() > 0) {
+                                    int relativeX = (locus.getStart() - gStart) / resolution;
+                                    if (relativeX >= 0 && relativeX < width) {
+                                        accumulation[relativeX] += locus.getScore();
+                                    }
+                                }
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                currIndex = cIndex.getAndIncrement();
+            }
+
+            synchronized (totalAccumulation) {
+                for (int k = 0; k < totalAccumulation.length; k++) {
+                    if (accumulation[k] > 0) {
+                        totalAccumulation[k] += accumulation[k];
+                    }
+                }
+                if (peakCounter > 0) {
+                    totalNumber[0] += peakCounter;
                 }
             }
-        }
+        });
 
-        normalizeInPlace(accumulation, peakCounter);
-        MatrixTools.saveMatrixTextNumpy(outFile + ".npy", accumulation);
+        normalizeInPlace(totalAccumulation, totalNumber[0]);
+        MatrixTools.saveMatrixTextNumpy(outFile + ".npy", totalAccumulation);
     }
 
     public void run() {
@@ -87,9 +141,9 @@ public class ATA {
         }
     }
 
-    private static void normalizeInPlace(double[] vector, int peakCounter) {
+    private static void normalizeInPlace(double[] vector, long counts) {
         for (int k = 0; k < vector.length; k++) {
-            vector[k] /= peakCounter;
+            vector[k] /= counts;
         }
     }
 
