@@ -133,6 +133,7 @@ public class Recap {
                             System.exit(9);
                         }
 
+                        int maxBinDist = Math.max(getMaxDistance(loops, resolution, window), 9000000 / resolution);
                         double[] expected;
                         try {
                             expected = ds.getExpectedValues(
@@ -142,18 +143,16 @@ public class Recap {
                             expected = null;
                         }
                         if (expected == null) {
-                            int maxBinDist = getMaxDistance(loops, resolution, window);
                             System.out.println("Calculating log-normal expected vector");
                             expected = ExpectedUtils.calculateExpected(zd, norm, maxBinDist, true);
                         }
 
-                        float pseudoCount = getMedianExpectedAt(9000000 / resolution, window, expected);
+                        float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, window, expected);
                         double superDiagonal = expected[1];
 
                         try {
                             for (Feature2D loop : loops) {
                                 float[][] obsMatrix = new float[matrixWidth][matrixWidth];
-
                                 Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm, key);
                                 float[][] eMatrix = new float[matrixWidth][matrixWidth];
                                 Utils.fillInExpectedMatrix(eMatrix, loop, matrixWidth, expected, chrom1.getIndex(),
