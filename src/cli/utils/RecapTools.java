@@ -17,18 +17,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class RecapTools {
 
-    public static List<String> getCategories(boolean useOE) {
+    public static List<String> getCategories() {
         List<String> categories = new ArrayList<>();
 
         String[] properties = new String[]{"VAL", "STD_DEV", "KURTOSIS", "SKEWNESS", "MEAN_ENRICHMENT",
                 "MEDIAN_ENRICHMENT", "GEO_ENRICHMENT", "MAX_ENRICHMENT", "MIN_ENRICHMENT", "DECAY_A", "DECAY_k"};
-        String[] types = new String[]{"OBS_"};
+        String[] types = new String[]{"OBS_", "OE_"};
 
-        if (useOE) {
-            categories.add("PRESENCE");
-            categories.add("PRESENCE_INF");
-            types = new String[]{"OBS_", "OE_"};
-        }
+        categories.add("PRESENCE");
+        categories.add("PRESENCE_INF");
+
         for (String stem : types) {
             for (String property : properties) {
                 categories.add(stem + property);
@@ -153,11 +151,11 @@ public class RecapTools {
         return df.getExpectedValue(chrIndex, dist);
     }
 
-    public static void exportAllMatrices(Feature2DList refinedLoops, String[] names, File outFolder, boolean useOE) {
+    public static void exportAllMatrices(Feature2DList refinedLoops, String[] names, File outFolder) {
         int n = refinedLoops.getNumTotalFeatures();
         int m = names.length;
 
-        List<String> categories = getCategories(useOE);
+        List<String> categories = getCategories();
 
         List<float[][]> outputs = new ArrayList<>();
         for (int k = 0; k < categories.size(); k++) {

@@ -111,7 +111,7 @@ public class Utils {
     }
 
     public static void fillInExpectedMatrix(float[][] matrix, Feature2D loop,
-                                            int matrixWidth, ExpectedValueFunction df, int chrIndex,
+                                            int matrixWidth, double[] expectedVector, int chrIndex,
                                             int resolution, int window) {
 
         long binXStart = (loop.getMidPt1() / resolution) - window;
@@ -121,8 +121,8 @@ public class Utils {
             for (int relativeY = 0; relativeY < matrixWidth; relativeY++) {
                 long X = relativeX + binXStart;
                 long Y = relativeY + binYStart;
-                long dist = Math.abs(X - Y);
-                double expected = df.getExpectedValue(chrIndex, dist);
+                int dist = (int) Math.abs(X - Y);
+                double expected = expectedVector[dist];
                 matrix[relativeX][relativeY] = (float) expected;
             }
         }

@@ -1,6 +1,7 @@
 package cli.clt;
 
 import cli.Main;
+import cli.utils.ExpectedUtils;
 import cli.utils.HiCUtils;
 import cli.utils.RecapTools;
 import cli.utils.flags.RegionConfiguration;
@@ -11,7 +12,6 @@ import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
-import javastraw.reader.expected.ExpectedValueFunction;
 import javastraw.reader.expected.QuickMedian;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Recap {
@@ -83,17 +82,16 @@ public class Recap {
         }
 
         System.out.println("Using resolution: " + resolution);
-        AtomicBoolean useOE = new AtomicBoolean(true);
 
-        Feature2DList refinedLoops = recapStats(filepaths, names, loopList, handler, resolution, window, norm, useOE);
+        Feature2DList refinedLoops = recapStats(filepaths, names, loopList, handler, resolution, window, norm);
         refinedLoops.exportFeatureList(new File(outFolder, "recap.bedpe"), false, Feature2DList.ListFormat.NA);
-        RecapTools.exportAllMatrices(refinedLoops, names, outFolder, useOE.get());
+        RecapTools.exportAllMatrices(refinedLoops, names, outFolder);
         System.out.println("pinpoint complete");
     }
 
     private static Feature2DList recapStats(String[] filepaths, String[] names, Feature2DList loopList,
                                             ChromosomeHandler handler, int resolution, int window,
-                                            NormalizationType norm, AtomicBoolean useOE) {
+                                            NormalizationType norm) {
 
         if (Main.printVerboseComments) {
             System.out.println("Start Recap/Compile process");
@@ -135,29 +133,31 @@ public class Recap {
                             System.exit(9);
                         }
 
-                        ExpectedValueFunction df = ds.getExpectedValues(zoom, norm, false);
-                        boolean doOE = df != null && useOE.get();
-
-                        double superDiagonal = 0;
-                        float pseudoCount = 0;
-                        if (doOE) {
-                            pseudoCount = getMedianExpectedAt(9000000 / resolution, window, chrom1.getIndex(), df);
-                            superDiagonal = df.getExpectedValue(chrom1.getIndex(), 1);
-                        } else {
-                            useOE.set(false);
+                        double[] expected;
+                        try {
+                            expected = ds.getExpectedValues(
+                                    zoom, norm, false).getExpectedValuesWithNormalization(
+                                    chrom1.getIndex()).getValues().get(0);
+                        } catch (Exception e) {
+                            expected = null;
                         }
+                        if (expected == null) {
+                            int maxBinDist = getMaxDistance(loops, resolution, window);
+                            System.out.println("Calculating log-normal expected vector");
+                            expected = ExpectedUtils.calculateExpected(zd, norm, maxBinDist, true);
+                        }
+
+                        float pseudoCount = getMedianExpectedAt(9000000 / resolution, window, expected);
+                        double superDiagonal = expected[1];
 
                         try {
                             for (Feature2D loop : loops) {
                                 float[][] obsMatrix = new float[matrixWidth][matrixWidth];
-                                float[][] eMatrix = null;
 
                                 Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm, key);
-                                if (doOE) {
-                                    eMatrix = new float[matrixWidth][matrixWidth];
-                                    Utils.fillInExpectedMatrix(eMatrix, loop, matrixWidth, df, chrom1.getIndex(),
-                                            resolution, window);
-                                }
+                                float[][] eMatrix = new float[matrixWidth][matrixWidth];
+                                Utils.fillInExpectedMatrix(eMatrix, loop, matrixWidth, expected, chrom1.getIndex(),
+                                        resolution, window);
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
                                 Map<String, String> attributes = RecapTools.getStats(obsMatrix, eMatrix,
@@ -187,10 +187,21 @@ public class Recap {
         return loopList;
     }
 
-    private static float getMedianExpectedAt(int d0, int dx, int chromIndex, ExpectedValueFunction df) {
+    private static int getMaxDistance(List<Feature2D> loops, int resolution, int window) {
+        long maxDist = 0;
+        for (Feature2D loop : loops) {
+            long dist = Math.abs(loop.getMidPt1() - loop.getMidPt2()) / resolution;
+            if (dist > maxDist) {
+                maxDist = dist;
+            }
+        }
+        return (int) (maxDist + 2 * window);
+    }
+
+    private static float getMedianExpectedAt(int d0, int dx, double[] expectedVector) {
         List<Double> values = new ArrayList<>();
         for (int dist = d0 - dx; dist < d0 + dx; dist++) {
-            double expected = df.getExpectedValue(chromIndex, dist);
+            double expected = expectedVector[dist];
             if (expected > 0) {
                 values.add(expected);
             }

@@ -2,6 +2,7 @@ package cli.clt;
 
 import cli.HiCValue;
 import cli.Main;
+import cli.utils.ExpectedUtils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -9,7 +10,6 @@ import javastraw.reader.Dataset;
 import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
-import javastraw.reader.block.ContactRecord;
 import javastraw.reader.expected.QuickMedian;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
@@ -20,7 +20,6 @@ import javastraw.tools.MatrixTools;
 import javastraw.tools.UNIXTools;
 
 import java.io.File;
-import java.util.Iterator;
 import java.util.List;
 
 public class Probability {
@@ -60,7 +59,7 @@ public class Probability {
             MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
             if (zd == null) continue;
 
-            double[] expected = calculateExpected(zd, norm, DEFAULT_MAX_DIST/resolution, useLog);
+            double[] expected = ExpectedUtils.calculateExpected(zd, norm, DEFAULT_MAX_DIST / resolution, useLog);
             MatrixTools.saveMatrixTextNumpy((new File(outFolder, "expected.npy")).getAbsolutePath(),
                     expected);
             QuickMedian.doRollingMedian(expected, DEFAULT_WINDOW/resolution);
@@ -76,7 +75,7 @@ public class Probability {
                                        int resolution, NormalizationType norm) {
         for(int i = 0; i < 5; i++) {
             Feature2D loop = loops.get(i);
-            int dist = getDist(loop, resolution);
+            int dist = ExpectedUtils.getDist(loop, resolution);
             float val = HiCValue.getExactPixel(zd, loop, resolution, norm);
             double proportionLoop = (val - expected[dist])/(expected[1]-expected[dist]);
             double enrichment = val / expected[dist];
@@ -98,49 +97,5 @@ public class Probability {
                     " ps "+pseudocount
             );
         }
-    }
-
-    private static double[] calculateExpected(MatrixZoomData zd, NormalizationType norm, int maxBinDist,
-                                              boolean useLog) {
-        double[] expected = new double[maxBinDist];
-        long[] counts = new long[maxBinDist];
-
-        Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
-        while (iterator.hasNext()){
-            ContactRecord record = iterator.next();
-            int dist = getDist(record);
-            if(dist < maxBinDist){
-                if(useLog){
-                    expected[dist] += Math.log(1 + record.getCounts());
-                } else {
-                    expected[dist] += record.getCounts();
-                }
-                counts[dist]++;
-            }
-        }
-
-        for(int z = 0; z < maxBinDist; z++){
-            if(counts[z] > 0){
-                expected[z] /= counts[z];
-            }
-        }
-
-        if(useLog){
-            for(int z = 0; z < maxBinDist; z++){
-                expected[z] = Math.expm1(expected[z]);
-            }
-        }
-
-        return expected;
-    }
-
-    private static int getDist(Feature2D loop, int resolution) {
-        int binXStart = (int) (loop.getMidPt1() / resolution);
-        int binYStart = (int) (loop.getMidPt2() / resolution);
-        return Math.abs(binXStart-binYStart);
-    }
-
-    private static int getDist(ContactRecord record) {
-        return Math.abs(record.getBinX()- record.getBinY());
     }
 }
