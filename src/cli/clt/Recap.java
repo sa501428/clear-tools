@@ -174,7 +174,8 @@ public class Recap {
                             System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
 
                         } catch (Exception e) {
-                            System.err.println(e.getMessage());
+                            e.printStackTrace();
+                            System.exit(76);
                         }
                     }
                     threadPair = currChromPair.getAndIncrement();
@@ -189,12 +190,12 @@ public class Recap {
     private static int getMaxDistance(List<Feature2D> loops, int resolution, int window) {
         long maxDist = 0;
         for (Feature2D loop : loops) {
-            long dist = Math.abs(loop.getMidPt1() - loop.getMidPt2()) / resolution;
+            long dist = Math.abs((loop.getStart1() / resolution - window) - (loop.getEnd2() / resolution + window));
             if (dist > maxDist) {
                 maxDist = dist;
             }
         }
-        return (int) (maxDist + 2 * window);
+        return (int) (maxDist + 4 * window);
     }
 
     private static float getMedianExpectedAt(int d0, int dx, double[] expectedVector) {
