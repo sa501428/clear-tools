@@ -25,7 +25,8 @@ public class Main {
                 "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
                 "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
                 "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
-                "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>");
+                "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
+                "hotspot [--res int] [--norm string] [--window int] <file1.hic,file2.hic,...>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }

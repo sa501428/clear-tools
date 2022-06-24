@@ -58,11 +58,19 @@ public class HotSpot {
         }
     }
     public static void main() {
+
+
+        // take in args, parser
+        // extract the flags / field options
+        // hic files, resolution, norm, ....
+
+
         tissueTypeToNumpyFile("right_ventricle");
         tissueTypeToNumpyFile("atria");
         tissueTypeToNumpyFile("heart");
         tissueTypeToNumpyFile("colon");
         tissueTypeToNumpyFile("lung");
         tissueTypeToNumpyFile("liver");
+
     }
 }
