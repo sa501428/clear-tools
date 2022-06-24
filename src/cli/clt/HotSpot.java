@@ -1,4 +1,4 @@
-package cli.utils;
+package cli.clt;
 
 import javastraw.reader.Dataset;
 import javastraw.reader.Matrix;
@@ -10,8 +10,10 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
 
-public class JavaStrawEx {
-    public static void tissueTypeToNumpyFile (String tissue) {
+import java.io.IOException;
+
+public class HotSpot {
+    public static void tissueTypeToNumpyFile(String tissue) {
         boolean useCache = false;
 
         //QUESTION:
@@ -19,7 +21,7 @@ public class JavaStrawEx {
         String filename = "https://s3.us-east-1.wasabisys.com/aiden-encode-hic-mirror/bifocals_iter1/" + tissue + "_nd.hic"; //insert filename here. I don't think URL is acceptable
 
         // create a hic dataset object
-        Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, useCache, false);
+        Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, useCache, true);
 
         // choose norm: we know the datasets we're using will have SCALE available
         NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "NONE"});
@@ -42,11 +44,18 @@ public class JavaStrawEx {
         int binXEnd = 121000236 / resolution;
         int binYEnd = 120988666 / resolution;
 
-        int numRows = (binXEnd - binXStart) / resolution + 1; // replace with actual number later
-        int numCols = (binYEnd - binYStart) / resolution + 1; // replace later
+        int numRows = binXEnd - binXStart + 1; // replace with actual number later
+        int numCols = binYEnd - binYStart + 1; // replace later
 
-        float[][] float2DArray = HiCFileTools.extractLocalBoundedRegionFloatMatrix(zd, binXStart, binXEnd, binYStart, binYEnd, numRows, numCols, norm, getDataUnderTheDiagonal);
-        MatrixTools.saveMatrixTextNumpy("/Users/michaelngo/Desktop/" + tissue + "numpymatrix/to.output.npy", float2DArray);
+        float[][] float2DArray = new float[0][];
+        try {
+            float2DArray = HiCFileTools.extractLocalBoundedRegionFloatMatrix(zd, binXStart, binXEnd, binYStart, binYEnd, numRows, numCols, norm, getDataUnderTheDiagonal);
+            MatrixTools.saveMatrixTextNumpy(tissue + "numpymatrix.to.output.npy", float2DArray);
+        } catch (IOException e) {
+            //throw new RuntimeException(e);
+            System.err.println(e.getLocalizedMessage());
+            //System.exit(10);
+        }
     }
     public static void main() {
         tissueTypeToNumpyFile("right_ventricle");
