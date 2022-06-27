@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.12.5";
+    public static final String VERSION_NUM = "0.13.00";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
@@ -25,7 +25,8 @@ public class Main {
                 "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
                 "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
                 "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
-                "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>");
+                "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
+                "hotspot [--res int] [--norm string] [--window int] <file1.hic,file2.hic,...>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
@@ -65,6 +66,8 @@ public class Main {
             ata.run();
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
+        } else if (command.startsWith("hotspot")) {
+            HotSpot.main();
         } else {
             printGeneralUsageAndExit(3);
         }

@@ -26,6 +26,10 @@ Ratios and Enrichments Compared Across Phenotypes
 
 COMParing Interactions from Loops across Experiments
 
+## HOTSPOT
+
+Highly Observable Transitions in Selective Pixels Of Tissues
+
 ## additional tools
 
 probability
