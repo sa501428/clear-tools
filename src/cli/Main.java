@@ -25,7 +25,8 @@ public class Main {
                 "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
                 "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
                 "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
-                "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>");
+                "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
+                "hotspot [--res int] [--window int] [--norm string] <file1.hic,file2.hic,...> <name1,name2,...> <out_folder>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
@@ -66,7 +67,7 @@ public class Main {
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
         } else if (command.startsWith("hotspot")) {
-            HotSpot.main();
+            HotSpot.run(args, parser);
         } else {
             printGeneralUsageAndExit(3);
         }
