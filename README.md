@@ -28,6 +28,10 @@ COMParing Interactions from Loops across Experiments
 
 ## additional tools
 
+## SIFT
+
+Search and Identify Focal Targets
+
 probability
 
 clean
