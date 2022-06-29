@@ -12,6 +12,7 @@ import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
@@ -99,9 +100,11 @@ public class Pinpoint {
                 Chromosome chr1 = config.getChr1();
                 Chromosome chr2 = config.getChr2();
 
+                Matrix matrix = dataset.getMatrix(chr1, chr2);
+
                 List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
                 if (loops != null && loops.size() > 0) {
-                    MatrixZoomData zd = HiCFileTools.getMatrixZoomData(dataset, chr1, chr2, zoom);
+                    MatrixZoomData zd = matrix.getZoomData(zoom);
                     if (zd != null) {
                         try {
                             List<Feature2D> pinpointedLoops = new ArrayList<>();
@@ -135,7 +138,6 @@ public class Pinpoint {
                                     System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                                 }
                             }
-                            zd.clearCache();
 
                             synchronized (key) {
                                 refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
@@ -148,6 +150,7 @@ public class Pinpoint {
                         }
                     }
                 }
+                matrix.clearCache();
                 threadPair = currChromPair.getAndIncrement();
             }
         });

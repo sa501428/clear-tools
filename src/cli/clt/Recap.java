@@ -13,6 +13,7 @@ import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.expected.QuickMedian;
+import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
@@ -123,10 +124,11 @@ public class Recap {
                     RegionConfiguration config = chromosomePairs.get(threadPair);
                     Chromosome chrom1 = config.getChr1();
                     Chromosome chrom2 = config.getChr2();
+                    Matrix matrix = ds.getMatrix(chrom1, chrom2);
 
                     List<Feature2D> loops = loopList.get(chrom1.getIndex(), chrom2.getIndex());
                     if (loops != null && loops.size() > 0) {
-                        MatrixZoomData zd = HiCFileTools.getMatrixZoomData(ds, chrom1, chrom2, zoom);
+                        MatrixZoomData zd = matrix.getZoomData(zoom);
 
                         if (zd == null) {
                             System.err.println("ZD is null " + chrom1.getName() + "_" + chrom2.getName());
@@ -169,7 +171,6 @@ public class Recap {
                                     System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                                 }
                             }
-                            zd.clearCache();
 
                             System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
 
@@ -178,6 +179,7 @@ public class Recap {
                             System.exit(76);
                         }
                     }
+                    matrix.clearCache();
                     threadPair = currChromPair.getAndIncrement();
                 }
             });

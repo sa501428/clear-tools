@@ -35,6 +35,7 @@ import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
@@ -165,6 +166,8 @@ public class APA {
                 Chromosome chr1 = config.getChr1();
                 Chromosome chr2 = config.getChr2();
 
+                Matrix matrix = ds.getMatrix(chr1, chr2);
+
                 List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
                 if (loops != null && loops.size() > 0) {
 
@@ -180,7 +183,7 @@ public class APA {
                         }
                     }
 
-                    MatrixZoomData zd = HiCFileTools.getMatrixZoomData(ds, chr1, chr2, zoom);
+                    MatrixZoomData zd = matrix.getZoomData(zoom);
                     if (zd != null) {
                         try {
                             for (Feature2D loop : loops) {
@@ -197,7 +200,6 @@ public class APA {
                                     System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                                 }
                             }
-                            zd.clearCache();
                             System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
@@ -206,6 +208,7 @@ public class APA {
                     vector1 = null;
                     vector2 = null;
                 }
+                matrix.clearCache();
                 threadPair = currChromPair.getAndIncrement();
             }
 

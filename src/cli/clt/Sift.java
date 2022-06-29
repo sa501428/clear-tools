@@ -3,10 +3,10 @@ package cli.clt;
 import cli.utils.ExpectedUtils;
 import cli.utils.WelfordStats;
 import javastraw.reader.Dataset;
-import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.expected.QuickMedian;
+import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.tools.HiCFileTools;
@@ -32,7 +32,6 @@ public class Sift {
                         int maxBin = maxDist / res;
                         getStats(zd, maxBin, chrom, res, window);
                     }
-                    zd.clearCache();
                 }
                 matrix.clearCache();
             }
@@ -50,18 +49,19 @@ public class Sift {
 
     private static void getStats(MatrixZoomData zd, int maxBin, Chromosome chrom, int res, int windowSize) {
 
-        System.out.println("Processing " + chrom.getName() + " " + res);
-        int compression = windowSize / res;
-        int maxCompressedBin = maxBin / compression + 1;
+
+        //int compression = windowSize / res;
+        int maxCompressedBin = logp1i(maxBin) + 1;
+        System.out.println("Processing " + chrom.getName() + " " + res + "  max " + maxCompressedBin);
 
         WelfordStats stats = new WelfordStats(maxCompressedBin);
 
         for (Iterator<ContactRecord> it = zd.getDirectIterator(); it.hasNext(); ) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > 1) {
-                int dist = ExpectedUtils.getDist(cr) / compression;
+                int dist = logp1i(ExpectedUtils.getDist(cr));
                 if (dist < maxCompressedBin) {
-                    stats.addValue(dist, Math.log(1 + cr.getCounts()));
+                    stats.addValue(dist, logp1(cr.getCounts()));
                 }
             }
         }
@@ -69,20 +69,28 @@ public class Sift {
         String stem = chrom.getName() + "_" + res + "_w" + windowSize;
         double[] std = stats.getStdDev();
         MatrixTools.saveMatrixTextNumpy(stem + "_std.npy", std);
-        QuickMedian.doRollingMedian(std, 2 * windowSize / res);
+        QuickMedian.doRollingMedian(std, windowSize / res);
         MatrixTools.saveMatrixTextNumpy(stem + "_smooth_std.npy", std);
 
         MatrixTools.saveMatrixTextNumpy(stem + "_mu.npy", stats.getMean());
-        QuickMedian.doRollingMedian(stats.getMean(), 2 * windowSize / res);
+        QuickMedian.doRollingMedian(stats.getMean(), windowSize / res);
         MatrixTools.saveMatrixTextNumpy(stem + "_smooth_mu.npy", stats.getMean());
 
         int[] positions = new int[maxCompressedBin];
-        for (int z = 1; z < maxCompressedBin; z++) {
-            positions[z] = positions[z - 1] + (res * compression);
+        for (int z = 0; z < maxCompressedBin; z++) {
+            positions[z] = (int) Math.expm1(z);
         }
 
         MatrixTools.saveMatrixTextNumpy(stem + "x.npy", positions);
 
+    }
+
+    private static int logp1i(int x) {
+        return (int) Math.floor(Math.log(1 + x));
+    }
+
+    private static double logp1(float x) {
+        return Math.log(1 + x);
     }
 
 
@@ -93,9 +101,10 @@ public class Sift {
         int maxDist = 10000000;
 
         for (Chromosome chrom : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
+            Matrix matrix = ds.getMatrix(chrom, chrom);
             for (int res : new int[]{5000, 2000, 1000, 500, 200, 100, 50, 20, 10}) {
                 int maxBin = maxDist / res;
-                Matrix matrix = ds.getMatrix(chrom, chrom);
+
                 MatrixZoomData zd = matrix.getZoomData(new HiCZoom(res));
 
                 float[] percentages = getPercentNonZeros(zd, maxBin, chrom, res);
@@ -109,11 +118,8 @@ public class Sift {
                 String stem = chrom.getName() + "_" + res + "_";
                 MatrixTools.saveMatrixTextNumpy(stem + "perc.npy", percentages);
                 MatrixTools.saveMatrixTextNumpy(stem + "x.npy", positions);
-
-                zd.clearCache();
-
-
             }
+            matrix.clearCache();
         }
 
         /*
