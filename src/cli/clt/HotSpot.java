@@ -4,6 +4,8 @@ import cli.utils.StandardDevUtils;
 import javastraw.reader.Dataset;
 import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
+import javastraw.reader.block.Block;
+import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
@@ -11,67 +13,22 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
 
-import java.io.IOException;
 import java.util.List;
 
+import static cli.utils.StandardDevUtils.StdDeviationFinder;
+
 public class HotSpot {
-    /*
-    private static void tissueTypeToNumpyFile(String tissue) {
 
-        boolean useCache = false;
-
-        //QUESTION:
-        // https://s3.us-east-1.wasabisys.com/aiden-encode-hic-mirror/bifocals_iter1/TISSUE_nd.hic
-        String filename = "https://s3.us-east-1.wasabisys.com/aiden-encode-hic-mirror/bifocals_iter1/" + tissue + "_nd.hic"; //insert filename here. I don't think URL is acceptable
-
-        // create a hic dataset object
-        Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, useCache, true);
-        // choose norm: we know the datasets we're using will have SCALE available
-        NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "NONE"});
-
-        // choose to use 2Kb resolution
-        int resolution = 2000;
-
-        // Get a list of the chromosome objects
-        Chromosome chr5 = ds.getChromosomeHandler().getChromosomeFromName("chr5");
-
-        Matrix matrix = ds.getMatrix(chr5, chr5);
-        MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
-
-        boolean getDataUnderTheDiagonal = true;
-
-        // our bounds will be binXStart, binYStart, binXEnd, binYEnd
-        // these are in BIN coordinates, not genome coordinates
-        int binXStart = 119848237 / resolution;
-        int binYStart = 119836267 / resolution;
-        int binXEnd = 121000236 / resolution;
-        int binYEnd = 120988666 / resolution;
-
-        int numRows = binXEnd - binXStart + 1; // replace with actual number later
-        int numCols = binYEnd - binYStart + 1; // replace later
-
-        float[][] float2DArray = new float[0][];
-        try {
-            float2DArray = HiCFileTools.extractLocalBoundedRegionFloatMatrix(zd, binXStart, binXEnd, binYStart, binYEnd, numRows, numCols, norm, getDataUnderTheDiagonal);
-            MatrixTools.saveMatrixTextNumpy(tissue + "numpymatrix.to.output.npy", float2DArray);
-        } catch (IOException e) {
-            //throw new RuntimeException(e);
-            System.err.println(e.getLocalizedMessage());
-            //System.exit(10);
-        }
-    }
-    */
-    private static List<float[][]> getMatrices(int res, int window, String strNorm, String[] files, String[] names) {
+    private static List<float[][]> getMatrices(int res, int window, String strNorm, String[] files) {
         /*
         Accepts parameters of the HOTSPOT command line tool and returns a list of 2D float arrays that represent the Hi-C maps corresponding to the files. The 2D float
         arrays will have pixel sizes equal window argument
          */
         boolean useCache = false;
-
-        for (String filename : files) {
-
+        List<float[][]> mtxList = null;
+        for (String file : files) {
             // create a hic dataset object
-            Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, useCache, true);
+            Dataset ds = HiCFileTools.extractDatasetForCLT(file, false, useCache, true);
             // choose norm: we know the datasets we're using will have SCALE available
             NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{strNorm, "NONE"});
 
@@ -79,33 +36,54 @@ public class HotSpot {
             int resolution = res;
 
             // Get a list of the chromosome objects
-            Chromosome chr5 = ds.getChromosomeHandler().getChromosomeFromName("chr5");
+            Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
 
-            Matrix matrix = ds.getMatrix(chr5, chr5);
-            MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
+            // Instantiates the 2D float array that will be used to represent the Hi-C map of individual tissue genomes
+            int genomeLength = 0;
+            for (Chromosome chromosome : chromosomes) {
+                genomeLength += chromosome.getLength();
+            }
+            int genomeBinsLength = (int) Math.ceil(genomeLength / (double) resolution);
+            float[][] singleMatrix = new float[genomeBinsLength][genomeBinsLength];
 
             boolean getDataUnderTheDiagonal = true;
 
-            // our bounds will be binXStart, binYStart, binXEnd, binYEnd
-            // these are in BIN coordinates, not genome coordinates
-            int binXStart = 119848237 / resolution;
-            int binYStart = 119836267 / resolution;
-            int binXEnd = 121000236 / resolution;
-            int binYEnd = 120988666 / resolution;
+            // Iterates through each possible chromosome pair
+            // ASSUMPTION: (for prevAbsYBinCoord) that chromosomes is a list in order from chromosome 0 to 13
+            int prevAbsYBinCoord = 0;
+            for (int i = 0; i < chromosomes.length; i++) {
+                int prevAbsXBinCoord = 0;
+                for (int j = i; i < chromosomes.length; i++) {
+                    Matrix matrix = ds.getMatrix(chromosomes[i], chromosomes[j]);
+                    if (matrix == null) continue;
+                    MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
+                    if (zd == null) continue;
 
-            int numRows = binXEnd - binXStart + 1; // replace with actual number later
-            int numCols = binYEnd - binYStart + 1; // replace later
+                    long binXStart = 0, binYStart = 0;
+                    // TODO: deal with edge cases (length doesn't divide evenly by resolution)
+                    long binXEnd = chromosomes[i].getLength() / resolution;
+                    long binYEnd = chromosomes[j].getLength() / resolution;
 
-            float[][] float2DArray = new float[0][];
-            try {
-                float2DArray = HiCFileTools.extractLocalBoundedRegionFloatMatrix(zd, binXStart, binXEnd, binYStart, binYEnd, numRows, numCols, norm, getDataUnderTheDiagonal);
-                MatrixTools.saveMatrixTextNumpy(tissue + "numpymatrix.to.output.npy", float2DArray);
-            } catch (IOException e) {
-                //throw new RuntimeException(e);
-                System.err.println(e.getLocalizedMessage());
-                //System.exit(10);
+                    // Iterates through the blocks of the chromosome pair, eventually grabbing the bin coordinates and count to record them in singleMatrix
+                    List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, norm, getDataUnderTheDiagonal);
+                    for (Block b : blocks) {
+                        if (b != null) {
+                            for (ContactRecord rec : b.getContactRecords()) {
+                                if (rec.getCounts() > 0) { // will skip NaNs
+                                    int binX = rec.getBinX();
+                                    int binY = rec.getBinY();
+                                    singleMatrix[binX + prevAbsXBinCoord][binY + prevAbsYBinCoord] = rec.getCounts();
+                                }
+                            }
+                        }
+
+                    }
+                }
+                // adds the singleMatrix to the list of overall matrices, mtxList
+                mtxList.add(singleMatrix);
             }
         }
+        return mtxList;
     }
 
     private static void printUsageAndExit() {
@@ -117,14 +95,20 @@ public class HotSpot {
     }
 
     public static void run(String[] args, CommandLineParser parser) {
-        if (args.length != 6 || args[3].length() != args[4].length()) {
+        if (args.length != 3) {
             printUsageAndExit();
         }
-        final int DEFAULT_RES = 0;
+        final int DEFAULT_RES = 2000;
         final int DEFAULT_WINDOW = 0;
         // hotspot [--res int] [--window int] [--norm string] <file1.hic,file2.hic,...> <name1,name2,...> <out_folder>
-        List<float[][]> mtxList = getMatrices(parser.getResolutionOption(DEFAULT_RES), parser.getWindowSizeOption(DEFAULT_WINDOW), parser.getNormalizationStringOption(), args[3], args[4]);
+        String[] files = args[2].split(",");
+        List<float[][]> mtxList = getMatrices(parser.getResolutionOption(DEFAULT_RES), parser.getWindowSizeOption(DEFAULT_WINDOW), parser.getNormalizationStringOption(), files);
         StandardDevUtils stdDevObj = new StandardDevUtils();
-        // return float[][] stdDevObj.StdDeviationFinder(mtxList);
+        float[][] stdDevArray = new float[mtxList.get(0).length][mtxList.get(0).length];
+        stdDevArray = StdDeviationFinder(mtxList);
+
+        // saves 2D float array as a NumpyMatrix to outfolder
+        // ASSUMPTION: in command line, outfolder argument is inputted as an entire path
+        MatrixTools.saveMatrixTextNumpy(args[3], stdDevArray);
     }
 }
