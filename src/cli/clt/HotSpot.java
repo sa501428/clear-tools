@@ -3,17 +3,17 @@ package cli.clt;
 import javastraw.reader.Dataset;
 import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
+import javastraw.reader.expected.ExpectedValueFunction;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
+import javastraw.tools.ExtractingOEDataUtils;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static cli.utils.StandardDevUtils.StdDeviationFinder;
@@ -21,7 +21,7 @@ import static cli.utils.StandardDevUtils.StdDeviationFinder;
 public class HotSpot {
 
     private static void getMatrices(int resolution, int window, String strNorm, String file,
-                                    Map<Integer, HashMap<String, float[][]>> results) {
+                                    Map<Integer, Map<String, float[][]>> results) {
         /*
         Accepts parameters of the HOTSPOT command line tool and returns a list of 2D float arrays that represent the Hi-C maps of a (temporarily) pre-defined region
         corresponding to the files. The 2D float arrays will have pixel sizes equal window argument
@@ -40,15 +40,19 @@ public class HotSpot {
         //  Proof of concept that stdDeviationFinder works and matrix prints.
         //  Eventually want to slide and record non-zero (or higher std dev?) values to bedpe file
 
-        Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
-        Matrix matrix = ds.getMatrix(chromosomes[5], chromosomes[5]);
+        Chromosome c5 = ds.getChromosomeHandler().getChromosomeFromName("chr5");
+        Matrix matrix = ds.getMatrix(c5, c5);
         MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
         int binXStart = 119848237 / resolution;
         int binXEnd = binXStart + window;
         int binYStart = 119836267 / resolution;
         int binYEnd = binYStart + window;
         try {
-            float[][] currentMatrix = HiCFileTools.extractLocalBoundedRegionFloatMatrix(zd, binXStart, binXEnd, binYStart, binYEnd, window, window, norm, getDataUnderTheDiagonal);
+            ExpectedValueFunction df = ds.getExpectedValuesOrExit(zd.getZoom(), norm, c5, true, false);
+            float[][] currentMatrix = ExtractingOEDataUtils.extractObsOverExpBoundedRegion(zd,
+                    binXStart, binXEnd, binYStart, binYEnd, window, window, norm, df, c5.getIndex(), 50, true,
+                    true, ExtractingOEDataUtils.ThresholdType.TRUE_OE_LOG, 1, 0);
+
             results.get(5).put(file, currentMatrix);
         } catch (IOException e) {
             System.err.println("error extracting local bounded region float matrix");
@@ -101,7 +105,7 @@ public class HotSpot {
         final int DEFAULT_WINDOW = 1000;
         String[] files = args[2].split(",");
         // Map instead of HashMap
-        Map<Integer, HashMap<String, float[][]>> results = new HashMap<>();
+        Map<Integer, Map<String, float[][]>> results = new HashMap<>();
         int window = parser.getWindowSizeOption(DEFAULT_WINDOW);
         String outfolder = args[3];
         Dataset ds = HiCFileTools.extractDatasetForCLT(files[0], false, false, true);
@@ -116,12 +120,7 @@ public class HotSpot {
                     results);
         }
 
-        // todo remove this hard code
-        List<float[][]> mtxList = new ArrayList<>();
-        for (String file : files) {
-            mtxList.add(results.get(5).get(file));
-        }
-        float[][] stdDevArray = StdDeviationFinder(mtxList);
+        float[][] stdDevArray = StdDeviationFinder(results.get(5).values(), window);
 
         // saves 2D float array as a NumpyMatrix to outfolder
         // ASSUMPTION: in command line, outfolder argument is inputted as an entire path
