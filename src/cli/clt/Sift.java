@@ -1,22 +1,54 @@
 package cli.clt;
 
+import cli.Main;
 import cli.utils.ExpectedUtils;
 import cli.utils.WelfordStats;
+import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
+import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.expected.QuickMedian;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
+import javastraw.reader.type.NormalizationHandler;
+import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
+import javastraw.tools.UNIXTools;
 
+import java.io.File;
 import java.util.BitSet;
 import java.util.Iterator;
 
 
 public class Sift {
+
+    private final NormalizationType none = NormalizationHandler.NONE;
+    private final NormalizationType scale = NormalizationHandler.SCALE;
+    private final int window = 5;
+
+    public Sift(String[] args, CommandLineParser parser) {
+        if (args.length != 3) {
+            Main.printGeneralUsageAndExit(5);
+        }
+
+        // sift <file1.hic> <outfolder>
+        Dataset ds = HiCFileTools.extractDatasetForCLT(args[1],
+                false, false, false);
+        File outFolder = UNIXTools.makeDir(new File(args[2]));
+        Feature2DList refinedLoops = siftThroughCalls(ds);
+        refinedLoops.exportFeatureList(new File(outFolder, "sift.bedpe"), false, Feature2DList.ListFormat.NA);
+        System.out.println("sift complete");
+    }
+
+    private Feature2DList siftThroughCalls(Dataset ds) {
+        ChromosomeHandler handler = ds.getChromosomeHandler();
+
+        return null;
+    }
+
     public static void main(String[] args) {
         String file = "/Users/muhammad/Desktop/all_nd.hic";
         Dataset ds = HiCFileTools.extractDatasetForCLT(file, false, false, false);

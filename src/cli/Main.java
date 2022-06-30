@@ -65,6 +65,8 @@ public class Main {
             ata.run();
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
+        } else if (command.startsWith("sift")) {
+            new Sift(args, parser);
         } else {
             printGeneralUsageAndExit(3);
         }
