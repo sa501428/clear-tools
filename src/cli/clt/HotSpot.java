@@ -3,8 +3,6 @@ package cli.clt;
 import javastraw.reader.Dataset;
 import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
-import javastraw.reader.block.Block;
-import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
@@ -12,6 +10,8 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,10 +21,10 @@ import static cli.utils.StandardDevUtils.StdDeviationFinder;
 public class HotSpot {
 
     private static void getMatrices(int resolution, int window, String strNorm, String file,
-                                    Map<Integer, float[][]> results) {
+                                    Map<Integer, HashMap<String, float[][]>> results) {
         /*
-        Accepts parameters of the HOTSPOT command line tool and returns a list of 2D float arrays that represent the Hi-C maps corresponding to the files. The 2D float
-        arrays will have pixel sizes equal window argument
+        Accepts parameters of the HOTSPOT command line tool and returns a list of 2D float arrays that represent the Hi-C maps of a (temporarily) pre-defined region
+        corresponding to the files. The 2D float arrays will have pixel sizes equal window argument
          */
         boolean useCache = false;
         // create a hic dataset object
@@ -32,46 +32,53 @@ public class HotSpot {
         // choose norm: we know the datasets we're using will have SCALE available
         NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{strNorm, "NONE"});
 
-        // Get a list of the chromosome objects
-        Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
-
         // Instantiates the 2D float array that will be used to represent the Hi-C map of individual tissue genomes
 
         boolean getDataUnderTheDiagonal = true;
 
-        // Iterates through each possible chromosome pair
-        // ASSUMPTION: (for prevAbsYBinCoord) that chromosomes is a list in order from chromosome 0 to 13
-        //int prevAbsYBinCoord = 0;
+        // todo remove this hardcode. This is just used for displaying a singular region of interest as a matrix.
+        //  Proof of concept that stdDeviationFinder works and matrix prints.
+        //  Eventually want to slide and record non-zero (or higher std dev?) values to bedpe file
 
-
-        for (int i = 0; i < chromosomes.length; i++) {
-            //int prevAbsXBinCoord = 0;
-
-            Matrix matrix = ds.getMatrix(chromosomes[i], chromosomes[i]);
-            if (matrix == null) continue;
-            MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
-            if (zd == null) continue;
-
-            int binXStart = 3000000 / resolution; // todo make this slide across the map
-            // TODO: deal with edge cases (length doesn't divide evenly by resolution)
-            long binXEnd = binXStart + window;
-
-            float[][] singleMatrix = results.get(chromosomes[i].getIndex());
-
-            // Iterates through the blocks of the chromosome pair, eventually grabbing the bin coordinates and count to record them in singleMatrix
-            List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binXStart, binXEnd, binXEnd, norm, getDataUnderTheDiagonal);
-            for (Block b : blocks) {
-                if (b != null) {
-                    for (ContactRecord rec : b.getContactRecords()) {
-                        if (rec.getCounts() > 0) { // will skip NaNs
-                            int binX = rec.getBinX() - binXStart;
-                            int binY = rec.getBinY() - binXStart;
-                            singleMatrix[binX][binY] = rec.getCounts();
-                        }
-                    }
-                }
-            }
+        Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
+        Matrix matrix = ds.getMatrix(chromosomes[5], chromosomes[5]);
+        MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
+        int binXStart = 119848237 / resolution;
+        int binXEnd = binXStart + window;
+        int binYStart = 119836267 / resolution;
+        int binYEnd = binYStart + window;
+        try {
+            float[][] currentMatrix = HiCFileTools.extractLocalBoundedRegionFloatMatrix(zd, binXStart, binXEnd, binYStart, binYEnd, window, window, norm, getDataUnderTheDiagonal);
+            results.get(5).put(file, currentMatrix);
+        } catch (IOException e) {
+            System.err.println("error extracting local bounded region float matrix");
         }
+
+//        Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
+//
+//        for (int i = 0; i < chromosomes.length; i++) {
+//            Matrix matrix = ds.getMatrix(chromosomes[i], chromosomes[i]);
+//            if (matrix == null) continue;
+//            MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
+//            if (zd == null) continue;
+//
+//            long binXStart = 0; // todo make this slide across the map
+//            long binXEnd = binXStart + window;
+//            long binYStart = 0;
+//            long binYEnd = binXStart + window;
+//
+//            float[][] currentMatrix = new float[window][window];
+//            results.get(chromosomes[i].getIndex()).put(file, currentMatrix);
+//
+//            // Iterates through the blocks of the chromosome pair, eventually grabbing the bin coordinates and count to record them in currentMatrix
+//            Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
+//            while (iterator.hasNext()) {
+//                ContactRecord record = iterator.next();
+//                int binX = record.getBinX();
+//                int binY = record.getBinY();
+//                currentMatrix[binX][binY] = record.getCounts();
+//            }
+//        }
     }
 
     private static void printUsageAndExit() {
@@ -83,21 +90,24 @@ public class HotSpot {
     }
 
     public static void run(String[] args, CommandLineParser parser) {
+
+        // hotspot [--res int] [--window int] [--norm string] <file1.hic,file2.hic,...> <name1,name2,...> <out_folder>
+
         if (args.length != 3) {
             printUsageAndExit();
         }
+
         final int DEFAULT_RES = 2000;
         final int DEFAULT_WINDOW = 1000;
-        // hotspot [--res int] [--window int] [--norm string] <file1.hic,file2.hic,...> <name1,name2,...> <out_folder>
         String[] files = args[2].split(",");
-
-        Map<Integer, float[][]> results = new HashMap<>();
-
+        // Map instead of HashMap
+        Map<Integer, HashMap<String, float[][]>> results = new HashMap<>();
         int window = parser.getWindowSizeOption(DEFAULT_WINDOW);
-
+        String outfolder = args[3];
         Dataset ds = HiCFileTools.extractDatasetForCLT(files[0], false, false, true);
         for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
-            results.put(chromosome.getIndex(), new float[window][window]);
+            // what Muhammad had: results.put(chromosome.getIndex(), new float[window][window]);
+            results.put(chromosome.getIndex(), new HashMap<>());
         }
 
         for (String file : files) {
@@ -105,13 +115,16 @@ public class HotSpot {
                     window, parser.getNormalizationStringOption(), file,
                     results);
         }
-        //StandardDevUtils stdDevObj = new StandardDevUtils();
-        //float[][] stdDevArray = new float[mtxList.get(0).length][mtxList.get(0).length];
 
+        // todo remove this hard code
+        List<float[][]> mtxList = new ArrayList<>();
+        for (String file : files) {
+            mtxList.add(results.get(5).get(file));
+        }
         float[][] stdDevArray = StdDeviationFinder(mtxList);
 
         // saves 2D float array as a NumpyMatrix to outfolder
         // ASSUMPTION: in command line, outfolder argument is inputted as an entire path
-        MatrixTools.saveMatrixTextNumpy(args[3], stdDevArray);
+        MatrixTools.saveMatrixTextNumpy(outfolder, stdDevArray);
     }
 }
