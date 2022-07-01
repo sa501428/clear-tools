@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.13.2";
+    public static final String VERSION_NUM = "0.14.0";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
@@ -25,7 +25,8 @@ public class Main {
                 "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
                 "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
                 "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
-                "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>");
+                "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
+                "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
@@ -67,6 +68,8 @@ public class Main {
             new Recap(args, parser);
         } else if (command.startsWith("sift")) {
             new Sift(args, parser);
+        } else if (command.startsWith("fuse") || command.startsWith("fusion")) {
+            new Fusion(args, parser);
         } else {
             printGeneralUsageAndExit(3);
         }
