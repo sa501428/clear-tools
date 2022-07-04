@@ -43,6 +43,38 @@ public class Sift {
         System.out.println("sift complete");
     }
 
+    private Feature2DList siftThroughCalls(Dataset ds) {
+        ChromosomeHandler handler = ds.getChromosomeHandler();
+        Feature2DList output = new Feature2DList();
+        for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
+            Matrix matrix = ds.getMatrix(chrom, chrom);
+
+            if (matrix != null) {
+                int hires = 100;
+                MatrixZoomData zd2 = matrix.getZoomData(new HiCZoom(hires));
+                System.out.println("Start HiRes pass (" + hires + ")");
+                Set<ContactRecord> initialPoints = getHiResExtremePixels(zd2, MAX_DIST / hires, MIN_DIST / hires);
+                System.out.println("HiRes pass done (" + hires + ")");
+
+                for (int lowres : new int[]{200, 1000, 5000}) {
+                    MatrixZoomData zd1 = matrix.getZoomData(new HiCZoom(lowres));
+                    System.out.println("Start LowRes pass (" + lowres + ")");
+                    Set<SimpleLocation> enrichedRegions = getExtremeLocations(zd1, MAX_DIST / lowres, MIN_DIST / lowres,
+                            lowres < 1000);
+                    filterOutByOverlap(initialPoints, enrichedRegions, lowres / hires);
+                    enrichedRegions.clear();
+                    System.out.println("LowRes pass done (" + lowres + ")");
+                }
+                matrix.clearCache();
+
+                output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
+                        chrom, chrom, hires));
+            }
+        }
+
+        return output;
+    }
+
     private static Set<ContactRecord> getHiResExtremePixels(MatrixZoomData zd, int maxBin, int minBin) {
 
         int maxCompressedBin = logp1i(maxBin) + 1;
@@ -135,46 +167,47 @@ public class Sift {
         return features;
     }
 
-    private Feature2DList siftThroughCalls(Dataset ds) {
-        ChromosomeHandler handler = ds.getChromosomeHandler();
-        Feature2DList output = new Feature2DList();
-        for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
-            Matrix matrix = ds.getMatrix(chrom, chrom);
-
-            if (matrix != null) {
-                int hires = 100;
-                MatrixZoomData zd2 = matrix.getZoomData(new HiCZoom(hires));
-                System.out.println("Start HiRes pass (" + hires + ")");
-                Set<ContactRecord> initialPoints = getHiResExtremePixels(zd2, MAX_DIST / hires, MIN_DIST / hires);
-                System.out.println("HiRes pass done (" + hires + ")");
-
-                for (int lowres : new int[]{200, 1000, 5000}) {
-                    MatrixZoomData zd1 = matrix.getZoomData(new HiCZoom(lowres));
-                    System.out.println("Start LowRes pass (" + lowres + ")");
-                    Set<SimpleLocation> enrichedRegions = getExtremeLocations(zd1, MAX_DIST / lowres, MIN_DIST / lowres,
-                            lowres < 1000);
-                    filterOutByOverlap(initialPoints, enrichedRegions, lowres / hires);
-                    enrichedRegions.clear();
-                    System.out.println("LowRes pass done (" + lowres + ")");
-                }
-                matrix.clearCache();
-
-                output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
-                        chrom, chrom, hires));
-            }
-        }
-
-        return output;
-    }
-
     private void filterOutByOverlap(Set<ContactRecord> initialPoints, Set<SimpleLocation> regions, int scalar) {
         Set<ContactRecord> toRemove = new HashSet<>();
+        Map<SimpleLocation, List<ContactRecord>> locationMap = new HashMap<>();
         for (ContactRecord cr : initialPoints) {
-            if (!inRegions(cr, regions, scalar)) {
+            SimpleLocation region = new SimpleLocation(cr.getBinX() / scalar, cr.getBinY() / scalar);
+            if (regions.contains(region)) {
+                if (locationMap.containsKey(region)) {
+                    locationMap.get(region).add(cr);
+                } else {
+                    List<ContactRecord> values = new ArrayList<>();
+                    values.add(cr);
+                    locationMap.put(region, values);
+                }
+            } else {
                 toRemove.add(cr);
             }
         }
+
+        for (List<ContactRecord> overlaps : locationMap.values()) {
+            if (overlaps.size() > 1) {
+                float max = getMax(overlaps);
+                for (ContactRecord cr2 : overlaps) {
+                    if (cr2.getCounts() < max) {
+                        toRemove.add(cr2);
+                    }
+                }
+            }
+        }
+
         initialPoints.removeAll(toRemove);
+        locationMap.clear();
+    }
+
+    private float getMax(List<ContactRecord> records) {
+        float maxVal = records.get(0).getCounts();
+        for (ContactRecord cr : records) {
+            if (cr.getCounts() > maxVal) {
+                maxVal = cr.getCounts();
+            }
+        }
+        return maxVal;
     }
 
     private boolean inRegions(ContactRecord cr, Set<SimpleLocation> regions, int scalar) {
