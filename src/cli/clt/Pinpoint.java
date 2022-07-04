@@ -101,56 +101,58 @@ public class Pinpoint {
                 Chromosome chr2 = config.getChr2();
 
                 Matrix matrix = dataset.getMatrix(chr1, chr2);
+                if (matrix != null) {
 
-                List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
-                if (loops != null && loops.size() > 0) {
-                    MatrixZoomData zd = matrix.getZoomData(zoom);
-                    if (zd != null) {
-                        try {
-                            List<Feature2D> pinpointedLoops = new ArrayList<>();
-                            for (Feature2D loop : loops) {
+                    List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
+                    if (loops != null && loops.size() > 0) {
+                        MatrixZoomData zd = matrix.getZoomData(zoom);
+                        if (zd != null) {
+                            try {
+                                List<Feature2D> pinpointedLoops = new ArrayList<>();
+                                for (Feature2D loop : loops) {
 
-                                int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
+                                    int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
 
-                                int binXStart = (int) ((loop.getStart1() / resolution) - window);
-                                int binYStart = (int) ((loop.getStart2() / resolution) - window);
+                                    int binXStart = (int) ((loop.getStart1() / resolution) - window);
+                                    int binYStart = (int) ((loop.getStart2() / resolution) - window);
 
-                                int matrixWidth = 3 * window + 1;
-                                float[][] output = new float[matrixWidth][matrixWidth];
+                                    int matrixWidth = 3 * window + 1;
+                                    float[][] output = new float[matrixWidth][matrixWidth];
 
-                                Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm, key);
+                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm, key);
 
-                                String saveString = loop.simpleString();
-                                String[] saveStrings = saveString.split("\\s+");
-                                saveString = String.join("_", saveStrings);
+                                    String saveString = loop.simpleString();
+                                    String[] saveStrings = saveString.split("\\s+");
+                                    saveString = String.join("_", saveStrings);
 
-                                //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
-                                float[][] kde = ConvolutionTools.sparseConvolution(output);
-                                output = null; // clear output
-                                //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
+                                    //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
+                                    float[][] kde = ConvolutionTools.sparseConvolution(output);
+                                    output = null; // clear output
+                                    //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
 
-                                ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
-                                        pinpointedLoops, loop, saveString);
+                                    ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
+                                            pinpointedLoops, loop, saveString);
 
-                                kde = null;
+                                    kde = null;
 
-                                if (currNumLoops.incrementAndGet() % 100 == 0) {
-                                    System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+                                    if (currNumLoops.incrementAndGet() % 100 == 0) {
+                                        System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+                                    }
                                 }
+
+                                synchronized (key) {
+                                    refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
+                                }
+
+                                System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+
+                            } catch (Exception e) {
+                                System.err.println(e.getMessage());
                             }
-
-                            synchronized (key) {
-                                refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
-                            }
-
-                            System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
-
-                        } catch (Exception e) {
-                            System.err.println(e.getMessage());
                         }
                     }
+                    matrix.clearCache();
                 }
-                matrix.clearCache();
                 threadPair = currChromPair.getAndIncrement();
             }
         });

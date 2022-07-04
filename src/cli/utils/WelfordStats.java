@@ -1,5 +1,7 @@
 package cli.utils;
 
+import cli.utils.sift.ZScores;
+
 public class WelfordStats {
     private final long[] counts;
     private final double[] mu;
@@ -30,6 +32,10 @@ public class WelfordStats {
             }
         }
         return std;
+    }
+
+    public ZScores getZscores() {
+        return new ZScores(getMean(), getStdDev());
     }
 }
 
