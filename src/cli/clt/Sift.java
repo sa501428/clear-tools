@@ -111,7 +111,8 @@ public class Sift {
      * 5 - change zscore to 2
      * 6 - change hires from 100 to 200, and add 500 and 2000 to the resolution runs (already have 1000, 5000 )
      * 7 - remove 500 bp res
-     * 8 - coalesce pixels
+     * 8 - coalesce pixels radius 13kb
+     * 9 - coalesce pixels radius 5kb
      */
     private Feature2DList siftThroughCalls(Dataset ds) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
@@ -137,7 +138,7 @@ public class Sift {
                 }
                 matrix.clearCache();
 
-                SiftUtils.coalescePixelsToCentroid(initialPoints, hires, 13000);
+                SiftUtils.coalesceAndRetainCentroids(initialPoints, hires, 5000);
 
                 output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
                         chrom, chrom, hires));

@@ -6,8 +6,8 @@ import javastraw.reader.block.ContactRecord;
 import java.util.*;
 
 public class SiftUtils {
-    public static List<ContactRecord> coalescePixelsToCentroid(Set<ContactRecord> features,
-                                                               int resolution, int gRadius) {
+    public static void coalesceAndRetainCentroids(Set<ContactRecord> features,
+                                                  int resolution, int gRadius) {
         // HashSet intermediate for removing duplicates
         // LinkedList used so that we can pop out highest obs values
         LinkedList<ContactRecord> featureLL = new LinkedList<>(features);
@@ -37,6 +37,7 @@ public class SiftUtils {
             }
         }
 
-        return coalesced;
+        features.clear();
+        features.addAll(coalesced);
     }
 }
