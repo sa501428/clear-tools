@@ -5,6 +5,7 @@ import cli.utils.ExpectedUtils;
 import cli.utils.WelfordStats;
 import cli.utils.sift.SimpleLocation;
 import cli.utils.sift.ZScores;
+import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
@@ -16,28 +17,24 @@ import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
-import javastraw.tools.MatrixTools;
 import javastraw.tools.UNIXTools;
 
+import java.awt.*;
 import java.io.File;
-import java.util.BitSet;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
+import java.util.*;
 
 
 public class Sift {
     private final int MAX_DIST = 10000000;
-    private final NormalizationType none = NormalizationHandler.NONE;
-    private final NormalizationType scale = NormalizationHandler.SCALE;
+    private static final NormalizationType scale = NormalizationHandler.SCALE;
+    private final int MIN_DIST = 10000;
     private final int window = 5;
 
     public Sift(String[] args, CommandLineParser parser) {
         if (args.length != 3) {
             Main.printGeneralUsageAndExit(5);
         }
-
-        // sift <file1.hic> <outfolder>
         Dataset ds = HiCFileTools.extractDatasetForCLT(args[1],
                 false, false, false);
         File outFolder = UNIXTools.makeDir(new File(args[2]));
@@ -46,34 +43,51 @@ public class Sift {
         System.out.println("sift complete");
     }
 
-    public static void main(String[] args) {
-        String file = "/Users/muhammad/Desktop/all_nd.hic";
-        //Chromosome chrom = ds.getChromosomeHandler().getChromosomeFromName("chr8");
-        int maxDist = 10000000;
-
-
-
-        /*
-        int res1 = 100;
-
-        double[] expected = ExpectedUtils.calculateRawExpected(zd, maxBin, true, 0);
-        getAllEnrichedPoints(zd, expected);
-
-         */
-
-    }
-
-    private static Set<SimpleLocation> getExtremePixels(MatrixZoomData zd, int maxBin) {
+    private static Set<ContactRecord> getHiResExtremePixels(MatrixZoomData zd, int maxBin, int minBin) {
 
         int maxCompressedBin = logp1i(maxBin) + 1;
-        ZScores zScores = getZscores(zd, maxCompressedBin);
-        Set<SimpleLocation> records = new HashSet<>();
+        int minCompressedBin = logp1i(minBin);
 
+        ZScores zScores = getZscores(zd, maxCompressedBin, true);
+
+        Set<ContactRecord> records = new HashSet<>();
         for (Iterator<ContactRecord> it = zd.getDirectIterator(); it.hasNext(); ) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > 1) {
                 int dist = logp1i(ExpectedUtils.getDist(cr));
-                if (dist < maxCompressedBin) {
+                if (dist > minCompressedBin && dist < maxCompressedBin) {
+                    float zscore = zScores.getZscore(dist, logp1(cr.getCounts()));
+                    if (zscore > 3) {
+                        records.add(cr);
+                    }
+                }
+            }
+        }
+
+        return records;
+    }
+
+    private static Set<SimpleLocation> getExtremeLocations(MatrixZoomData zd, int maxBin, int minBin, boolean useNone) {
+
+        int maxCompressedBin = logp1i(maxBin) + 1;
+        int minCompressedBin = logp1i(minBin);
+
+        ZScores zScores = getZscores(zd, maxCompressedBin, useNone);
+
+        Set<SimpleLocation> records = new HashSet<>();
+
+        Iterator<ContactRecord> it;
+        if (useNone) {
+            it = zd.getDirectIterator();
+        } else {
+            it = zd.getNormalizedIterator(scale);
+        }
+
+        while (it.hasNext()) {
+            ContactRecord cr = it.next();
+            if (cr.getCounts() > 1) {
+                int dist = logp1i(ExpectedUtils.getDist(cr));
+                if (dist > minCompressedBin && dist < maxCompressedBin) {
                     float zscore = zScores.getZscore(dist, logp1(cr.getCounts()));
                     if (zscore > 3) {
                         records.add(new SimpleLocation(cr));
@@ -85,9 +99,17 @@ public class Sift {
         return records;
     }
 
-    private static ZScores getZscores(MatrixZoomData zd, int length) {
+    private static ZScores getZscores(MatrixZoomData zd, int length, boolean useNone) {
         WelfordStats stats = new WelfordStats(length);
-        for (Iterator<ContactRecord> it = zd.getDirectIterator(); it.hasNext(); ) {
+
+        Iterator<ContactRecord> it;
+        if (useNone) {
+            it = zd.getDirectIterator();
+        } else {
+            it = zd.getNormalizedIterator(scale);
+        }
+
+        while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > 1) {
                 int dist = logp1i(ExpectedUtils.getDist(cr));
@@ -99,51 +121,60 @@ public class Sift {
         return stats.getZscores();
     }
 
-    private Feature2DList siftThroughCalls(Dataset ds) {
-        ChromosomeHandler handler = ds.getChromosomeHandler();
-
-        for (Chromosome chrom : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
-            if (chrom.getIndex() < 2 || chrom.getIndex() == 10 || chrom.getIndex() > 20) {
-                Matrix matrix = ds.getMatrix(chrom, chrom);
-
-                MatrixZoomData zd1 = matrix.getZoomData(new HiCZoom(200));
-                Set<SimpleLocation> initialPoints = getExtremePixels(zd1, MAX_DIST / 200);
-
-                MatrixZoomData zd2 = matrix.getZoomData(new HiCZoom(100));
-                Set<SimpleLocation> finalPoints = getOverlappingExtremePixels(zd2,
-                        MAX_DIST / 100, initialPoints, 200 / 100);
-
-                initialPoints.clear();
-
-                matrix.clearCache();
-            }
+    public static List<Feature2D> convertToFeature2Ds(Set<ContactRecord> records,
+                                                      Chromosome c1, Chromosome c2, int resolution) {
+        List<Feature2D> features = new ArrayList<>();
+        for (ContactRecord record : records) {
+            long start1 = (long) record.getBinX() * resolution;
+            long end1 = start1 + resolution;
+            long start2 = (long) record.getBinY() * resolution;
+            long end2 = start2 + resolution;
+            features.add(new Feature2D(Feature2D.FeatureType.PEAK, c1.getName(), start1, end1,
+                    c2.getName(), start2, end2, Color.BLACK, new HashMap<>()));
         }
-
-        return null;
+        return features;
     }
 
-    private Set<SimpleLocation> getOverlappingExtremePixels(MatrixZoomData zd, int maxBin, Set<SimpleLocation> regions, int scalar) {
+    private Feature2DList siftThroughCalls(Dataset ds) {
+        ChromosomeHandler handler = ds.getChromosomeHandler();
+        Feature2DList output = new Feature2DList();
+        for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
+            Matrix matrix = ds.getMatrix(chrom, chrom);
 
-        int maxCompressedBin = logp1i(maxBin) + 1;
-        ZScores zScores = getZscores(zd, maxCompressedBin);
-        Set<SimpleLocation> records = new HashSet<>();
+            if (matrix != null) {
+                int hires = 100;
+                MatrixZoomData zd2 = matrix.getZoomData(new HiCZoom(hires));
+                System.out.println("Start HiRes pass (" + hires + ")");
+                Set<ContactRecord> initialPoints = getHiResExtremePixels(zd2, MAX_DIST / hires, MIN_DIST / hires);
+                System.out.println("HiRes pass done (" + hires + ")");
 
-        for (Iterator<ContactRecord> it = zd.getDirectIterator(); it.hasNext(); ) {
-            ContactRecord cr = it.next();
-            if (cr.getCounts() > 1) {
-                int dist = logp1i(ExpectedUtils.getDist(cr));
-                if (dist < maxCompressedBin) {
-                    float zscore = zScores.getZscore(dist, logp1(cr.getCounts()));
-                    if (zscore > 3) {
-                        if (inRegions(cr, regions, scalar)) {
-                            records.add(new SimpleLocation(cr));
-                        }
-                    }
+                for (int lowres : new int[]{200, 1000, 5000}) {
+                    MatrixZoomData zd1 = matrix.getZoomData(new HiCZoom(lowres));
+                    System.out.println("Start LowRes pass (" + lowres + ")");
+                    Set<SimpleLocation> enrichedRegions = getExtremeLocations(zd1, MAX_DIST / lowres, MIN_DIST / lowres,
+                            lowres < 1000);
+                    filterOutByOverlap(initialPoints, enrichedRegions, lowres / hires);
+                    enrichedRegions.clear();
+                    System.out.println("LowRes pass done (" + lowres + ")");
                 }
+                matrix.clearCache();
+
+                output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
+                        chrom, chrom, hires));
             }
         }
 
-        return records;
+        return output;
+    }
+
+    private void filterOutByOverlap(Set<ContactRecord> initialPoints, Set<SimpleLocation> regions, int scalar) {
+        Set<ContactRecord> toRemove = new HashSet<>();
+        for (ContactRecord cr : initialPoints) {
+            if (!inRegions(cr, regions, scalar)) {
+                toRemove.add(cr);
+            }
+        }
+        initialPoints.removeAll(toRemove);
     }
 
     private boolean inRegions(ContactRecord cr, Set<SimpleLocation> regions, int scalar) {
@@ -157,86 +188,5 @@ public class Sift {
 
     private static double logp1(float x) {
         return Math.log(1 + x);
-    }
-
-
-    public static void test1(String[] args) {
-        String file = "/Users/muhammad/Desktop/all_nd.hic";
-        Dataset ds = HiCFileTools.extractDatasetForCLT(file, false, false, false);
-        //Chromosome chrom = ds.getChromosomeHandler().getChromosomeFromName("chr8");
-        int maxDist = 10000000;
-
-        for (Chromosome chrom : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
-            Matrix matrix = ds.getMatrix(chrom, chrom);
-            for (int res : new int[]{5000, 2000, 1000, 500, 200, 100, 50, 20, 10}) {
-                int maxBin = maxDist / res;
-
-                MatrixZoomData zd = matrix.getZoomData(new HiCZoom(res));
-
-                float[] percentages = getPercentNonZeros(zd, maxBin, chrom, res);
-                int[] positions = new int[maxBin];
-                for (int z = 1; z < maxBin; z++) {
-                    positions[z] = positions[z - 1] + res;
-                }
-
-                System.out.println("Processing " + chrom.getName() + " " + res);
-
-                String stem = chrom.getName() + "_" + res + "_";
-                MatrixTools.saveMatrixTextNumpy(stem + "perc.npy", percentages);
-                MatrixTools.saveMatrixTextNumpy(stem + "x.npy", positions);
-            }
-            matrix.clearCache();
-        }
-
-        /*
-        int res1 = 100;
-
-        double[] expected = ExpectedUtils.calculateRawExpected(zd, maxBin, true, 0);
-        getAllEnrichedPoints(zd, expected);
-
-         */
-
-    }
-
-    private static float[] getPercentNonZeros(MatrixZoomData zd, int maxBin, Chromosome chrom, int res) {
-
-        int maxL = (int) ((chrom.getLength() / res) + 1);
-        BitSet rowSums = new BitSet(maxL);
-
-        int[] perc = new int[maxBin];
-
-        for (Iterator<ContactRecord> it = zd.getDirectIterator(); it.hasNext(); ) {
-            ContactRecord cr = it.next();
-            if (cr.getCounts() > 0) {
-
-                rowSums.set(cr.getBinX());
-                rowSums.set(cr.getBinY());
-
-                int dist = ExpectedUtils.getDist(cr);
-                if (dist < maxBin) {
-                    perc[dist]++;
-                }
-            }
-        }
-
-        int n = rowSums.cardinality();
-        rowSums = null;
-        float[] percents = new float[maxBin];
-        for (int i = 0; i < maxBin; i++) {
-            percents[i] = (float) (perc[i]) / (n - i);
-        }
-
-        return percents;
-    }
-
-    private static void getAllEnrichedPoints(MatrixZoomData zd, double[] expected) {
-        for (Iterator<ContactRecord> it = zd.getDirectIterator(); it.hasNext(); ) {
-            ContactRecord cr = it.next();
-            if (cr.getCounts() > 1) {
-
-
-            }
-        }
-
     }
 }
