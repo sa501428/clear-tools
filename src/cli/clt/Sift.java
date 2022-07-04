@@ -3,6 +3,7 @@ package cli.clt;
 import cli.Main;
 import cli.utils.ExpectedUtils;
 import cli.utils.WelfordStats;
+import cli.utils.sift.SiftUtils;
 import cli.utils.sift.SimpleLocation;
 import cli.utils.sift.ZScores;
 import javastraw.feature2D.Feature2D;
@@ -27,6 +28,8 @@ import java.util.*;
 
 public class Sift {
     private final int MAX_DIST = 10000000;
+
+    private static final int ZSCORE_CUTOFF = 2;
     private static final NormalizationType scale = NormalizationHandler.SCALE;
     private final int MIN_DIST = 10000;
     private final int window = 5;
@@ -43,38 +46,6 @@ public class Sift {
         System.out.println("sift complete");
     }
 
-    private Feature2DList siftThroughCalls(Dataset ds) {
-        ChromosomeHandler handler = ds.getChromosomeHandler();
-        Feature2DList output = new Feature2DList();
-        for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
-            Matrix matrix = ds.getMatrix(chrom, chrom);
-
-            if (matrix != null) {
-                int hires = 100;
-                MatrixZoomData zd2 = matrix.getZoomData(new HiCZoom(hires));
-                System.out.println("Start HiRes pass (" + hires + ")");
-                Set<ContactRecord> initialPoints = getHiResExtremePixels(zd2, MAX_DIST / hires, MIN_DIST / hires);
-                System.out.println("HiRes pass done (" + hires + ")");
-
-                for (int lowres : new int[]{200, 1000, 5000}) {
-                    MatrixZoomData zd1 = matrix.getZoomData(new HiCZoom(lowres));
-                    System.out.println("Start LowRes pass (" + lowres + ")");
-                    Set<SimpleLocation> enrichedRegions = getExtremeLocations(zd1, MAX_DIST / lowres, MIN_DIST / lowres,
-                            lowres < 1000);
-                    filterOutByOverlap(initialPoints, enrichedRegions, lowres / hires);
-                    enrichedRegions.clear();
-                    System.out.println("LowRes pass done (" + lowres + ")");
-                }
-                matrix.clearCache();
-
-                output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
-                        chrom, chrom, hires));
-            }
-        }
-
-        return output;
-    }
-
     private static Set<ContactRecord> getHiResExtremePixels(MatrixZoomData zd, int maxBin, int minBin) {
 
         int maxCompressedBin = logp1i(maxBin) + 1;
@@ -89,7 +60,7 @@ public class Sift {
                 int dist = logp1i(ExpectedUtils.getDist(cr));
                 if (dist > minCompressedBin && dist < maxCompressedBin) {
                     float zscore = zScores.getZscore(dist, logp1(cr.getCounts()));
-                    if (zscore > 3) {
+                    if (zscore > ZSCORE_CUTOFF) {
                         records.add(cr);
                     }
                 }
@@ -121,7 +92,7 @@ public class Sift {
                 int dist = logp1i(ExpectedUtils.getDist(cr));
                 if (dist > minCompressedBin && dist < maxCompressedBin) {
                     float zscore = zScores.getZscore(dist, logp1(cr.getCounts()));
-                    if (zscore > 3) {
+                    if (zscore > ZSCORE_CUTOFF) {
                         records.add(new SimpleLocation(cr));
                     }
                 }
@@ -129,6 +100,51 @@ public class Sift {
         }
 
         return records;
+    }
+
+    /*
+     * Iteration notes
+     * 1 - original pass
+     * 2 - similar, fix stuff
+     * 3 zscore at 3, diff filtering
+     * 4 zscore t0 2.5
+     * 5 - change zscore to 2
+     * 6 - change hires from 100 to 200, and add 500 and 2000 to the resolution runs (already have 1000, 5000 )
+     * 7 - remove 500 bp res
+     * 8 - coalesce pixels
+     */
+    private Feature2DList siftThroughCalls(Dataset ds) {
+        ChromosomeHandler handler = ds.getChromosomeHandler();
+        Feature2DList output = new Feature2DList();
+        for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
+            Matrix matrix = ds.getMatrix(chrom, chrom);
+
+            if (matrix != null) {
+                int hires = 200;
+                MatrixZoomData zd2 = matrix.getZoomData(new HiCZoom(hires));
+                System.out.println("Start HiRes pass (" + hires + ")");
+                Set<ContactRecord> initialPoints = getHiResExtremePixels(zd2, MAX_DIST / hires, MIN_DIST / hires);
+                System.out.println("HiRes pass done (" + hires + ")");
+
+                for (int lowres : new int[]{1000, 2000, 5000}) {
+                    MatrixZoomData zd1 = matrix.getZoomData(new HiCZoom(lowres));
+                    System.out.println("Start LowRes pass (" + lowres + ")");
+                    Set<SimpleLocation> enrichedRegions = getExtremeLocations(zd1, MAX_DIST / lowres, MIN_DIST / lowres,
+                            false);
+                    filterOutByOverlap(initialPoints, enrichedRegions, lowres / hires);
+                    enrichedRegions.clear();
+                    System.out.println("LowRes pass done (" + lowres + ")");
+                }
+                matrix.clearCache();
+
+                SiftUtils.coalescePixelsToCentroid(initialPoints, hires, 13000);
+
+                output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
+                        chrom, chrom, hires));
+            }
+        }
+
+        return output;
     }
 
     private static ZScores getZscores(MatrixZoomData zd, int length, boolean useNone) {
