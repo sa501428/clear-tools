@@ -11,6 +11,7 @@ import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationHandler;
@@ -150,13 +151,9 @@ public class Enhance {
                 }
 
                 for (final Dataset ds : datasets) {
-                    MatrixZoomData zd;
-                    synchronized (ds) {
-                        zd = HiCFileTools.getMatrixZoomData(ds, chr1, chr2, zoom);
-                    }
-
-                    if (zd != null) {
-                        zd.clearCache();
+                    Matrix matrix = ds.getMatrix(chr1, chr2);
+                    if (matrix != null) {
+                        matrix.clearCacheForZoom(zoom);
                     }
                 }
 
