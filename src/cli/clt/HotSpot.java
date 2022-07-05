@@ -128,6 +128,5 @@ public class HotSpot {
 
         // inside where the contacts are,
 
-
     }
 }

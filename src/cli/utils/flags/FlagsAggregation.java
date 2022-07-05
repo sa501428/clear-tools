@@ -31,6 +31,7 @@ import javastraw.feature2D.Feature2D;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
@@ -110,10 +111,15 @@ public class FlagsAggregation {
                 Chromosome chr1 = config.getChr1();
                 Chromosome chr2 = config.getChr2();
 
-                MatrixZoomData zd;
-                synchronized (key) {
-                    zd = HiCFileTools.getMatrixZoomData(ds, chr1, chr2, zoom);
+                Matrix matrix = ds.getMatrix(chr1, chr2);
+                if (matrix == null) {
+                    threadPair = chromosomePair.getAndIncrement();
+                    //currentProgressStatus.getAndIncrement();
+                    maxProgressStatus.decrementAndGet();
+                    continue;
                 }
+
+                MatrixZoomData zd = matrix.getZoomData(zoom);
 
                 if (zd == null) {
                     threadPair = chromosomePair.getAndIncrement();
@@ -122,7 +128,7 @@ public class FlagsAggregation {
                     continue;
                 }
 
-                for(int distBin = 0; distBin < intraDataStacks.length; distBin++) {
+                for (int distBin = 0; distBin < intraDataStacks.length; distBin++) {
                     // inter only done once
                     if (chr1.getIndex() != chr2.getIndex() && distBin > 0) continue;
 
@@ -180,7 +186,7 @@ public class FlagsAggregation {
                     }
                 }
 
-                zd.clearCache();
+                matrix.clearCache();
 
                 System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");
                 threadPair = chromosomePair.getAndIncrement();
