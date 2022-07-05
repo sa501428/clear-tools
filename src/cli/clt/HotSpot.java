@@ -1,5 +1,7 @@
 package cli.clt;
 
+import javastraw.feature2D.Feature2D;
+import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
 import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
@@ -10,13 +12,10 @@ import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.ExtractingOEDataUtils;
 import javastraw.tools.HiCFileTools;
-import javastraw.tools.MatrixTools;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-
-import static cli.utils.StandardDevUtils.StdDeviationFinder;
 
 public class HotSpot {
 
@@ -101,30 +100,34 @@ public class HotSpot {
         }
 
         final int DEFAULT_RES = 2000;
-        final int DEFAULT_WINDOW = 1000;
         String[] files = args[1].split(",");
         // Map instead of HashMap
-        Map<Integer, Map<String, float[][]>> results = new HashMap<>();
-        int window = parser.getWindowSizeOption(DEFAULT_WINDOW);
+
         String outfolder = args[2];
         Dataset ds = HiCFileTools.extractDatasetForCLT(files[0], false, false, true);
-        for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
-            // what Muhammad had: results.put(chromosome.getIndex(), new float[window][window]);
-            results.put(chromosome.getIndex(), new HashMap<>());
+
+        Feature2DList result = new Feature2DList();
+        for (Chromosome chrom : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
+            List<Feature2D> hotspots = findTheHotspots(chrom, files, parser.getResolutionOption(DEFAULT_RES),
+                    parser.getNormalizationStringOption());
+            result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
         }
 
-        for (String file : files) {
-            HotSpot.getMatrices(parser.getResolutionOption(DEFAULT_RES),
-                    window, parser.getNormalizationStringOption(), file,
-                    results);
-        }
+        result.exportFeatureList();
+    }
 
-        // todo remove this hardcode (get(5))
-        float[][] stdDevArray = StdDeviationFinder(results.get(5).values(), window);
+    private static List<Feature2D> findTheHotspots(Chromosome chrom, String[] files, int resolutionOption,
+                                                   String normalizationStringOption) {
 
-        // saves 2D float array as a NumpyMatrix to outfolder
-        // ASSUMPTION: in command line, outfolder argument is inputted as an entire path
-        System.out.println("hello");
-        MatrixTools.saveMatrixTextNumpy(outfolder, stdDevArray);
+        Map<IntegerPair,>
+
+        // load the dataset // iterating on them 1 at a time
+        // iteration type Option #1
+        
+        // any contact more than 10MB from the diagonal can be skipped / ignored
+
+        // inside where the contacts are,
+
+
     }
 }
