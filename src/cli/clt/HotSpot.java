@@ -5,8 +5,8 @@ import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.expected.ExpectedValueFunction;
 import javastraw.reader.mzd.MatrixZoomData;
-import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
+import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.ExtractingOEDataUtils;
 import javastraw.tools.HiCFileTools;
@@ -30,11 +30,10 @@ public class HotSpot {
         // create a hic dataset object
         Dataset ds = HiCFileTools.extractDatasetForCLT(file, false, useCache, true);
         // choose norm: we know the datasets we're using will have SCALE available
-        NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{strNorm, "NONE"});
+        // NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{strNorm, "NONE"});
+        NormalizationType norm = NormalizationHandler.SCALE;
 
         // Instantiates the 2D float array that will be used to represent the Hi-C map of individual tissue genomes
-
-        boolean getDataUnderTheDiagonal = true;
 
         // todo remove this hardcode. This is just used for displaying a singular region of interest as a matrix.
         //  Proof of concept that stdDeviationFinder works and matrix prints.
@@ -43,17 +42,17 @@ public class HotSpot {
         Chromosome c5 = ds.getChromosomeHandler().getChromosomeFromName("chr5");
         Matrix matrix = ds.getMatrix(c5, c5);
         MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
-        int binXStart = 119848237 / resolution;
+        int binXStart = 119000000 / resolution;
         int binXEnd = binXStart + window;
-        int binYStart = 119836267 / resolution;
+        int binYStart = 119000000 / resolution;
         int binYEnd = binYStart + window;
         try {
             ExpectedValueFunction df = ds.getExpectedValuesOrExit(zd.getZoom(), norm, c5, true, false);
-            float[][] currentMatrix = ExtractingOEDataUtils.extractObsOverExpBoundedRegion(zd,
+            float[][] currentWindowMatrix = ExtractingOEDataUtils.extractObsOverExpBoundedRegion(zd,
                     binXStart, binXEnd, binYStart, binYEnd, window, window, norm, df, c5.getIndex(), 50, true,
-                    true, ExtractingOEDataUtils.ThresholdType.TRUE_OE_LOG, 1, 0);
-
-            results.get(5).put(file, currentMatrix);
+                    true, ExtractingOEDataUtils.ThresholdType.TRUE_OE, 1, 0);
+            
+            results.get(5).put(file, currentWindowMatrix);
         } catch (IOException e) {
             System.err.println("error extracting local bounded region float matrix");
         }
@@ -103,11 +102,11 @@ public class HotSpot {
 
         final int DEFAULT_RES = 2000;
         final int DEFAULT_WINDOW = 1000;
-        String[] files = args[2].split(",");
+        String[] files = args[1].split(",");
         // Map instead of HashMap
         Map<Integer, Map<String, float[][]>> results = new HashMap<>();
         int window = parser.getWindowSizeOption(DEFAULT_WINDOW);
-        String outfolder = args[3];
+        String outfolder = args[2];
         Dataset ds = HiCFileTools.extractDatasetForCLT(files[0], false, false, true);
         for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
             // what Muhammad had: results.put(chromosome.getIndex(), new float[window][window]);
@@ -120,10 +119,12 @@ public class HotSpot {
                     results);
         }
 
+        // todo remove this hardcode (get(5))
         float[][] stdDevArray = StdDeviationFinder(results.get(5).values(), window);
 
         // saves 2D float array as a NumpyMatrix to outfolder
         // ASSUMPTION: in command line, outfolder argument is inputted as an entire path
+        System.out.println("hello");
         MatrixTools.saveMatrixTextNumpy(outfolder, stdDevArray);
     }
 }
