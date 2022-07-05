@@ -69,7 +69,7 @@ public class Main {
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
         } else if (command.startsWith("hotspot")) {
-            HotSpot.main();
+            HotSpot.run(args, parser);
         } else if (command.startsWith("sift")) {
             new Sift(args, parser);
         } else if (command.startsWith("fuse") || command.startsWith("fusion")) {

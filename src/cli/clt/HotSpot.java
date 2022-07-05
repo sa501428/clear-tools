@@ -1,24 +1,11 @@
 package cli.clt;
 
-import cli.utils.StandardDevUtils;
-import javastraw.reader.Dataset;
-import javastraw.reader.block.Block;
-import javastraw.reader.block.ContactRecord;
-import javastraw.reader.Matrix;
-import javastraw.reader.basics.Chromosome;
-import javastraw.reader.mzd.MatrixZoomData;
-import javastraw.reader.norm.NormalizationPicker;
-import javastraw.reader.type.HiCZoom;
-import javastraw.reader.type.NormalizationType;
-import javastraw.tools.HiCFileTools;
-import javastraw.tools.MatrixTools;
 
-import java.util.Iterator;
-import java.io.IOException;
 import java.util.List;
 
 public class HotSpot {
     private static List<float[][]> getMatrices(int res, int window, String strNorm, String filename, String[] names) {
+        /*
         boolean useCache = false;
         // create a hic dataset object
         Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, useCache, true);
@@ -51,6 +38,8 @@ public class HotSpot {
             System.err.println(e.getLocalizedMessage());
             //System.exit(10);
         }
+        */
+        return null;
     }
 
     /*
@@ -141,6 +130,7 @@ public class HotSpot {
     }
 
     public static void run(String[] args, CommandLineParser parser) {
+        /*
         if (args.length != 6 || args[3].length() != args[4].length()) {
             printUsageAndExit();
         }
@@ -149,6 +139,7 @@ public class HotSpot {
         // hotspot [--res int] [--window int] [--norm string] <file1.hic,file2.hic,...> <name1,name2,...> <out_folder>
         List<float[][]> mtxList = getMatrices(parser.getResolutionOption(DEFAULT_RES), parser.getWindowSizeOption(DEFAULT_WINDOW), parser.getNormalizationStringOption(), args[3], args[4]);
         StandardDevUtils stdDevObj = new StandardDevUtils();
-        print(stdDevObj.StdDeviationFinder(mtxList));
+        System.out.println(stdDevObj.StdDeviationFinder(mtxList));
+        */
     }
-}}
+}
