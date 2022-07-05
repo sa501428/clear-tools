@@ -1,5 +1,7 @@
 package cli.clt;
 
+import cli.utils.Welford;
+import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
@@ -14,6 +16,7 @@ import javastraw.tools.ExtractingOEDataUtils;
 import javastraw.tools.HiCFileTools;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -118,15 +121,28 @@ public class HotSpot {
 
     private static List<Feature2D> findTheHotspots(Chromosome chrom, String[] files, int resolutionOption,
                                                    String normalizationStringOption) {
+        // 2 ints (positions) row and column
+        Map<SimpleLocation, Welford> results = new HashMap<>();
 
-        Map<IntegerPair,>
+
+        ////// for every dataset, extract the chromosome
+        // iterate on it type 1
 
         // load the dataset // iterating on them 1 at a time
         // iteration type Option #1
-        
+
         // any contact more than 10MB from the diagonal can be skipped / ignored
+        // also skip any contact < 25kb
+        // only do this for contacts where the counts > 0
 
         // inside where the contacts are,
+
+
+        ////// END for every dataset, extract the chromosome
+
+
+        // iterate and delete any welfrod less than 3 values
+        
 
     }
 }
