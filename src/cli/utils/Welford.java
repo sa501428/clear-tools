@@ -22,6 +22,10 @@ public class Welford {
         }
         return 0;
     }
+
+    public long getCounts() {
+        return counts;
+    }
 }
 
 
