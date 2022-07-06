@@ -7,59 +7,56 @@ import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
-import javastraw.reader.expected.ExpectedValueFunction;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
-import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
-import javastraw.tools.ExtractingOEDataUtils;
 import javastraw.tools.HiCFileTools;
 
 import java.awt.*;
-import java.io.IOException;
+import java.io.File;
 import java.util.List;
 import java.util.*;
 
 public class HotSpot {
 
-    private static void getMatrices(int resolution, int window, String strNorm, String file,
-                                    Map<Integer, Map<String, float[][]>> results) {
-        /*
-        Accepts parameters of the HOTSPOT command line tool and returns a list of 2D float arrays that represent the Hi-C maps of a (temporarily) pre-defined region
-        corresponding to the files. The 2D float arrays will have pixel sizes equal window argument
-         */
-        boolean useCache = false;
-        // create a hic dataset object
-        Dataset ds = HiCFileTools.extractDatasetForCLT(file, false, useCache, true);
-        // choose norm: we know the datasets we're using will have SCALE available
-        // NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{strNorm, "NONE"});
-        NormalizationType norm = NormalizationHandler.SCALE;
-
-        // Instantiates the 2D float array that will be used to represent the Hi-C map of individual tissue genomes
-
-        // todo remove this hardcode. This is just used for displaying a singular region of interest as a matrix.
-        //  Proof of concept that stdDeviationFinder works and matrix prints.
-        //  Eventually want to slide and record non-zero (or higher std dev?) values to bedpe file
-
-        Chromosome c5 = ds.getChromosomeHandler().getChromosomeFromName("chr5");
-        Matrix matrix = ds.getMatrix(c5, c5);
-        MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
-        int binXStart = 119000000 / resolution;
-        int binXEnd = binXStart + window;
-        int binYStart = 119000000 / resolution;
-        int binYEnd = binYStart + window;
-        try {
-            ExpectedValueFunction df = ds.getExpectedValuesOrExit(zd.getZoom(), norm, c5, true, false);
-            float[][] currentWindowMatrix = ExtractingOEDataUtils.extractObsOverExpBoundedRegion(zd,
-                    binXStart, binXEnd, binYStart, binYEnd, window, window, norm, df, c5.getIndex(), 50, true,
-                    true, ExtractingOEDataUtils.ThresholdType.TRUE_OE, 1, 0);
-
-            results.get(5).put(file, currentWindowMatrix);
-        } catch (IOException e) {
-            System.err.println("error extracting local bounded region float matrix");
-        }
+//    private static void getMatrices(int resolution, int window, String strNorm, String file,
+//                                    Map<Integer, Map<String, float[][]>> results) {
+//        /*
+//        Accepts parameters of the HOTSPOT command line tool and returns a list of 2D float arrays that represent the Hi-C maps of a (temporarily) pre-defined region
+//        corresponding to the files. The 2D float arrays will have pixel sizes equal window argument
+//         */
+//        boolean useCache = false;
+//        // create a hic dataset object
+//        Dataset ds = HiCFileTools.extractDatasetForCLT(file, false, useCache, true);
+//        // choose norm: we know the datasets we're using will have SCALE available
+//        // NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{strNorm, "NONE"});
+//        NormalizationType norm = NormalizationHandler.SCALE;
+//
+//        // Instantiates the 2D float array that will be used to represent the Hi-C map of individual tissue genomes
+//
+//        // todo remove this hardcode. This is just used for displaying a singular region of interest as a matrix.
+//        //  Proof of concept that stdDeviationFinder works and matrix prints.
+//        //  Eventually want to slide and record non-zero (or higher std dev?) values to bedpe file
+//
+//        Chromosome c5 = ds.getChromosomeHandler().getChromosomeFromName("chr5");
+//        Matrix matrix = ds.getMatrix(c5, c5);
+//        MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
+//        int binXStart = 119000000 / resolution;
+//        int binXEnd = binXStart + window;
+//        int binYStart = 119000000 / resolution;
+//        int binYEnd = binYStart + window;
+//        try {
+//            ExpectedValueFunction df = ds.getExpectedValuesOrExit(zd.getZoom(), norm, c5, true, false);
+//            float[][] currentWindowMatrix = ExtractingOEDataUtils.extractObsOverExpBoundedRegion(zd,
+//                    binXStart, binXEnd, binYStart, binYEnd, window, window, norm, df, c5.getIndex(), 50, true,
+//                    true, ExtractingOEDataUtils.ThresholdType.TRUE_OE, 1, 0);
+//
+//            results.get(5).put(file, currentWindowMatrix);
+//        } catch (IOException e) {
+//            System.err.println("error extracting local bounded region float matrix");
+//        }
 
 //        Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
 //
@@ -86,7 +83,7 @@ public class HotSpot {
 //                currentMatrix[binX][binY] = record.getCounts();
 //            }
 //        }
-    }
+//    }
 
     private static void printUsageAndExit() {
         /* example print: ("apa [--min-dist minval] [--max-dist max_val] [--window window] [-r resolution]" +
@@ -117,8 +114,8 @@ public class HotSpot {
                     parser.getNormalizationStringOption());
             result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
         }
-`
-        result.exportFeatureList();
+
+        result.exportFeatureList(new File(outfolder), false, Feature2DList.ListFormat.NA);
     }
 
     private static List<Feature2D> findTheHotspots(Chromosome chrom, String[] files, int resolutionOption,
@@ -215,14 +212,14 @@ public class HotSpot {
 
 
         for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
-            // todo only execute attributes.put if entry's Welford is within a certain Z-score
             Welford welford = entry.getValue();
-            if ((welford.getStdDev() - overallWelford.getMean() / overallWelford.getStdDev()) >= zScoreCutOff) {
+            if (((welford.getStdDev() - overallWelford.getMean()) / overallWelford.getStdDev()) >= zScoreCutOff) {
                 attributes.put("std", "" + entry.getValue().getStdDev());
                 // QUESTION: can I implement getBinX() and getBinY() methods into SimpleLocation?
-                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom, entry.getKey().getBinX(), entry.getKey().getBinY, chrom, entry.getKey().getBinX(), entry.getKey().getBinY, Color.BLACK, attributes);
+                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), entry.getKey().getBinX(), entry.getKey().getBinY(), chrom.getName(), entry.getKey().getBinX(), entry.getKey().getBinY(), Color.BLACK, attributes);
                 hotspots.add(feature);
             }
         }
         return hotspots;
     }
+}
