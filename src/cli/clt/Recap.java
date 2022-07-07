@@ -157,8 +157,7 @@ public class Recap {
                                 float[][] obsMatrix = new float[matrixWidth][matrixWidth];
                                 Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm, key);
                                 float[][] eMatrix = new float[matrixWidth][matrixWidth];
-                                Utils.fillInExpectedMatrix(eMatrix, loop, matrixWidth, expected, chrom1.getIndex(),
-                                        resolution, window);
+                                Utils.fillInExpectedMatrix(eMatrix, loop, matrixWidth, expected, resolution, window);
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
                                 Map<String, String> attributes = RecapTools.getStats(obsMatrix, eMatrix,

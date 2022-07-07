@@ -62,8 +62,11 @@ public class Utils {
         blocks = null;
     }
 
-    public static void addLocalBoundedRegion(float[][] matrix, MatrixZoomData zd, long binXStart, long binYStart,
-                                             long binXEnd, long binYEnd, int matrixWidth, NormalizationType norm) {
+    public static void getRegion(MatrixZoomData zd, long binXStart, long binYStart,
+                                 long binXEnd, long binYEnd, NormalizationType norm) {
+        int numRows = (int) (binXEnd - binXStart);
+        int numCols = (int) (binYEnd - binYStart);
+        float[][] matrix = new float[numRows][numCols];
         List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
                 binXEnd, binYEnd, norm, false);
         fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart);
@@ -126,7 +129,7 @@ public class Utils {
     }
 
     public static void fillInExpectedMatrix(float[][] matrix, Feature2D loop,
-                                            int matrixWidth, double[] expectedVector, int chrIndex,
+                                            int matrixWidth, double[] expectedVector,
                                             int resolution, int window) {
 
         long binXStart = (loop.getMidPt1() / resolution) - window;
