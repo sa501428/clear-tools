@@ -213,6 +213,11 @@ public class Sift {
      * 16 - linear distance for 5k lowres expected
      * 17 - incorporate local enrichment; only use 1 norm for global enrichment at lowres,
      *      remove vector filtering but keep denom filtering
+     * 18 - no max neighbor
+     * 19 - change to 20% enrichment, not 25%; also put prefiltering earlier
+     * 20 - change low res zscore to 1
+     * 21 - change low res zscore to 1.5
+     * 22 - same as 19 (low res zscore 2)
      */
     private Feature2DList siftThroughCalls(Dataset ds) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
@@ -231,16 +236,8 @@ public class Sift {
 
                 for (int lowRes : new int[]{5000}) { // 1000, 2000,
 
-                    /*
-                    double[] vector1 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(lowRes), SCALE).getData().getValues().get(0);
-                    double[] vector1b = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(lowRes), VC).getData().getValues().get(0);
-                    VectorCleanerUtils.inPlaceClean(vector1);
-                    VectorCleanerUtils.inPlaceClean(vector1b);
-
-                    CoverageFiltering.inPlaceFilterByNorms(initialPoints, vector1, vector1b, lowRes / hires);
-                    System.out.println("Num initial loops after filter 0 " + initialPoints.size());
-                    */
-
+                    NMSUtils.filterOutByOverlap(initialPoints, lowRes / hires);
+                    System.out.println("Num loops after pre filter (overlaps) " + initialPoints.size());
 
                     MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowRes));
                     System.out.println("Start LowRes pass (" + lowRes + ")");
@@ -251,13 +248,12 @@ public class Sift {
                     enrichedRegions.clear();
                     System.out.println("LowRes pass done (" + lowRes + ")");
 
-                    System.out.println("Num initial loops after filter 1 " + initialPoints.size());
+                    System.out.println("Num loops after low res global filter " + initialPoints.size());
 
                     EnrichmentChecker.filterOutIfNotLocalMax(zdLow, initialPoints, lowRes / hires, SCALE);
 
-                    System.out.println("Num initial loops after filter 1P2 " + initialPoints.size());
+                    System.out.println("Num loops after low res local filter " + initialPoints.size());
 
-                    //filterOutByOverlap(initialPoints, lowRes / hires);
                     //System.out.println("Num initial loops after filter2 " + initialPoints.size());
 
                     // verify enrichment relative to nearby pixels
@@ -268,7 +264,7 @@ public class Sift {
                 matrix.clearCache();
 
                 SiftUtils.coalesceAndRetainCentroids(initialPoints, hires, 5000);
-                System.out.println("Num initial loops after filter3 " + initialPoints.size());
+                System.out.println("Num loops after filter3 " + initialPoints.size());
 
                 output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
                         chrom, chrom, hires));

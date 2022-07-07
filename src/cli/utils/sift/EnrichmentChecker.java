@@ -15,7 +15,8 @@ public class EnrichmentChecker {
     public static void filterOutIfNotLocalMax(MatrixZoomData zdLow, Set<ContactRecord> initialPoints, int scalar,
                                               NormalizationType norm) {
 
-        List<BoundingBoxWithContacts> boxes = getBoundingBoxes(NMSUtils.getLocationMap(initialPoints, scalar * 200));
+        List<BoundingBoxWithContacts> boxes = getBoundingBoxes(scalar,
+                NMSUtils.getLocationMap(initialPoints, scalar * 200));
 
         for (BoundingBoxWithContacts box : boxes) {
             Set<ContactRecord> toRemove = box.findPointsNotEnriched(zdLow, norm);
@@ -23,10 +24,10 @@ public class EnrichmentChecker {
         }
     }
 
-    private static List<BoundingBoxWithContacts> getBoundingBoxes(Map<SimpleLocation, List<ContactRecord>> locationMap) {
+    private static List<BoundingBoxWithContacts> getBoundingBoxes(int scalar, Map<SimpleLocation, List<ContactRecord>> locationMap) {
         List<BoundingBoxWithContacts> boxes = new ArrayList<>();
         for (List<ContactRecord> contacts : locationMap.values()) {
-            boxes.add(new BoundingBoxWithContacts(contacts));
+            boxes.add(new BoundingBoxWithContacts(contacts, scalar));
         }
         return boxes;
     }

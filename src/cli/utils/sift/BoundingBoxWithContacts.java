@@ -15,12 +15,14 @@ public class BoundingBoxWithContacts {
     private final static int buffer = 10;
     private final static int width = 2;
     private final List<ContactRecord> contacts;
+    private final int scalar;
     private int minR, maxR, minC, maxC;
 
-    public BoundingBoxWithContacts(List<ContactRecord> contacts) {
+    public BoundingBoxWithContacts(List<ContactRecord> contacts, int scalar) {
         this.contacts = contacts;
-        minR = contacts.get(0).getBinX();
-        minC = contacts.get(0).getBinY();
+        this.scalar = scalar;
+        minR = contacts.get(0).getBinX() / scalar;
+        minC = contacts.get(0).getBinY() / scalar;
         maxR = minR;
         maxC = minC;
         setBounds();
@@ -28,11 +30,11 @@ public class BoundingBoxWithContacts {
 
     private void setBounds() {
         for (ContactRecord contact : contacts) {
-            minR = Math.min(minR, contact.getBinX() - buffer);
-            minC = Math.min(minC, contact.getBinY() - buffer);
+            minR = Math.min(minR, contact.getBinX() / scalar - buffer);
+            minC = Math.min(minC, contact.getBinY() / scalar - buffer);
 
-            maxR = Math.max(maxR, contact.getBinX() + buffer);
-            maxC = Math.max(maxC, contact.getBinY() + buffer);
+            maxR = Math.max(maxR, contact.getBinX() / scalar + buffer);
+            maxC = Math.max(maxC, contact.getBinY() / scalar + buffer);
         }
         if (minR < 0) minR = 0;
         if (minC < 0) minC = 0;
@@ -46,7 +48,7 @@ public class BoundingBoxWithContacts {
         Set<ContactRecord> toRemove = new HashSet<>();
         float[][] region = getRegionSpanned(zdLow, norm);
         for (ContactRecord contact : contacts) {
-            if (!isProperlyEnriched(region, contact.getBinX() - minR, contact.getBinY() - minC)) {
+            if (!isProperlyEnriched(region, contact.getBinX() / scalar - minR, contact.getBinY() / scalar - minC)) {
                 toRemove.add(contact);
             }
         }
@@ -70,16 +72,16 @@ public class BoundingBoxWithContacts {
 
         // neighborhood stats
         double mean = stats.getMean();
-        double max = stats.getMax();
+        //double max = stats.getMax();
         double median = stats.getPercentile(50);
 
         return reasonablyEnrichedRelativeTo(mean, loopVal) &&
-                reasonablyEnrichedRelativeTo(max, loopVal) &&
+                //reasonablyEnrichedRelativeTo(max, loopVal) &&
                 reasonablyEnrichedRelativeTo(median, loopVal);
     }
 
     private boolean reasonablyEnrichedRelativeTo(double denom, float num) {
         double val = num / denom;
-        return val > 1.25 && val < 50;
+        return val > 1.2 && val < 50;
     }
 }
