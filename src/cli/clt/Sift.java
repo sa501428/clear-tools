@@ -41,7 +41,9 @@ public class Sift {
         Dataset ds = HiCFileTools.extractDatasetForCLT(args[1],
                 false, false, false);
         //File outFolder = UNIXTools.makeDir(new File(args[2]));
-        Feature2DList refinedLoops = siftThroughCalls(ds);
+        int hires = parser.getResolutionOption(200);
+        int lowres = parser.getLowResolutionOption(5000);
+        Feature2DList refinedLoops = siftThroughCalls(ds, hires, lowres);
         refinedLoops.exportFeatureList(new File(args[2] + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("sift complete");
     }
@@ -219,55 +221,45 @@ public class Sift {
      * 21 - change low res zscore to 1.5
      * 22 - same as 19 (low res zscore 2)
      */
-    private Feature2DList siftThroughCalls(Dataset ds) {
+    private Feature2DList siftThroughCalls(Dataset ds, int hiRes, int lowRes) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList output = new Feature2DList();
         for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
             Matrix matrix = ds.getMatrix(chrom, chrom);
 
             if (matrix != null) {
-                int hires = 200;
-                MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(hires));
-                System.out.println("Start HiRes pass (" + hires + ")");
-                Set<ContactRecord> initialPoints = getHiResExtremePixels(zdHigh, MAX_DIST / hires, MIN_DIST / hires);
-                System.out.println("HiRes pass done (" + hires + ")");
+                MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(hiRes));
+                System.out.println("Start HiRes pass (" + hiRes + ")");
+                Set<ContactRecord> initialPoints = getHiResExtremePixels(zdHigh, MAX_DIST / hiRes, MIN_DIST / hiRes);
+                System.out.println("HiRes pass done (" + hiRes + ")");
+                matrix.clearCacheForZoom(new HiCZoom(hiRes));
 
                 System.out.println("Num initial loops " + initialPoints.size());
 
-                for (int lowRes : new int[]{5000}) { // 1000, 2000,
+                NMSUtils.filterOutByOverlap(initialPoints, lowRes / hiRes);
+                System.out.println("Num loops after pre filter (overlaps) " + initialPoints.size());
 
-                    NMSUtils.filterOutByOverlap(initialPoints, lowRes / hires);
-                    System.out.println("Num loops after pre filter (overlaps) " + initialPoints.size());
+                MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowRes));
+                System.out.println("Start LowRes pass (" + lowRes + ")");
+                Set<SimpleLocation> enrichedRegions = getExtremeLocations(ds, chrom.getIndex(), lowRes,
+                        zdLow, MAX_DIST / lowRes, MIN_DIST / lowRes);
 
-                    MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowRes));
-                    System.out.println("Start LowRes pass (" + lowRes + ")");
-                    Set<SimpleLocation> enrichedRegions = getExtremeLocations(ds, chrom.getIndex(), lowRes,
-                            zdLow, MAX_DIST / lowRes, MIN_DIST / lowRes);
+                NMSUtils.filterOutByOverlap(initialPoints, enrichedRegions, lowRes / hiRes);
+                enrichedRegions.clear();
+                System.out.println("LowRes pass done (" + lowRes + ")");
 
-                    NMSUtils.filterOutByOverlap(initialPoints, enrichedRegions, lowRes / hires);
-                    enrichedRegions.clear();
-                    System.out.println("LowRes pass done (" + lowRes + ")");
+                System.out.println("Num loops after low res global filter " + initialPoints.size());
 
-                    System.out.println("Num loops after low res global filter " + initialPoints.size());
-
-                    EnrichmentChecker.filterOutIfNotLocalMax(zdLow, initialPoints, lowRes / hires, SCALE);
-
-                    System.out.println("Num loops after low res local filter " + initialPoints.size());
-
-                    //System.out.println("Num initial loops after filter2 " + initialPoints.size());
-
-                    // verify enrichment relative to nearby pixels
-
-                }
-
-
+                EnrichmentChecker.filterOutIfNotLocalMax(zdLow, initialPoints, lowRes / hiRes, SCALE);
                 matrix.clearCache();
 
-                SiftUtils.coalesceAndRetainCentroids(initialPoints, hires, 5000);
+                System.out.println("Num loops after low res local filter " + initialPoints.size());
+
+                SiftUtils.coalesceAndRetainCentroids(initialPoints, hiRes, 5000);
                 System.out.println("Num loops after filter3 " + initialPoints.size());
 
                 output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
-                        chrom, chrom, hires));
+                        chrom, chrom, hiRes));
             }
         }
 
