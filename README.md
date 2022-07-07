@@ -32,9 +32,11 @@ Highly Observable Transitions in Selective Pixels Of Tissues
 
 ## additional tools
 
-## SIFT
+## SIFT / SIEVE
 
 Search and Identify Focal Targets
+Simple Identification of Focal Target
+Simple Identification of Enrichments
 
 probability
 

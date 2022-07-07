@@ -2,6 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.ExpectedUtils;
+import cli.utils.VectorCleanerUtils;
 import cli.utils.WelfordStats;
 import cli.utils.sift.SiftUtils;
 import cli.utils.sift.SimpleLocation;
@@ -96,7 +97,7 @@ public class Sift {
                     double denomVCSqrt = nvVCSqrt[cr.getBinX()] * nvVCSqrt[cr.getBinY()];
                     double denomScale = nvSCALE[cr.getBinX()] * nvSCALE[cr.getBinY()];
 
-                    if (denomVC > 0 && denomVCSqrt > 0 && denomScale > 0) {
+                    if (denomVC > 1 && denomVCSqrt > 1 && denomScale > 1) {
                         double valVC = (cr.getCounts() / denomVC);
                         double valVCSqrt = (cr.getCounts() / denomVCSqrt);
                         double valScale = (cr.getCounts() / denomScale);
@@ -206,7 +207,10 @@ public class Sift {
      * 10 - use multiple normalizations *** seems best so far, but pretty conservative
      * 11 - only validate at 5000, not 1000/2000
      * 12 - higher zscore cutoff for 5kb
-     * 13 - just the hires calls
+     * 13 - just the hires calls, collapse at 2k
+     * 14 - scale/vc vector filtering, collapse at 5k
+     * 15 - restore global max filtering
+     * 16 - linear distance for 5k lowres expected
      */
     private Feature2DList siftThroughCalls(Dataset ds) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
@@ -222,8 +226,19 @@ public class Sift {
                 System.out.println("HiRes pass done (" + hires + ")");
 
                 System.out.println("Num initial loops " + initialPoints.size());
-                /*
+
                 for (int lowRes : new int[]{5000}) { // 1000, 2000,
+
+                    double[] vector1 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(lowRes), SCALE).getData().getValues().get(0);
+                    double[] vector1b = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(lowRes), VC).getData().getValues().get(0);
+                    VectorCleanerUtils.inPlaceClean(vector1);
+                    VectorCleanerUtils.inPlaceClean(vector1b);
+
+                    inPlaceFilterByNorms(initialPoints, vector1, vector1b, lowRes / hires);
+
+                    System.out.println("Num initial loops after filter0 " + initialPoints.size());
+
+
                     MatrixZoomData zd1 = matrix.getZoomData(new HiCZoom(lowRes));
                     System.out.println("Start LowRes pass (" + lowRes + ")");
                     Set<SimpleLocation> enrichedRegions = getExtremeLocations(ds, chrom.getIndex(), lowRes,
@@ -232,16 +247,21 @@ public class Sift {
                     filterOutByOverlap(initialPoints, enrichedRegions, lowRes / hires);
                     enrichedRegions.clear();
                     System.out.println("LowRes pass done (" + lowRes + ")");
-                }
-                */
 
-                filterOutByOverlap(initialPoints, 2000 / hires);
-                System.out.println("Num initial loops after filter1 " + initialPoints.size());
+                    System.out.println("Num initial loops after filter1 " + initialPoints.size());
+
+                    //filterOutByOverlap(initialPoints, lowRes / hires);
+                    //System.out.println("Num initial loops after filter2 " + initialPoints.size());
+
+                    // verify enrichment relative to nearby pixels
+
+                }
+
 
                 matrix.clearCache();
 
                 SiftUtils.coalesceAndRetainCentroids(initialPoints, hires, 5000);
-                System.out.println("Num initial loops after filter2 " + initialPoints.size());
+                System.out.println("Num initial loops after filter3 " + initialPoints.size());
 
                 output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
                         chrom, chrom, hires));
@@ -251,11 +271,29 @@ public class Sift {
         return output;
     }
 
-    private void filterOutByOverlap(Set<ContactRecord> initialPoints, int window) {
+    private void inPlaceFilterByNorms(Set<ContactRecord> initialPoints, double[] vector1, double[] vector1b, int scalar) {
+        List<ContactRecord> toDelete = new LinkedList<>();
+        for (ContactRecord record : initialPoints) {
+            if (!normsAreGood(record, vector1, vector1b, scalar)) {
+                toDelete.add(record);
+            }
+        }
+        toDelete.forEach(initialPoints::remove);
+    }
+
+    private boolean normsAreGood(ContactRecord record, double[] vector1, double[] vector2, int scalar) {
+        return normIsGood(vector1, record, scalar) && normIsGood(vector2, record, scalar);
+    }
+
+    private boolean normIsGood(double[] vector, ContactRecord record, int scalar) {
+        return vector[record.getBinX() / scalar] > 1 && vector[record.getBinY() / scalar] > 1;
+    }
+
+    private void filterOutByOverlap(Set<ContactRecord> initialPoints, int scalar) {
         Set<ContactRecord> toRemove = new HashSet<>();
         Map<SimpleLocation, List<ContactRecord>> locationMap = new HashMap<>();
         for (ContactRecord cr : initialPoints) {
-            SimpleLocation region = new SimpleLocation(cr.getBinX() / window, cr.getBinY() / window);
+            SimpleLocation region = new SimpleLocation(cr.getBinX() / scalar, cr.getBinY() / scalar);
             if (locationMap.containsKey(region)) {
                 locationMap.get(region).add(cr);
             } else {
