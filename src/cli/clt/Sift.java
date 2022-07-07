@@ -2,7 +2,6 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.ExpectedUtils;
-import cli.utils.VectorCleanerUtils;
 import cli.utils.WelfordStats;
 import cli.utils.sift.*;
 import javastraw.feature2D.Feature2D;
@@ -77,11 +76,14 @@ public class Sift {
         int maxCompressedBin = logp1i(maxBin) + 1;
         int minCompressedBin = logp1i(minBin);
 
-        double[] nvVC = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), VC).getData().getValues().get(0);
-        double[] nvVCSqrt = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), VC_SQRT).getData().getValues().get(0);
+        //double[] nvVC = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), VC).getData().getValues().get(0);
+        //double[] nvVCSqrt = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), VC_SQRT).getData().getValues().get(0);
         double[] nvSCALE = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), SCALE).getData().getValues().get(0);
 
-        Z4Scores zScores = getZ4scores(zd, maxCompressedBin, nvVC, nvVCSqrt, nvSCALE);
+        //Z4Scores zScores = getZ4scores(zd, maxCompressedBin, nvVC, nvVCSqrt, nvSCALE);
+
+        ZScores zScores = getZscores(zd, maxCompressedBin, false);
+
         Set<SimpleLocation> records = new HashSet<>();
         Iterator<ContactRecord> it = zd.getDirectIterator();
 
@@ -90,22 +92,23 @@ public class Sift {
             if (cr.getCounts() > 1) {
                 int dist = logp1i(ExpectedUtils.getDist(cr));
                 if (dist > minCompressedBin && dist < maxCompressedBin) {
-                    double denomVC = nvVC[cr.getBinX()] * nvVC[cr.getBinY()];
-                    double denomVCSqrt = nvVCSqrt[cr.getBinX()] * nvVCSqrt[cr.getBinY()];
+                    //double denomVC = nvVC[cr.getBinX()] * nvVC[cr.getBinY()];
+                    //double denomVCSqrt = nvVCSqrt[cr.getBinX()] * nvVCSqrt[cr.getBinY()];
                     double denomScale = nvSCALE[cr.getBinX()] * nvSCALE[cr.getBinY()];
 
-                    if (denomVC > 1 && denomVCSqrt > 1 && denomScale > 1) {
-                        double valVC = (cr.getCounts() / denomVC);
-                        double valVCSqrt = (cr.getCounts() / denomVCSqrt);
+                    if (denomScale > 0.75) { // denomVC > 1 && denomVCSqrt > 1 &&
+                        //double valVC = (cr.getCounts() / denomVC);
+                        //double valVCSqrt = (cr.getCounts() / denomVCSqrt);
                         double valScale = (cr.getCounts() / denomScale);
-                        if (valVC > 1 && valVCSqrt > 1 && valScale > 1) {
-                            double raw = logp1(cr.getCounts());
-                            valVC = logp1(valVC);
-                            valVCSqrt = logp1(valVCSqrt);
+                        if (valScale > 1) { // valVC > 1 && valVCSqrt > 1 &&
+                            //double raw = logp1(cr.getCounts());
+                            //valVC = logp1(valVC);
+                            //valVCSqrt = logp1(valVCSqrt);
                             valScale = logp1(valScale);
 
-                            if (zScores.passesAllZscores(dist, LOWRES_ZSCORE_CUTOFF,
-                                    raw, valVC, valVCSqrt, valScale)) {
+                            // .passesAllZscores(dist, LOWRES_ZSCORE_CUTOFF,
+                            //                                    raw, valVC, valVCSqrt, valScale)
+                            if (zScores.getZscore(dist, valScale) > LOWRES_ZSCORE_CUTOFF) {
                                 records.add(new SimpleLocation(cr));
                             }
                         }
@@ -208,6 +211,8 @@ public class Sift {
      * 14 - scale/vc vector filtering, collapse at 5k
      * 15 - restore global max filtering
      * 16 - linear distance for 5k lowres expected
+     * 17 - incorporate local enrichment; only use 1 norm for global enrichment at lowres,
+     *      remove vector filtering but keep denom filtering
      */
     private Feature2DList siftThroughCalls(Dataset ds) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
@@ -226,6 +231,7 @@ public class Sift {
 
                 for (int lowRes : new int[]{5000}) { // 1000, 2000,
 
+                    /*
                     double[] vector1 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(lowRes), SCALE).getData().getValues().get(0);
                     double[] vector1b = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(lowRes), VC).getData().getValues().get(0);
                     VectorCleanerUtils.inPlaceClean(vector1);
@@ -233,6 +239,7 @@ public class Sift {
 
                     CoverageFiltering.inPlaceFilterByNorms(initialPoints, vector1, vector1b, lowRes / hires);
                     System.out.println("Num initial loops after filter 0 " + initialPoints.size());
+                    */
 
 
                     MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowRes));
@@ -246,7 +253,7 @@ public class Sift {
 
                     System.out.println("Num initial loops after filter 1 " + initialPoints.size());
 
-                    EnrichmentChecker.filterOutIfNotLocalMax(zdLow, initialPoints, lowRes / hires);
+                    EnrichmentChecker.filterOutIfNotLocalMax(zdLow, initialPoints, lowRes / hires, SCALE);
 
                     System.out.println("Num initial loops after filter 1P2 " + initialPoints.size());
 

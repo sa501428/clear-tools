@@ -62,8 +62,8 @@ public class Utils {
         blocks = null;
     }
 
-    public static void getRegion(MatrixZoomData zd, long binXStart, long binYStart,
-                                 long binXEnd, long binYEnd, NormalizationType norm) {
+    public static float[][] getRegion(MatrixZoomData zd, long binXStart, long binYStart,
+                                      long binXEnd, long binYEnd, NormalizationType norm) {
         int numRows = (int) (binXEnd - binXStart);
         int numCols = (int) (binYEnd - binYStart);
         float[][] matrix = new float[numRows][numCols];
@@ -72,6 +72,7 @@ public class Utils {
         fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart);
         blocks.clear();
         blocks = null;
+        return matrix;
     }
 
     public static void fillInMatrixFromBlocks(float[][] matrix, List<Block> blocks, long binXStart, long binYStart) {
