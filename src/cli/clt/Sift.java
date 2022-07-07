@@ -43,6 +43,12 @@ public class Sift {
         //File outFolder = UNIXTools.makeDir(new File(args[2]));
         int hires = parser.getResolutionOption(200);
         int lowres = parser.getLowResolutionOption(5000);
+        BoundingBoxWithContacts.width = parser.getWindowSizeOption(5);
+        BoundingBoxWithContacts.buffer = 2 * BoundingBoxWithContacts.width;
+
+        BoundingBoxWithContacts.minEnrichment = parser.getMinOption(1.2);
+        BoundingBoxWithContacts.maxEnrichment = parser.getMaxOption(50);
+
         Feature2DList refinedLoops = siftThroughCalls(ds, hires, lowres);
         refinedLoops.exportFeatureList(new File(args[2] + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("sift complete");
@@ -220,6 +226,7 @@ public class Sift {
      * 20 - change low res zscore to 1
      * 21 - change low res zscore to 1.5
      * 22 - same as 19 (low res zscore 2)
+     * 23 - 2x min local enrichment
      */
     private Feature2DList siftThroughCalls(Dataset ds, int hiRes, int lowRes) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
@@ -255,7 +262,7 @@ public class Sift {
 
                 System.out.println("Num loops after low res local filter " + initialPoints.size());
 
-                SiftUtils.coalesceAndRetainCentroids(initialPoints, hiRes, 5000);
+                SiftUtils.coalesceAndRetainCentroids(initialPoints, hiRes, lowRes);
                 System.out.println("Num loops after filter3 " + initialPoints.size());
 
                 output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,

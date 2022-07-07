@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.17.0";
+    public static final String VERSION_NUM = "0.17.1";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
@@ -28,7 +28,7 @@ public class Main {
                 "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
                 "hotspot [--res int] [--norm string] [--window int] <file1.hic,file2.hic,...>\n" +
                 "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
-                "sift <file.hic> <outfolder>");
+                "sift [--widow int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }

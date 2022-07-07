@@ -43,6 +43,8 @@ public class CommandLineParser extends CmdLineParser {
     private final Option lowResolutionsOption = addIntegerOption("low-res");
     private final Option normalizationTypeOption = addStringOption('k', "norm");
     private final Option cutoffOption = addIntegerOption("cutoff");
+    private final Option minOption = addDoubleOption("min");
+    private final Option maxOption = addDoubleOption("max");
     private final Option threadsOption = addIntegerOption("threads");
     private final Option windowOption = addIntegerOption("window");
     private final Option minDisValOption = addIntegerOption("min-dist");
@@ -65,7 +67,12 @@ public class CommandLineParser extends CmdLineParser {
 
     private int optionToInteger(Option option, int defaultValue) {
         Object opt = getOptionValue(option);
-        return opt == null ?  defaultValue : ((Number) opt).intValue();
+        return opt == null ? defaultValue : ((Number) opt).intValue();
+    }
+
+    private double optionToDouble(Option option, double defaultValue) {
+        Object opt = getOptionValue(option);
+        return opt == null ? defaultValue : ((Number) opt).doubleValue();
     }
 
     private String optionToString(Option option) {
@@ -99,6 +106,14 @@ public class CommandLineParser extends CmdLineParser {
 
     public int getCutoffOption() {
         return optionToInteger(cutoffOption, Main.DEFAULT_CUTOFF);
+    }
+
+    public double getMinOption(double defaultVal) {
+        return optionToDouble(minOption, defaultVal);
+    }
+
+    public double getMaxOption(double defaultVal) {
+        return optionToDouble(maxOption, defaultVal);
     }
 
     public int getResolutionOption(int defaultVal) {

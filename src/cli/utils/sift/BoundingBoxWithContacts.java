@@ -12,8 +12,11 @@ import java.util.Set;
 
 public class BoundingBoxWithContacts {
 
-    private final static int buffer = 10;
-    private final static int width = 2;
+    public static int buffer = 10;
+    public static int width = 5;
+    public static double minEnrichment = 2;
+    public static double maxEnrichment = 50;
+
     private final List<ContactRecord> contacts;
     private final int scalar;
     private int minR, maxR, minC, maxC;
@@ -61,8 +64,8 @@ public class BoundingBoxWithContacts {
         for (int r = i - width; r <= i + width; r++) {
             for (int c = j - width; c <= j + width; c++) {
                 if (r == i && c == j) continue;
-                // too much "sparsity" near this region
-                if (region[r][c] < 1e-10) return false;
+
+                //if (region[r][c] < 1e-10) return false;
                 // something else nearby is bigger
                 if (region[r][c] > loopVal) return false;
 
@@ -70,18 +73,19 @@ public class BoundingBoxWithContacts {
             }
         }
 
+        // too much "sparsity" near this region
+        if (stats.getPercentile(20) < 1) return false;
+
         // neighborhood stats
         double mean = stats.getMean();
-        //double max = stats.getMax();
         double median = stats.getPercentile(50);
 
         return reasonablyEnrichedRelativeTo(mean, loopVal) &&
-                //reasonablyEnrichedRelativeTo(max, loopVal) &&
                 reasonablyEnrichedRelativeTo(median, loopVal);
     }
 
     private boolean reasonablyEnrichedRelativeTo(double denom, float num) {
         double val = num / denom;
-        return val > 1.2 && val < 50;
+        return val > minEnrichment && val < maxEnrichment;
     }
 }
