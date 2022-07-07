@@ -57,12 +57,24 @@ public class Utils {
                     binXEnd, binYEnd, norm, false);
         }
 
-        fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart, matrixWidth);
+        fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart);
         blocks.clear();
         blocks = null;
     }
 
-    public static void fillInMatrixFromBlocks(float[][] matrix, List<Block> blocks, long binXStart, long binYStart, int matrixWidth) {
+    public static void addLocalBoundedRegion(float[][] matrix, MatrixZoomData zd, long binXStart, long binYStart,
+                                             long binXEnd, long binYEnd, int matrixWidth, NormalizationType norm) {
+        List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
+                binXEnd, binYEnd, norm, false);
+        fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart);
+        blocks.clear();
+        blocks = null;
+    }
+
+    public static void fillInMatrixFromBlocks(float[][] matrix, List<Block> blocks, long binXStart, long binYStart) {
+        int numRows = matrix.length;
+        int numCols = matrix[0].length;
+
         if (blocks.size() > 0) {
             for (Block b : blocks) {
                 if (b != null) {
@@ -71,8 +83,8 @@ public class Utils {
                             // only called for small regions - should not exceed int
                             int relativeX = (int) (rec.getBinX() - binXStart);
                             int relativeY = (int) (rec.getBinY() - binYStart);
-                            if (relativeX >= 0 && relativeX < matrixWidth) {
-                                if (relativeY >= 0 && relativeY < matrixWidth) {
+                            if (relativeX >= 0 && relativeX < numRows) {
+                                if (relativeY >= 0 && relativeY < numCols) {
                                     matrix[relativeX][relativeY] += rec.getCounts();
                                 }
                             }
@@ -84,8 +96,11 @@ public class Utils {
     }
 
     public static void fillInOEMatrixFromBlocks(float[][] matrix, List<Block> blocks,
-                                                long binXStart, long binYStart, int matrixWidth,
+                                                long binXStart, long binYStart,
                                                 ExpectedValueFunction df, int chrIndex, double pseudocount) {
+        int numRows = matrix.length;
+        int numCols = matrix[0].length;
+
         if (blocks.size() > 0) {
             for (Block b : blocks) {
                 if (b != null) {
@@ -95,8 +110,8 @@ public class Utils {
 
                             int relativeX = (int) (rec.getBinX() - binXStart);
                             int relativeY = (int) (rec.getBinY() - binYStart);
-                            if (relativeX >= 0 && relativeX < matrixWidth) {
-                                if (relativeY >= 0 && relativeY < matrixWidth) {
+                            if (relativeX >= 0 && relativeX < numRows) {
+                                if (relativeY >= 0 && relativeY < numCols) {
                                     int dist = Math.abs(rec.getBinX() - rec.getBinY());
                                     double expected = df.getExpectedValue(chrIndex, dist);
                                     matrix[relativeX][relativeY] = (float) ((rec.getCounts() + pseudocount) /

@@ -30,6 +30,11 @@ public class NMSUtils {
 
     public static void filterOutByOverlap(Set<ContactRecord> initialPoints, int scalar) {
         Set<ContactRecord> toRemove = new HashSet<>();
+        Map<SimpleLocation, List<ContactRecord>> locationMap = getLocationMap(initialPoints, scalar);
+        nonMaxSuppressionInGroup(initialPoints, toRemove, locationMap);
+    }
+
+    static Map<SimpleLocation, List<ContactRecord>> getLocationMap(Set<ContactRecord> initialPoints, int scalar) {
         Map<SimpleLocation, List<ContactRecord>> locationMap = new HashMap<>();
         for (ContactRecord cr : initialPoints) {
             SimpleLocation region = new SimpleLocation(cr.getBinX() / scalar, cr.getBinY() / scalar);
@@ -41,8 +46,7 @@ public class NMSUtils {
                 locationMap.put(region, values);
             }
         }
-
-        nonMaxSuppressionInGroup(initialPoints, toRemove, locationMap);
+        return locationMap;
     }
 
     public static void nonMaxSuppressionInGroup(Set<ContactRecord> initialPoints, Set<ContactRecord> toRemove, Map<SimpleLocation, List<ContactRecord>> locationMap) {

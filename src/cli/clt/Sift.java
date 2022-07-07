@@ -217,9 +217,9 @@ public class Sift {
 
             if (matrix != null) {
                 int hires = 200;
-                MatrixZoomData zd2 = matrix.getZoomData(new HiCZoom(hires));
+                MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(hires));
                 System.out.println("Start HiRes pass (" + hires + ")");
-                Set<ContactRecord> initialPoints = getHiResExtremePixels(zd2, MAX_DIST / hires, MIN_DIST / hires);
+                Set<ContactRecord> initialPoints = getHiResExtremePixels(zdHigh, MAX_DIST / hires, MIN_DIST / hires);
                 System.out.println("HiRes pass done (" + hires + ")");
 
                 System.out.println("Num initial loops " + initialPoints.size());
@@ -232,20 +232,23 @@ public class Sift {
                     VectorCleanerUtils.inPlaceClean(vector1b);
 
                     CoverageFiltering.inPlaceFilterByNorms(initialPoints, vector1, vector1b, lowRes / hires);
+                    System.out.println("Num initial loops after filter 0 " + initialPoints.size());
 
-                    System.out.println("Num initial loops after filter0 " + initialPoints.size());
 
-
-                    MatrixZoomData zd1 = matrix.getZoomData(new HiCZoom(lowRes));
+                    MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowRes));
                     System.out.println("Start LowRes pass (" + lowRes + ")");
                     Set<SimpleLocation> enrichedRegions = getExtremeLocations(ds, chrom.getIndex(), lowRes,
-                            zd1, MAX_DIST / lowRes, MIN_DIST / lowRes);
+                            zdLow, MAX_DIST / lowRes, MIN_DIST / lowRes);
 
                     NMSUtils.filterOutByOverlap(initialPoints, enrichedRegions, lowRes / hires);
                     enrichedRegions.clear();
                     System.out.println("LowRes pass done (" + lowRes + ")");
 
-                    System.out.println("Num initial loops after filter1 " + initialPoints.size());
+                    System.out.println("Num initial loops after filter 1 " + initialPoints.size());
+
+                    EnrichmentChecker.filterOutIfNotLocalMax(zdLow, initialPoints, lowRes / hires);
+
+                    System.out.println("Num initial loops after filter 1P2 " + initialPoints.size());
 
                     //filterOutByOverlap(initialPoints, lowRes / hires);
                     //System.out.println("Num initial loops after filter2 " + initialPoints.size());
@@ -267,7 +270,6 @@ public class Sift {
 
         return output;
     }
-
 
     private static int logp1i(int x) {
         return (int) Math.floor(Math.log(1 + x));
