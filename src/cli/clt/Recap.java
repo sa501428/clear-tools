@@ -124,10 +124,16 @@ public class Recap {
                     RegionConfiguration config = chromosomePairs.get(threadPair);
                     Chromosome chrom1 = config.getChr1();
                     Chromosome chrom2 = config.getChr2();
-                    Matrix matrix = ds.getMatrix(chrom1, chrom2);
+
 
                     List<Feature2D> loops = loopList.get(chrom1.getIndex(), chrom2.getIndex());
                     if (loops != null && loops.size() > 0) {
+                        Matrix matrix = ds.getMatrix(chrom1, chrom2);
+                        if (matrix == null) {
+                            System.err.println("Matrix is null " + chrom1.getName() + "_" + chrom2.getName());
+                            System.exit(9);
+                        }
+
                         MatrixZoomData zd = matrix.getZoomData(zoom);
 
                         if (zd == null) {
@@ -177,8 +183,8 @@ public class Recap {
                             e.printStackTrace();
                             System.exit(76);
                         }
+                        matrix.clearCache();
                     }
-                    matrix.clearCache();
                     threadPair = currChromPair.getAndIncrement();
                 }
             });
