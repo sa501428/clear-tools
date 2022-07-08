@@ -1,9 +1,9 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.ExpectedUtils;
 import cli.utils.HiCUtils;
 import cli.utils.RecapTools;
+import cli.utils.expected.LogExpectedModel;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
 import javastraw.feature2D.Feature2D;
@@ -12,7 +12,6 @@ import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
-import javastraw.reader.expected.QuickMedian;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
@@ -23,7 +22,6 @@ import javastraw.tools.ParallelizationTools;
 import javastraw.tools.UNIXTools;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -142,21 +140,10 @@ public class Recap {
                         }
 
                         int maxBinDist = Math.max(getMaxDistance(loops, resolution, window), 9000000 / resolution);
-                        double[] expected;
-                        try {
-                            expected = ds.getExpectedValues(
-                                    zoom, norm, false).getExpectedValuesWithNormalization(
-                                    chrom1.getIndex()).getValues().get(0);
-                        } catch (Exception e) {
-                            expected = null;
-                        }
-                        if (expected == null) {
-                            System.out.println("Calculating log-normal expected vector");
-                            expected = ExpectedUtils.calculateExpected(zd, norm, maxBinDist, true);
-                        }
+                        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBinDist);
 
-                        float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, window, expected);
-                        double superDiagonal = expected[1];
+                        float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, expected);
+                        double superDiagonal = expected.getExpFromBin(1);
 
                         try {
                             for (Feature2D loop : loops) {
@@ -205,16 +192,7 @@ public class Recap {
         return (int) (maxDist + 4 * window);
     }
 
-    private static float getMedianExpectedAt(int d0, int dx, double[] expectedVector) {
-        List<Double> values = new ArrayList<>();
-        for (int dist = d0 - dx; dist < d0 + dx; dist++) {
-            double expected = expectedVector[dist];
-            if (expected > 0) {
-                values.add(expected);
-            }
-        }
-        float median = QuickMedian.fastMedian(values);
-        if (median > 0) return median;
-        return 0f;
+    private static float getMedianExpectedAt(int d0, LogExpectedModel expectedVector) {
+        return (float) expectedVector.getExpFromBin(d0);
     }
 }

@@ -3,6 +3,7 @@ package cli.clt;
 import cli.Main;
 import cli.utils.ExpectedUtils;
 import cli.utils.WelfordStats;
+import cli.utils.expected.LogExpectedModel;
 import cli.utils.sift.*;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -56,8 +57,8 @@ public class Sift {
 
     private static Set<ContactRecord> getHiResExtremePixels(MatrixZoomData zd, int maxBin, int minBin) {
 
-        int maxCompressedBin = logp1i(maxBin) + 1;
-        int minCompressedBin = logp1i(minBin);
+        int maxCompressedBin = LogExpectedModel.logp1i(maxBin) + 1;
+        int minCompressedBin = LogExpectedModel.logp1i(minBin);
 
         ZScores zScores = getZscores(zd, maxCompressedBin, true);
 
@@ -65,9 +66,9 @@ public class Sift {
         for (Iterator<ContactRecord> it = zd.getDirectIterator(); it.hasNext(); ) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > 1) {
-                int dist = logp1i(ExpectedUtils.getDist(cr));
+                int dist = LogExpectedModel.logp1i(ExpectedUtils.getDist(cr));
                 if (dist > minCompressedBin && dist < maxCompressedBin) {
-                    float zscore = zScores.getZscore(dist, logp1(cr.getCounts()));
+                    float zscore = zScores.getZscore(dist, LogExpectedModel.logp1(cr.getCounts()));
                     if (zscore > HIRES_ZSCORE_CUTOFF) {
                         records.add(cr);
                     }
@@ -81,8 +82,8 @@ public class Sift {
     private static Set<SimpleLocation> getExtremeLocations(Dataset ds, int chrIdx, int resolution,
                                                            MatrixZoomData zd, int maxBin, int minBin) {
 
-        int maxCompressedBin = logp1i(maxBin) + 1;
-        int minCompressedBin = logp1i(minBin);
+        int maxCompressedBin = LogExpectedModel.logp1i(maxBin) + 1;
+        int minCompressedBin = LogExpectedModel.logp1i(minBin);
 
         //double[] nvVC = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), VC).getData().getValues().get(0);
         //double[] nvVCSqrt = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), VC_SQRT).getData().getValues().get(0);
@@ -98,7 +99,7 @@ public class Sift {
         while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > 1) {
-                int dist = logp1i(ExpectedUtils.getDist(cr));
+                int dist = LogExpectedModel.logp1i(ExpectedUtils.getDist(cr));
                 if (dist > minCompressedBin && dist < maxCompressedBin) {
                     //double denomVC = nvVC[cr.getBinX()] * nvVC[cr.getBinY()];
                     //double denomVCSqrt = nvVCSqrt[cr.getBinX()] * nvVCSqrt[cr.getBinY()];
@@ -112,7 +113,7 @@ public class Sift {
                             //double raw = logp1(cr.getCounts());
                             //valVC = logp1(valVC);
                             //valVCSqrt = logp1(valVCSqrt);
-                            valScale = logp1(valScale);
+                            valScale = LogExpectedModel.logp1(valScale);
 
                             // .passesAllZscores(dist, LOWRES_ZSCORE_CUTOFF,
                             //                                    raw, valVC, valVCSqrt, valScale)
@@ -128,63 +129,9 @@ public class Sift {
         return records;
     }
 
-    private static ZScores getZscores(MatrixZoomData zd, int length, boolean useNone) {
-        WelfordStats stats = new WelfordStats(length);
-
-        Iterator<ContactRecord> it;
-        if (useNone) {
-            it = zd.getDirectIterator();
-        } else {
-            it = zd.getNormalizedIterator(SCALE);
-        }
-
-        while (it.hasNext()) {
-            ContactRecord cr = it.next();
-            if (cr.getCounts() > 1) {
-                int dist = logp1i(ExpectedUtils.getDist(cr));
-                if (dist < length) {
-                    stats.addValue(dist, logp1(cr.getCounts()));
-                }
-            }
-        }
+    public static ZScores getZscores(MatrixZoomData zd, int length, boolean useNone) {
+        WelfordStats stats = LogExpectedModel.getSummaryStats(zd, length, useNone, 1, SCALE);
         return stats.getZscores();
-    }
-
-    private static Z4Scores getZ4scores(MatrixZoomData zd, int length,
-                                        double[] nvVC, double[] nvVCSqrt, double[] nvSCALE) {
-        WelfordStats rawStats = new WelfordStats(length);
-        WelfordStats vcStats = new WelfordStats(length);
-        WelfordStats vcSqrtStats = new WelfordStats(length);
-        WelfordStats scaleStats = new WelfordStats(length);
-        Iterator<ContactRecord> it = zd.getDirectIterator();
-
-        while (it.hasNext()) {
-            ContactRecord cr = it.next();
-            if (cr.getCounts() > 1) {
-                int dist = logp1i(ExpectedUtils.getDist(cr));
-                if (dist < length) {
-                    rawStats.addValue(dist, logp1(cr.getCounts()));
-                    populateNormedStats(cr, nvVC, vcStats, dist);
-                    populateNormedStats(cr, nvVCSqrt, vcSqrtStats, dist);
-                    populateNormedStats(cr, nvSCALE, scaleStats, dist);
-                }
-            }
-        }
-        return new Z4Scores(rawStats, vcStats, vcSqrtStats, scaleStats);
-    }
-
-    private static void populateNormedStats(ContactRecord cr, double[] norm, WelfordStats stats, int dist) {
-        double denom = norm[cr.getBinX()] * norm[cr.getBinY()];
-        if (denom > 0) {
-            double val = cr.getCounts() / denom;
-            if (val > 1) {
-                stats.addValue(dist, logp1(val));
-            }
-        }
-    }
-
-    private static double logp1(double x) {
-        return Math.log(1 + x);
     }
 
     public static List<Feature2D> convertToFeature2Ds(Set<ContactRecord> records,
@@ -272,13 +219,4 @@ public class Sift {
 
         return output;
     }
-
-    private static int logp1i(int x) {
-        return (int) Math.floor(Math.log(1 + x));
-    }
-
-    private static double logp1(float x) {
-        return Math.log(1 + x);
-    }
-
 }
