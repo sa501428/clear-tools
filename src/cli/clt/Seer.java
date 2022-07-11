@@ -1,4 +1,4 @@
-package cli.utils;
+package cli.clt;
 
 import javastraw.reader.Dataset;
 import javastraw.reader.block.ContactRecord;
@@ -18,6 +18,7 @@ public class Seer {
 
     // run file with chromosome file, create main class, output as numpy (desktop)
     public static int[] rowSum(String filename) {
+
         // create a hic dataset object
         Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, true);
 
@@ -67,12 +68,14 @@ public class Seer {
         return rowSummation;
     }
     private static void printUsageAndExit() {
-        System.out.println("seer [-- file string] <out_folder>");
+        System.out.println("seer <file> <out_folder>");
         System.exit(19);
     }
 
     public static void run(String[] args) {
-        int[] results = rowSum(args[0]);
-        MatrixTools.saveMatrixTextNumpy(args[1], results);
+        // check length of arguments equal to 3
+
+        int[] results = rowSum(args[1]);
+        MatrixTools.saveMatrixTextNumpy(args[2], results);
     }
 }

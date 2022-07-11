@@ -1,7 +1,6 @@
 package cli;
 
 import cli.clt.*;
-import cli.utils.Seer;
 import jargs.gnu.CmdLineParser;
 
 public class Main {
@@ -28,7 +27,7 @@ public class Main {
                 "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
                 "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
                 "hotspot [--res int] [--norm string] [--window int] <file1.hic,file2.hic,...> <name1, name2...> <out_folder>\n" +
-                "seer [-- file string] <out_folder>");
+                "seer <file> <out_folder>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
@@ -71,9 +70,9 @@ public class Main {
         } else if (command.startsWith("hotspot")) {
             HotSpot.run(args, parser);
             // added line
-        }  else if (command.startsWith("seer")) {
+        } else if (command.startsWith("seer")) {
             Seer.run(args);
-        }   else {
+        } else {
             printGeneralUsageAndExit(3);
         }
     }

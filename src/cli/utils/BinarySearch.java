@@ -8,7 +8,7 @@ import java.util.Random;
 public class BinarySearch {
     static public int runBinarySearchIteratively(int[] sortedArray, int key, int low, int high) {
         int diff = Integer.MAX_VALUE;
-        //int value = 0;
+        //int value = 0; use if you want value instead
         int index = 0;
         while (low <= high) {
             int mid = low + ((high - low) / 2);
@@ -16,7 +16,7 @@ public class BinarySearch {
             // If the distance is greater, updates distance and index.
             if (Math.abs(key-sortedArray[mid]) < diff) {
                 diff = Math.abs(key-sortedArray[mid]);
-                //value = sortedArray[mid];
+                //value = sortedArray[mid]; use this if you want the value
                 index = mid;
             }
             // standard binary search operations to progress through the list.
