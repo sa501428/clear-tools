@@ -26,7 +26,7 @@ public class Main {
                 "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
                 "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
                 "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
-                "hotspot [--res int] [--window int] [--norm string] <file1.hic,file2.hic,...> <out_folder>\n" +
+                "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <out_folder>\n" +
                 "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
                 "sift <file.hic> <outfolder>");
         System.out.println("Exit code " + exitCode);

@@ -89,13 +89,13 @@ public class HotSpot {
         /* example print: ("apa [--min-dist minval] [--max-dist max_val] [--window window] [-r resolution]" +
                 " [-k NONE/VC/VC_SQRT/KR] [--corner-width corner_width] [--include-inter include_inter_chr] [--ag-norm]" +
                 " <input.hic> <loops.bedpe> <outfolder>"); */
-        System.out.println("hotspot [--res resolution] [--window window] [--norm normalization] <file1.hic,file2.hic,...> <name1,name2,...> <out_folder>");
+        System.out.println("hotspot [--res resolution] [--norm normalization] <file1.hic,file2.hic,...> <out_folder>");
         System.exit(19);
     }
 
     public static void run(String[] args, CommandLineParser parser) {
 
-        // hotspot [--res int] [--window int] [--norm string] <file1.hic,file2.hic,...> <name1,name2,...> <out_folder>
+        // hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <out_folder>
 
         if (args.length != 3) {
             printUsageAndExit();
@@ -103,19 +103,27 @@ public class HotSpot {
 
         final int DEFAULT_RES = 2000;
         String[] files = args[1].split(",");
-        // Map instead of HashMap
-
         String outfolder = args[2];
         Dataset ds = HiCFileTools.extractDatasetForCLT(files[0], false, false, true);
 
         Feature2DList result = new Feature2DList();
+
+        // this code can be commented out when running small-scale tests on local machine
         for (Chromosome chrom : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
             List<Feature2D> hotspots = findTheHotspots(chrom, files, parser.getResolutionOption(DEFAULT_RES),
                     parser.getNormalizationStringOption());
             result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
         }
 
-        result.exportFeatureList(new File(outfolder), false, Feature2DList.ListFormat.NA);
+        // this code is used for running small-scale tests on local machine
+//        Chromosome c21 = ds.getChromosomeHandler().getChromosomeFromName("chr21");
+//        List<Feature2D> hotspots = findTheHotspots(c21, files, parser.getResolutionOption(DEFAULT_RES),
+//                parser.getNormalizationStringOption());
+//        result.addByKey(Feature2DList.getKey(c21, c21), hotspots);
+
+        // review export statement from Sift or
+        result.exportFeatureList(new File(outfolder + ".hotspot.bedpe"), false, Feature2DList.ListFormat.NA);
+        System.out.println("hotspot complete");
     }
 
     private static List<Feature2D> findTheHotspots(Chromosome chrom, String[] files, int resolutionOption,
@@ -129,8 +137,8 @@ public class HotSpot {
         List<Feature2D> hotspots = new ArrayList();
         Map<String, String> attributes = new HashMap();
         Welford overallWelford = new Welford();
-        // The Z-Score Cutoff is currently hardcoded at 1.645, which has a confidence interval of 90%
-        float zScoreCutOff = 1.645f;
+        // The Z-Score Cutoff is currently hardcoded at 1.65, which has a confidence interval of 95.053%
+        float zScoreCutOff = 1.65f;
 
         ////// for every dataset, extract the chromosome
         // iterate on it type 1
@@ -166,9 +174,17 @@ public class HotSpot {
             System.out.println("Norm being used: " + norm.getLabel());
 
             Matrix matrix = ds.getMatrix(chrom, chrom);
-            if (matrix == null) continue;
+            if (matrix == null) {
+                // todo remove test print
+                System.out.println("matrix == null -> continuing");
+                continue;
+            }
             MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolutionOption));
-            if (zd == null) continue;
+            if (zd == null) {
+                // todo remove test print
+                System.out.println("zd == null -> continuing");
+                continue;
+            }
 
             // iterating through chrom using type 1 iteration
             Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
@@ -182,44 +198,57 @@ public class HotSpot {
                 binX = record.getBinX();
                 binY = record.getBinY();
 
-                if (Math.abs(binX - binY) > 10000000 || Math.abs(binX - binY) < 25000)
+                if (Math.abs(binX - binY) > (10000000 / resolutionOption) || Math.abs(binX - binY) < (75000 / resolutionOption))
                     continue;
                 count = record.getCounts();
                 if (count == 0)
                     continue;
 
-                // QUESTION: location is currently in bin coordinates. Should it be in genome coordinates?
                 SimpleLocation location = new SimpleLocation(binX, binY);
                 results.putIfAbsent(location, new Welford());
                 // QUESTION: although getCounts() returns a float and addValue() accepts a double, when I try to cast the returned value from getCounts() as a double I get a redundancy warning
                 results.get(location).addValue(count);
             }
+            System.out.println("finished recording locations for this file");
         }
 
-        int validCountThreshold = 3;
+        int validCountThreshold = Math.max(files.length / 2, 2);
+        System.out.println("validCountThreshold: " + validCountThreshold);
         for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
             if (entry.getValue().getCounts() < validCountThreshold)
                 removeList.add(entry.getKey());
         }
+        // todo remove test print
+        System.out.println("removeList size: " + removeList.size());
+
         for (SimpleLocation key : removeList) {
             results.remove(key);
         }
-        // QUESTION: should I implement an additional Welford that keeps track of the standard deviation and mean of all the standard deviations in results, and then use that Welford in calculating
-        // the Z-score of individual standard deviations?
+        // todo remove test print
+        System.out.println("num. remaining entries after removing: " + results.size());
+
         for (Welford welford : results.values()) {
             overallWelford.addValue(welford.getStdDev());
         }
 
+        // todo print statement to update status check.
+        System.out.println("overall welford standard deviation: " + overallWelford.getStdDev());
 
         for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
             Welford welford = entry.getValue();
             if (((welford.getStdDev() - overallWelford.getMean()) / overallWelford.getStdDev()) >= zScoreCutOff) {
                 attributes.put("std", "" + entry.getValue().getStdDev());
-                // QUESTION: can I implement getBinX() and getBinY() methods into SimpleLocation?
-                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), entry.getKey().getBinX(), entry.getKey().getBinY(), chrom.getName(), entry.getKey().getBinX(), entry.getKey().getBinY(), Color.BLACK, attributes);
+                long startX = (long) entry.getKey().getBinX() * resolutionOption;
+                long endX = startX + resolutionOption;
+                long startY = (long) entry.getKey().getBinY() * resolutionOption;
+                long endY = startY + resolutionOption;
+                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
                 hotspots.add(feature);
             }
         }
+
+        // todo print size of hotspots
+        System.out.println("size of hotspots: " + hotspots.size());
         return hotspots;
     }
 }
