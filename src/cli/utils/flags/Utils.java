@@ -25,6 +25,7 @@
 package cli.utils.flags;
 
 
+import cli.utils.expected.LogExpectedModel;
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.block.Block;
 import javastraw.reader.block.ContactRecord;
@@ -57,12 +58,28 @@ public class Utils {
                     binXEnd, binYEnd, norm, false);
         }
 
-        fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart, matrixWidth);
+        fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart);
         blocks.clear();
         blocks = null;
     }
 
-    public static void fillInMatrixFromBlocks(float[][] matrix, List<Block> blocks, long binXStart, long binYStart, int matrixWidth) {
+    public static float[][] getRegion(MatrixZoomData zd, long binXStart, long binYStart,
+                                      long binXEnd, long binYEnd, NormalizationType norm) {
+        int numRows = (int) (binXEnd - binXStart);
+        int numCols = (int) (binYEnd - binYStart);
+        float[][] matrix = new float[numRows][numCols];
+        List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
+                binXEnd, binYEnd, norm, false);
+        fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart);
+        blocks.clear();
+        blocks = null;
+        return matrix;
+    }
+
+    public static void fillInMatrixFromBlocks(float[][] matrix, List<Block> blocks, long binXStart, long binYStart) {
+        int numRows = matrix.length;
+        int numCols = matrix[0].length;
+
         if (blocks.size() > 0) {
             for (Block b : blocks) {
                 if (b != null) {
@@ -71,8 +88,8 @@ public class Utils {
                             // only called for small regions - should not exceed int
                             int relativeX = (int) (rec.getBinX() - binXStart);
                             int relativeY = (int) (rec.getBinY() - binYStart);
-                            if (relativeX >= 0 && relativeX < matrixWidth) {
-                                if (relativeY >= 0 && relativeY < matrixWidth) {
+                            if (relativeX >= 0 && relativeX < numRows) {
+                                if (relativeY >= 0 && relativeY < numCols) {
                                     matrix[relativeX][relativeY] += rec.getCounts();
                                 }
                             }
@@ -84,8 +101,11 @@ public class Utils {
     }
 
     public static void fillInOEMatrixFromBlocks(float[][] matrix, List<Block> blocks,
-                                                long binXStart, long binYStart, int matrixWidth,
+                                                long binXStart, long binYStart,
                                                 ExpectedValueFunction df, int chrIndex, double pseudocount) {
+        int numRows = matrix.length;
+        int numCols = matrix[0].length;
+
         if (blocks.size() > 0) {
             for (Block b : blocks) {
                 if (b != null) {
@@ -95,8 +115,8 @@ public class Utils {
 
                             int relativeX = (int) (rec.getBinX() - binXStart);
                             int relativeY = (int) (rec.getBinY() - binYStart);
-                            if (relativeX >= 0 && relativeX < matrixWidth) {
-                                if (relativeY >= 0 && relativeY < matrixWidth) {
+                            if (relativeX >= 0 && relativeX < numRows) {
+                                if (relativeY >= 0 && relativeY < numCols) {
                                     int dist = Math.abs(rec.getBinX() - rec.getBinY());
                                     double expected = df.getExpectedValue(chrIndex, dist);
                                     matrix[relativeX][relativeY] = (float) ((rec.getCounts() + pseudocount) /
@@ -111,7 +131,7 @@ public class Utils {
     }
 
     public static void fillInExpectedMatrix(float[][] matrix, Feature2D loop,
-                                            int matrixWidth, double[] expectedVector, int chrIndex,
+                                            int matrixWidth, LogExpectedModel expectedVector,
                                             int resolution, int window) {
 
         long binXStart = (loop.getMidPt1() / resolution) - window;
@@ -122,7 +142,7 @@ public class Utils {
                 long X = relativeX + binXStart;
                 long Y = relativeY + binYStart;
                 int dist = (int) Math.abs(X - Y);
-                double expected = expectedVector[dist];
+                double expected = expectedVector.getExpFromBin(dist);
                 matrix[relativeX][relativeY] = (float) expected;
             }
         }
