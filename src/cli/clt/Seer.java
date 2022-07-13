@@ -7,11 +7,11 @@ import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.tools.HiCFileTools;
-import javastraw.tools.MatrixTools;
 import javastraw.tools.UNIXTools;
 
-import java.io.File;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 public class Seer {
     /* takes in one file currently (for ease of testing: can change later to a list of files and easily iterate over).
@@ -19,55 +19,45 @@ public class Seer {
     */
 
     // run file with chromosome file, create main class, output as numpy (desktop)
-    public static int[] rowSum(String filename) {
+    public static void calculateRowSums(String filename, Map<Chromosome, int[]> chromToRowSumsMap) {
 
         // create a hic dataset object
         Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, true);
 
         int resolution = 50;
 
-        // hiC zoom objects, type & resolution fields (want the smallest number which is the resolution field). Iterate over.
+        // todo hiC zoom objects, type & resolution fields
+        //  (want the smallest number which is the resolution field). Iterate over.
         ds.getBpZooms();
-        // first find the genome length
-        /*
-        int genomeLength = 0;
-
-        for (int i = 0; i < chromosomes.length; i++) {
-            for (int j = i; i < chromosomes.length; i++) {
-                genomeLength++;
-            }
-        }
-        */
 
         // iterate over a chromosome for now (chromosome 10)
+        for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
+            Matrix matrix = ds.getMatrix(chromosome, chromosome);
+            if (matrix == null) continue;
+            MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
+            if (zd == null) continue;
 
-        Chromosome chr10 = ds.getChromosomeHandler().getChromosomeFromName("chr10");
-        Matrix matrix = ds.getMatrix(chr10, chr10);
-        if (matrix == null) return null;
-        MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
-        if (zd == null) return null;
+            int[] rowSummation = new int[(int) (chromosome.getLength() / resolution + 1)];
 
-        int[] rowSummation = new int[(int) (chr10.getLength() / resolution + 1)];
+            Iterator<ContactRecord> iterator = zd.getDirectIterator();
+            while (iterator.hasNext()) {
+                ContactRecord record = iterator.next();
+                float counts = record.getCounts();
 
-        Iterator<ContactRecord> iterator = zd.getDirectIterator();
-        while (iterator.hasNext()) {
-            ContactRecord record = iterator.next();
-            float counts = record.getCounts();
+                if (counts > 0) { // will skip NaNs
+                    int binX = record.getBinX();
+                    int binY = record.getBinY();
+                    rowSummation[binX] += record.getCounts();
 
-            if (counts > 0) { // will skip NaNs
-                int binX = record.getBinX();
-                int binY = record.getBinY();
-                rowSummation[binX] += record.getCounts();
-
-                if (binX != binY) {
-                    rowSummation[binY] += record.getCounts();
-                    // do task
+                    if (binX != binY) {
+                        rowSummation[binY] += record.getCounts();
+                        // do task
+                    }
                 }
             }
-        }
 
-        // returns the row summation matrix
-        return rowSummation;
+            chromToRowSumsMap.put(chromosome, rowSummation);
+        }
     }
     private static void printUsageAndExit() {
         System.out.println("seer <file> <out_folder>");
@@ -77,10 +67,29 @@ public class Seer {
     public static void run(String[] args) {
         // check length of arguments equal to 3
 
-        int[] results = rowSum(args[1]);
+        Map<Chromosome, int[]> chromToRowSumsMap = new HashMap<>();
+        calculateRowSums(args[1], chromToRowSumsMap);
         UNIXTools.makeDir(args[2]);
-        String outputFileName = new File(args[2], "rowSums.npy").getAbsolutePath();
+        exportRowSumsToBedgraph(chromToRowSumsMap, args[2]);
+        // MatrixTools.saveMatrixTextNumpy(outputFileName, results);
+    }
 
-        MatrixTools.saveMatrixTextNumpy(outputFileName, results);
+    private static void exportRowSumsToBedgraph(Map<Chromosome, int[]> chromToRowSumsMap, String arg) {
+
+        // String outputFileName = new File(args[2], "rowSums.bedgraph").getAbsolutePath();
+        // todo first you need to make a bufferedfilewritere / filewriter
+
+        for (Chromosome chromosome : chromToRowSumsMap.keySet()) {
+            int[] sums = chromToRowSumsMap.get(chromosome);
+
+            // todo for every bin, you will write a line to the files
+            // position = bin * resolution
+            // chromosome " " startPosition + " " + endPosition + " " actual sum
+
+
+        }
+
+        // close the writer
+
     }
 }
