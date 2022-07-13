@@ -9,6 +9,10 @@ import javastraw.reader.type.HiCZoom;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.UNIXTools;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -19,12 +23,10 @@ public class Seer {
     */
 
     // run file with chromosome file, create main class, output as numpy (desktop)
-    public static void calculateRowSums(String filename, Map<Chromosome, int[]> chromToRowSumsMap) {
+    public static void calculateRowSums(String filename, Map<Chromosome, int[]> chromToRowSumsMap, int resolution) {
 
         // create a hic dataset object
         Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, true);
-
-        int resolution = 50;
 
         // todo hiC zoom objects, type & resolution fields
         //  (want the smallest number which is the resolution field). Iterate over.
@@ -64,24 +66,40 @@ public class Seer {
         System.exit(19);
     }
 
-    public static void run(String[] args) {
+    public static void run(String[] args) throws IOException {
         // check length of arguments equal to 3
 
         Map<Chromosome, int[]> chromToRowSumsMap = new HashMap<>();
-        calculateRowSums(args[1], chromToRowSumsMap);
+        int resolution = 50;
+        calculateRowSums(args[1], chromToRowSumsMap, resolution);
         UNIXTools.makeDir(args[2]);
-        exportRowSumsToBedgraph(chromToRowSumsMap, args[2]);
+        exportRowSumsToBedgraph(chromToRowSumsMap, args[2], resolution);
         // MatrixTools.saveMatrixTextNumpy(outputFileName, results);
     }
 
-    private static void exportRowSumsToBedgraph(Map<Chromosome, int[]> chromToRowSumsMap, String arg) {
+    private static void exportRowSumsToBedgraph(Map<Chromosome, int[]> chromToRowSumsMap, String arg, int resolution) throws IOException {
 
-        // String outputFileName = new File(args[2], "rowSums.bedgraph").getAbsolutePath();
         // todo first you need to make a bufferedfilewritere / filewriter
+
+        // why is file giving an error? why do we need path in filename
+        String outputFileName = new File(arg, "rowSums.bedgraph").getAbsolutePath();
+        FileWriter fw = new FileWriter(outputFileName);
+        BufferedWriter bw = new BufferedWriter(fw);
 
         for (Chromosome chromosome : chromToRowSumsMap.keySet()) {
             int[] sums = chromToRowSumsMap.get(chromosome);
 
+            for (int i = 0; i < sums.length; i++) {
+                int startPosition = i * resolution;
+                int endPosition = startPosition + resolution;
+                int value = sums[i];
+                if (value > 0) {
+                    bw.write(chromosome.getName() + " " + startPosition + " " + endPosition + " " + value);
+                    bw.newLine();
+                }
+            }
+
+            // bin values --> sums[chromosome]
             // todo for every bin, you will write a line to the files
             // position = bin * resolution
             // chromosome " " startPosition + " " + endPosition + " " actual sum
@@ -90,6 +108,7 @@ public class Seer {
         }
 
         // close the writer
+        bw.close();
 
     }
 }
