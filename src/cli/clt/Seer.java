@@ -30,7 +30,15 @@ public class Seer {
 
         // todo hiC zoom objects, type & resolution fields
         //  (want the smallest number which is the resolution field). Iterate over.
-        ds.getBpZooms();
+        /*
+        List<HiCZoom> objList = ds.getBpZooms();
+        resolution = Integer.MAX_VALUE;
+        for (HiCZoom obj : objList){
+            if (obj. < resolution) {
+                resolution = obj.
+            }
+        }
+         */
 
         // iterate over a chromosome for now (chromosome 10)
         for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
