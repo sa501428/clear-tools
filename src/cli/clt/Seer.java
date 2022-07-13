@@ -1,14 +1,16 @@
 package cli.clt;
 
 import javastraw.reader.Dataset;
-import javastraw.reader.block.ContactRecord;
 import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
+import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
+import javastraw.tools.UNIXTools;
 
+import java.io.File;
 import java.util.Iterator;
 
 public class Seer {
@@ -76,6 +78,9 @@ public class Seer {
         // check length of arguments equal to 3
 
         int[] results = rowSum(args[1]);
-        MatrixTools.saveMatrixTextNumpy(args[2], results);
+        UNIXTools.makeDir(args[2]);
+        String outputFileName = new File(args[2], "rowSums.npy").getAbsolutePath();
+
+        MatrixTools.saveMatrixTextNumpy(outputFileName, results);
     }
 }
