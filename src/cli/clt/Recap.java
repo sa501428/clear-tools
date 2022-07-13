@@ -108,6 +108,8 @@ public class Recap {
 
         for (int di = 0; di < filepaths.length; di++) {
 
+            System.out.println("File: " + filepaths[di]);
+
             final Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[di], false, false,
                     true);
             String prefix = names[di] + "_";
