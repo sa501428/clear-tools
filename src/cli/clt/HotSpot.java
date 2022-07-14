@@ -16,11 +16,13 @@ import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
+import javastraw.tools.ParallelizationTools;
 
 import java.awt.*;
 import java.io.File;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class HotSpot {
 
@@ -114,15 +116,27 @@ public class HotSpot {
         String[] files = args[1].split(",");
         String outputFileName = args[2];
         Dataset ds = HiCFileTools.extractDatasetForCLT(files[0], false, false, true);
+        int resolution = parser.getResolutionOption(DEFAULT_RES);
+        String norm = parser.getNormalizationStringOption();
 
-        Feature2DList result = new Feature2DList();
+        final Feature2DList result = new Feature2DList();
+
+        Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
+        AtomicInteger cIndex = new AtomicInteger(0);
 
         // this code can be commented out when running small-scale tests on local machine
-        for (Chromosome chrom : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
-            List<Feature2D> hotspots = findTheHotspots(chrom, files, parser.getResolutionOption(DEFAULT_RES),
-                    parser.getNormalizationStringOption());
-            result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
-        }
+
+        ParallelizationTools.launchParallelizedCode(() -> {
+            int currIndex = cIndex.getAndIncrement();
+            while (currIndex < chromosomes.length) {
+                Chromosome chrom = chromosomes[currIndex];
+                List<Feature2D> hotspots = findTheHotspots(chrom, files, resolution, norm);
+                synchronized (result) {
+                    result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
+                }
+                currIndex = cIndex.getAndIncrement();
+            }
+        });
 
         // this code is used for running small-scale tests on local machine
 //        Chromosome c21 = ds.getChromosomeHandler().getChromosomeFromName("chr21");
