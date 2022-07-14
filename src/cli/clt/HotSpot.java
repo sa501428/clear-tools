@@ -1,6 +1,8 @@
 package cli.clt;
 
+import cli.utils.ExpectedUtils;
 import cli.utils.Welford;
+import cli.utils.expected.LogExpectedModel;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -18,6 +20,8 @@ import java.awt.*;
 import java.io.File;
 import java.util.List;
 import java.util.*;
+
+import static javastraw.reader.type.NormalizationHandler.SCALE;
 
 public class HotSpot {
 
@@ -58,7 +62,7 @@ public class HotSpot {
 //            System.err.println("error extracting local bounded region float matrix");
 //        }
 
-//        Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
+    //        Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
 //
 //        for (int i = 0; i < chromosomes.length; i++) {
 //            Matrix matrix = ds.getMatrix(chromosomes[i], chromosomes[i]);
@@ -84,8 +88,11 @@ public class HotSpot {
 //            }
 //        }
 //    }
-private static final int MAX_DIST = 10000000;
+    private static final int MAX_DIST = 10000000;
     private static final int MIN_DIST = 25000;
+
+    // The Z-Score Cutoff is currently hardcoded at 1.65, which has a confidence interval of __%
+    private static final float ZSCORE_CUTOFF = 2f;
 
 
     private static void printUsageAndExit() {
@@ -132,15 +139,16 @@ private static final int MAX_DIST = 10000000;
                                                    String normStringOption) {
         // 2 ints (positions) row and column
         Map<SimpleLocation, Welford> results = new HashMap<>();
-        int binX;
-        int binY;
-        double count;
         List<SimpleLocation> removeList = new ArrayList();
         List<Feature2D> hotspots = new ArrayList();
         Map<String, String> attributes = new HashMap();
         Welford overallWelford = new Welford();
-        // The Z-Score Cutoff is currently hardcoded at 1.65, which has a confidence interval of __%
-        float ZSCORE_CUTOFF = 2f;
+
+        int NUM_NONZERO_VALUES_THRESHOLD = Math.max(files.length / 2, 2);
+        System.out.println("validCountThreshold: " + NUM_NONZERO_VALUES_THRESHOLD);
+
+        int minBin = MIN_DIST / resolutionOption;
+        int maxBin = MAX_DIST / resolutionOption;
 
         ////// for every dataset, extract the chromosome
         // iterate on it type 1
@@ -167,78 +175,60 @@ private static final int MAX_DIST = 10000000;
 
             Matrix matrix = ds.getMatrix(chrom, chrom);
             if (matrix == null) {
-                // todo remove test print
-                System.out.println("matrix == null -> continuing");
+                System.out.println("matrix for " + chrom.getName() + " of file " + file + " == null -> continuing");
                 continue;
             }
             MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolutionOption));
             if (zd == null) {
-                // todo remove test print
-                System.out.println("zd == null -> continuing");
+                System.out.println("zd for " + chrom.getName() + " of file " + file + " == null -> continuing");
                 continue;
             }
 
             // iterating through chrom using type 1 iteration
-            Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
-            while (iterator.hasNext()) {
+            iterateThruChromosomeRecordingScaledValues(ds, chrom.getIndex(), resolutionOption, zd, maxBin, minBin, norm, results);
+            // test print
+            System.out.println("Total recorded locations before removal: " + results.size());
 
-                ContactRecord record = iterator.next();
-                binX = record.getBinX();
-                binY = record.getBinY();
-
-                if (Math.abs(binX - binY) > (MAX_DIST / resolutionOption) || Math.abs(binX - binY) < (MIN_DIST / resolutionOption))
-                    continue;
-                count = record.getCounts();
-                if (count == 0)
-                    continue;
-
-                SimpleLocation location = new SimpleLocation(binX, binY);
-                results.putIfAbsent(location, new Welford());
-                results.get(location).addValue(count);
+            for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
+                if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
+                    removeList.add(entry.getKey());
             }
-            System.out.println("finished recording locations for this file");
-        }
+            // test print
+            System.out.println("removeList size: " + removeList.size());
 
-        int VALID_COUNT_THRESHOLD = Math.max(files.length / 2, 2);
-        System.out.println("validCountThreshold: " + VALID_COUNT_THRESHOLD);
-        for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
-            if (entry.getValue().getCounts() < VALID_COUNT_THRESHOLD)
-                removeList.add(entry.getKey());
-        }
-        // todo remove test print
-        System.out.println("removeList size: " + removeList.size());
+            for (SimpleLocation key : removeList) {
+                results.remove(key);
+            }
+            // test print
+            System.out.println("num. remaining entries after removal: " + results.size());
 
-        for (SimpleLocation key : removeList) {
-            results.remove(key);
-        }
-        // todo remove test print
-        System.out.println("num. remaining entries after removing: " + results.size());
+            for (Welford welford : results.values()) {
+                overallWelford.addValue(welford.getStdDev());
+            }
 
-        for (Welford welford : results.values()) {
-            overallWelford.addValue(welford.getStdDev());
-        }
+            // test print
+            System.out.println("overall welford standard deviation: " + overallWelford.getStdDev());
 
-        // todo print statement to update status check.
-        System.out.println("overall welford standard deviation: " + overallWelford.getStdDev());
-
-        for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
-            Welford welford = entry.getValue();
-            if (((welford.getStdDev() - overallWelford.getMean()) / overallWelford.getStdDev()) >= ZSCORE_CUTOFF) {
-                attributes.put("std", "" + entry.getValue().getStdDev());
-                long startX = (long) entry.getKey().getBinX() * resolutionOption;
-                long endX = startX + resolutionOption;
-                long startY = (long) entry.getKey().getBinY() * resolutionOption;
-                long endY = startY + resolutionOption;
-                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
-                hotspots.add(feature);
+            for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
+                Welford welford = entry.getValue();
+                if (((welford.getStdDev() - overallWelford.getMean()) / overallWelford.getStdDev()) >= ZSCORE_CUTOFF) {
+                    attributes.put("std", "" + entry.getValue().getStdDev());
+                    long startX = (long) entry.getKey().getBinX() * resolutionOption;
+                    long endX = startX + resolutionOption;
+                    long startY = (long) entry.getKey().getBinY() * resolutionOption;
+                    long endY = startY + resolutionOption;
+                    Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
+                    hotspots.add(feature);
+                }
             }
         }
 
 
-        // todo print size of hotspots
-        System.out.println("size of hotspots: " + hotspots.size());
+        // test print
+        System.out.println("final number of hotspots: " + hotspots.size());
         return hotspots;
     }
+
 
     public static NormalizationType normSelector(Dataset ds, String normStringOption) {
         NormalizationType norm;
@@ -254,4 +244,51 @@ private static final int MAX_DIST = 10000000;
         System.out.println("Norm being used: " + norm.getLabel());
         return norm;
     }
+
+
+    private static void iterateThruChromosomeRecordingScaledValues(Dataset ds, int chrIdx, int resolution,
+                                                                   MatrixZoomData zd, int maxBin, int minBin, NormalizationType norm,
+                                                                   Map<SimpleLocation, Welford> results) {
+        int maxCompressedBin = LogExpectedModel.logp1i(maxBin) + 1;
+        int minCompressedBin = LogExpectedModel.logp1i(minBin);
+
+        double[] nvSCALE = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), SCALE).getData().getValues().get(0);
+
+        // NOTE: this line was commented out because it's only used by commented out code below
+//        ZScores zScores = Sift.getZscores(zd, maxCompressedBin, false);
+
+        Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
+        while (iterator.hasNext()) {
+
+            ContactRecord cr = iterator.next();
+            if (cr.getCounts() > 1) {
+                int dist = LogExpectedModel.logp1i(ExpectedUtils.getDist(cr));
+                if (dist > minCompressedBin && dist < maxCompressedBin) {
+
+                    // todo ask to fully understand nvSCALE and rest of code below
+                    double denomScale = nvSCALE[cr.getBinX()] * nvSCALE[cr.getBinY()];
+                    if (denomScale > 0.75) {
+                        double valScale = (cr.getCounts() / denomScale);
+                        if (valScale > 1) {
+                            valScale = LogExpectedModel.logp1(valScale);
+
+                            // todo: ask that it's okay that I omitted this portion of the code
+//                            // .passesAllZscores(dist, LOWRES_ZSCORE_CUTOFF,
+//                            //                                    raw, valVC, valVCSqrt, valScale)
+//                            if (zScores.getZscore(dist, valScale) > LOWRES_ZSCORE_CUTOFF) {
+//                                records.add(new SimpleLocation(cr));
+//                            }
+
+                            SimpleLocation location = new SimpleLocation(cr);
+                            results.putIfAbsent(location, new Welford());
+                            results.get(location).addValue(valScale);
+                        }
+                    }
+                }
+            }
+        }
+        System.out.println("finished recording locations for this file");
+    }
+
+
 }
