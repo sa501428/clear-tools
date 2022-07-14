@@ -65,4 +65,15 @@ public class LogExpectedModel {
         }
         return vec;
     }
+
+    public static float getP(double obs, double expected, double superDiagonal) {
+        // P = (O - E)/(SD - E)
+        return (float) ((obs - expected) / (superDiagonal - expected));
+    }
+
+    public float getPercentContact(int dist, float counts) {
+        double baseline = getExpFromBin(dist);
+        double maxSignal = getExpFromBin(1);
+        return getP(counts, baseline, maxSignal);
+    }
 }

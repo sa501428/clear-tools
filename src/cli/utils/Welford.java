@@ -1,5 +1,7 @@
 package cli.utils;
 
+import cli.utils.sift.Zscore;
+
 public class Welford {
     private long counts = 0;
     private double mu = 0;
@@ -21,6 +23,10 @@ public class Welford {
             return Math.sqrt(aggSquaredDiffs / (counts - 1));
         }
         return 0;
+    }
+
+    public Zscore getZscore() {
+        return new Zscore(getMean(), getStdDev());
     }
 
     public long getCounts() {
