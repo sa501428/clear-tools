@@ -84,18 +84,21 @@ public class HotSpot {
 //            }
 //        }
 //    }
+private static final int MAX_DIST = 10000000;
+    private static final int MIN_DIST = 25000;
+
 
     private static void printUsageAndExit() {
         /* example print: ("apa [--min-dist minval] [--max-dist max_val] [--window window] [-r resolution]" +
                 " [-k NONE/VC/VC_SQRT/KR] [--corner-width corner_width] [--include-inter include_inter_chr] [--ag-norm]" +
-                " <input.hic> <loops.bedpe> <outfolder>"); */
-        System.out.println("hotspot [--res resolution] [--norm normalization] <file1.hic,file2.hic,...> <out_folder>");
+                " <input.hic> <loops.bedpe> <outfile>"); */
+        System.out.println("hotspot [--res resolution] [--norm normalization] <file1.hic,file2.hic,...> <out_file>");
         System.exit(19);
     }
 
     public static void run(String[] args, CommandLineParser parser) {
 
-        // hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <out_folder>
+        // hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <out_file>
 
         if (args.length != 3) {
             printUsageAndExit();
@@ -103,7 +106,7 @@ public class HotSpot {
 
         final int DEFAULT_RES = 2000;
         String[] files = args[1].split(",");
-        String outfolder = args[2];
+        String outputFileName = args[2];
         Dataset ds = HiCFileTools.extractDatasetForCLT(files[0], false, false, true);
 
         Feature2DList result = new Feature2DList();
@@ -121,8 +124,7 @@ public class HotSpot {
 //                parser.getNormalizationStringOption());
 //        result.addByKey(Feature2DList.getKey(c21, c21), hotspots);
 
-        // review export statement from Sift or
-        result.exportFeatureList(new File(outfolder + ".hotspot.bedpe"), false, Feature2DList.ListFormat.NA);
+        result.exportFeatureList(new File(outputFileName + ".hotspot.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("hotspot complete");
     }
 
@@ -137,8 +139,8 @@ public class HotSpot {
         List<Feature2D> hotspots = new ArrayList();
         Map<String, String> attributes = new HashMap();
         Welford overallWelford = new Welford();
-        // The Z-Score Cutoff is currently hardcoded at 1.65, which has a confidence interval of 95.053%
-        float zScoreCutOff = 1.65f;
+        // The Z-Score Cutoff is currently hardcoded at 1.65, which has a confidence interval of __%
+        float ZSCORE_CUTOFF = 2f;
 
         ////// for every dataset, extract the chromosome
         // iterate on it type 1
@@ -161,17 +163,7 @@ public class HotSpot {
         for (String file : files) {
             Dataset ds = HiCFileTools.extractDatasetForCLT(file, false, false, false);
 
-            NormalizationType norm;
-            if (normStringOption != null && normStringOption.length() > 0) {
-                try {
-                    norm = ds.getNormalizationHandler().getNormTypeFromString(normStringOption);
-                } catch (Exception e) {
-                    norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{normStringOption, "SCALE", "KR", "NONE"});
-                }
-            } else {
-                norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "KR", "NONE"});
-            }
-            System.out.println("Norm being used: " + norm.getLabel());
+            NormalizationType norm = normSelector(ds, normStringOption);
 
             Matrix matrix = ds.getMatrix(chrom, chrom);
             if (matrix == null) {
@@ -189,16 +181,12 @@ public class HotSpot {
             // iterating through chrom using type 1 iteration
             Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
             while (iterator.hasNext()) {
-                // QUESTION: as it is, I still have to iterate through every single ContactRecord, including the ones that are 10MB off the diagonal. To shorten runtime,
-                // is there a way to skip to the next row once you reach a ContactRecord that's 10MB off the diagonal? Or, more generally, is there a way for the iterator to only include ContactRecords that are 25KB< x <10MB ?
-                // ALSO: does the iterator remain on one side of the diagonal, or is each bin off the diagonal included in the iterator twice?
 
                 ContactRecord record = iterator.next();
-                // QUESTION: does it speed up compiling time and/or run time if we declared binX and binY before the loop?
                 binX = record.getBinX();
                 binY = record.getBinY();
 
-                if (Math.abs(binX - binY) > (10000000 / resolutionOption) || Math.abs(binX - binY) < (75000 / resolutionOption))
+                if (Math.abs(binX - binY) > (MAX_DIST / resolutionOption) || Math.abs(binX - binY) < (MIN_DIST / resolutionOption))
                     continue;
                 count = record.getCounts();
                 if (count == 0)
@@ -206,16 +194,15 @@ public class HotSpot {
 
                 SimpleLocation location = new SimpleLocation(binX, binY);
                 results.putIfAbsent(location, new Welford());
-                // QUESTION: although getCounts() returns a float and addValue() accepts a double, when I try to cast the returned value from getCounts() as a double I get a redundancy warning
                 results.get(location).addValue(count);
             }
             System.out.println("finished recording locations for this file");
         }
 
-        int validCountThreshold = Math.max(files.length / 2, 2);
-        System.out.println("validCountThreshold: " + validCountThreshold);
+        int VALID_COUNT_THRESHOLD = Math.max(files.length / 2, 2);
+        System.out.println("validCountThreshold: " + VALID_COUNT_THRESHOLD);
         for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
-            if (entry.getValue().getCounts() < validCountThreshold)
+            if (entry.getValue().getCounts() < VALID_COUNT_THRESHOLD)
                 removeList.add(entry.getKey());
         }
         // todo remove test print
@@ -236,7 +223,7 @@ public class HotSpot {
 
         for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
             Welford welford = entry.getValue();
-            if (((welford.getStdDev() - overallWelford.getMean()) / overallWelford.getStdDev()) >= zScoreCutOff) {
+            if (((welford.getStdDev() - overallWelford.getMean()) / overallWelford.getStdDev()) >= ZSCORE_CUTOFF) {
                 attributes.put("std", "" + entry.getValue().getStdDev());
                 long startX = (long) entry.getKey().getBinX() * resolutionOption;
                 long endX = startX + resolutionOption;
@@ -247,8 +234,24 @@ public class HotSpot {
             }
         }
 
+
         // todo print size of hotspots
         System.out.println("size of hotspots: " + hotspots.size());
         return hotspots;
+    }
+
+    public static NormalizationType normSelector(Dataset ds, String normStringOption) {
+        NormalizationType norm;
+        if (normStringOption != null && normStringOption.length() > 0) {
+            try {
+                norm = ds.getNormalizationHandler().getNormTypeFromString(normStringOption);
+            } catch (Exception e) {
+                norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{normStringOption, "SCALE", "KR", "NONE"});
+            }
+        } else {
+            norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "KR", "NONE"});
+        }
+        System.out.println("Norm being used: " + norm.getLabel());
+        return norm;
     }
 }
