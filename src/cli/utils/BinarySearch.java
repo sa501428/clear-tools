@@ -20,34 +20,44 @@ public class BinarySearch {
             // standard binary search operations to progress through the list.
             if (sortedArray[mid] < key) {
                 low = mid + 1;
-            } else if (sortedArray[mid] > key){
+            } else if (sortedArray[mid] > key) {
                 high = mid - 1;
             }
         }
-        return "index - 1:" + (index - 1) + " index:" + (index) + " index + 1:" + (index + 1);
+        return "Target: " + key + " index - 1:" + sortedArray[index - 1] + " index:" + sortedArray[index] +
+                " pass? " + (key <= sortedArray[index] && key > sortedArray[index - 1]);
     }
 
     public static void main(String[] args) {
         Random rand = new Random();
-        double[] randomNums = new double[100];
-        double[] numSums = new double[100];
+        double[] numbers = new double[10000];
+        double[] cumSums = new double[10000];
+
+        int scalar = 20;
 
         // create random number generator w/ random values
-        for (int i = 0; i < randomNums.length; i++) {
-            randomNums[i] = rand.nextDouble();
+        for (int i = 0; i < numbers.length; i++) {
+            numbers[i] = scalar * rand.nextDouble();
         }
         // matrix of cumulative sums of the first array
-        numSums[0] = randomNums[0];
-        for (int i = 1; i < randomNums.length; i++) {
-            numSums[i] = numSums[i - 1] + randomNums[i];
+        cumSums[0] = numbers[0];
+        for (int i = 1; i < numbers.length; i++) {
+            cumSums[i] = cumSums[i - 1] + numbers[i];
         }
+
+        //
+        double sum = cumSums[cumSums.length - 1];
+
         // normalizes every term by having last value = 1
-        for (int i = 1; i < numSums.length; i++) {
-            numSums[i] = numSums[i] / numSums[numSums.length - 1];
+        for (int i = 0; i < cumSums.length; i++) {
+            cumSums[i] /= sum;
         }
-        // generate random num btwn 0-1, find closest index to that number
-        double target = Math.random();
-        // print indexes close to the index we find (one below, one higher and index).
-        System.out.println(runBinarySearchIteratively(numSums, target, 0, 100));
+
+        for (int i = 0; i < 100; i++) {
+            // generate random num btwn 0-1, find closest index to that number
+            double target = Math.random();
+            // print indexes close to the index we find (one below, one higher and index).
+            System.out.println(runBinarySearchIteratively(cumSums, target, 0, cumSums.length - 1));
+        }
     }
 }
