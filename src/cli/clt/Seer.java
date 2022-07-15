@@ -23,7 +23,8 @@ public class Seer {
     */
 
     // run file with chromosome file, create main class, output as numpy (desktop)
-    public static void calculateRowSums(String filename, Map<Chromosome, int[]> chromToRowSumsMap, int resolution) {
+
+    public static void calculateRowSums(String filename, Map<Chromosome, int[]> chromToRowSumsMap, int lowResolution, int highResolution) {
 
         // create a hic dataset object
         Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, true);
@@ -44,10 +45,10 @@ public class Seer {
         for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
             Matrix matrix = ds.getMatrix(chromosome, chromosome);
             if (matrix == null) continue;
-            MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
+            MatrixZoomData zd = matrix.getZoomData(new HiCZoom(highResolution));
             if (zd == null) continue;
 
-            int[] rowSummation = new int[(int) (chromosome.getLength() / resolution + 1)];
+            int[] rowSummation = new int[(int) (chromosome.getLength() / highResolution + 1)];
 
             Iterator<ContactRecord> iterator = zd.getDirectIterator();
             while (iterator.hasNext()) {
@@ -78,10 +79,11 @@ public class Seer {
         // check length of arguments equal to 3
 
         Map<Chromosome, int[]> chromToRowSumsMap = new HashMap<>();
-        int resolution = 50;
-        calculateRowSums(args[1], chromToRowSumsMap, resolution);
+        int lowResolution = 100;
+        int highResolution = 50;
+        calculateRowSums(args[1], chromToRowSumsMap, lowResolution, highResolution);
         UNIXTools.makeDir(args[2]);
-        exportRowSumsToBedgraph(chromToRowSumsMap, args[2], resolution);
+        exportRowSumsToBedgraph(chromToRowSumsMap, args[2], highResolution);
         // MatrixTools.saveMatrixTextNumpy(outputFileName, results);
     }
 
@@ -90,7 +92,10 @@ public class Seer {
         // todo first you need to make a bufferedfilewritere / filewriter
 
         // why is file giving an error? why do we need path in filename
-        String outputFileName = new File(arg, "rowSums.bedgraph").getAbsolutePath();
+        File outputFileName = new File(arg, "rowSums.bedgraph");
+        outputFileName.createNewFile();
+        // String outputFilePath = new File(arg, "rowSums.bedgraph").getAbsolutePath();
+
         FileWriter fw = new FileWriter(outputFileName);
         BufferedWriter bw = new BufferedWriter(fw);
 
@@ -111,8 +116,6 @@ public class Seer {
             // todo for every bin, you will write a line to the files
             // position = bin * resolution
             // chromosome " " startPosition + " " + endPosition + " " actual sum
-
-
         }
 
         // close the writer

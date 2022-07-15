@@ -1,21 +1,19 @@
 package cli.utils;
 
-import java.lang.Math;
-import java.util.ArrayList;
 import java.util.Random;
 
 // Finds closest term in Binary search if the key we're searching for isn't in the sequence.
 public class BinarySearch {
-    static public int runBinarySearchIteratively(int[] sortedArray, int key, int low, int high) {
-        int diff = Integer.MAX_VALUE;
+    static public String runBinarySearchIteratively(double[] sortedArray, double key, int low, int high) {
+        double diff = Integer.MAX_VALUE;
         //int value = 0; use if you want value instead
         int index = 0;
         while (low <= high) {
             int mid = low + ((high - low) / 2);
             // Checks distance of current term. Keeps track of the previous smallest distance from key.
             // If the distance is greater, updates distance and index.
-            if (Math.abs(key-sortedArray[mid]) < diff) {
-                diff = Math.abs(key-sortedArray[mid]);
+            if (Math.abs(key - sortedArray[mid]) < diff) {
+                diff = Math.abs(key - sortedArray[mid]);
                 //value = sortedArray[mid]; use this if you want the value
                 index = mid;
             }
@@ -25,38 +23,31 @@ public class BinarySearch {
             } else if (sortedArray[mid] > key){
                 high = mid - 1;
             }
-
         }
-        /*
-        // in the case that the binary search doesn't find the term, index will still be max value
-        if (index == Integer.MAX_VALUE){
-            // find the value with minimum distance to key
-            int newArray [] = new int[sortedArray.length];
-            for(i = 0; i < sortedArray.length; i++){
-                newArray[i] = Math.abs(sortedArray[i] - key);
-            }
-            // find the minimum difference. Not sure why this is giving an error as List is a type of collection?
-            int min = Collections.min(Arrays.asList(newArray));
-            low = Collections.min(Arrays.asList(sortedArray));
-            high = Collections.max(Arrays.asList(sortedArray));
-
-            // number we're looking for could either be distance above it or distance below (or both could be in).
-            // I assume it doesn't matter which one we get.
-            index = runBinarySearchIteratively(sortedArray, key + min low, high);
-            // if index is still max value that means it wasn't distance above it. Check distance below
-            if (index == Integer.MAX_VALUE){
-                index = runBinarySearchIteratively(sortedArray, key - min, low, high);
-            }
-        }
-        */
-        return index;
+        return "index - 1:" + (index - 1) + " index:" + (index) + " index + 1:" + (index + 1);
     }
 
     public static void main(String[] args) {
-        // create random number generator w/ random values btwn 0, 5 (a lot of values)
-        // matrix of cumulative sums of the first array --> normalize by having last value = 1
+        Random rand = new Random();
+        double[] randomNums = new double[100];
+        double[] numSums = new double[100];
+
+        // create random number generator w/ random values
+        for (int i = 0; i < randomNums.length; i++) {
+            randomNums[i] = rand.nextDouble();
+        }
+        // matrix of cumulative sums of the first array
+        numSums[0] = randomNums[0];
+        for (int i = 1; i < randomNums.length; i++) {
+            numSums[i] = numSums[i - 1] + randomNums[i];
+        }
+        // normalizes every term by having last value = 1
+        for (int i = 1; i < numSums.length; i++) {
+            numSums[i] = numSums[i] / numSums[numSums.length - 1];
+        }
         // generate random num btwn 0-1, find closest index to that number
+        double target = Math.random();
         // print indexes close to the index we find (one below, one higher and index).
-        System.out.println(runBinarySearchIteratively(new int[]{1,3,9,12,50,86,90}, 89, 0, 7));
+        System.out.println(runBinarySearchIteratively(numSums, target, 0, 100));
     }
 }
