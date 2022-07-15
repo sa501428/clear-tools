@@ -3,6 +3,8 @@ package cli;
 import cli.clt.*;
 import jargs.gnu.CmdLineParser;
 
+import java.io.IOException;
+
 public class Main {
 
     public static final String VERSION_NUM = "0.18.1";
@@ -28,12 +30,13 @@ public class Main {
                 "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
                 "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <outfile>\n" +
                 "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
-                "sift [--widow int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>");
+                "sift [--widow int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +
+                "seer <file> <out_folder>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
 
-    public static void main(String[] argv) throws CmdLineParser.UnknownOptionException, CmdLineParser.IllegalOptionValueException {
+    public static void main(String[] argv) throws CmdLineParser.UnknownOptionException, CmdLineParser.IllegalOptionValueException, IOException {
         if (argv.length == 0 || argv[0].equals("-h") || argv[0].equals("--help") || argv[0].equals("-V") || argv[0].equals("--version")) {
             printGeneralUsageAndExit(1);
         }
@@ -74,6 +77,8 @@ public class Main {
             new Sift(args, parser);
         } else if (command.startsWith("fuse") || command.startsWith("fusion")) {
             new Fusion(args, parser);
+        } else if (command.startsWith("seer")) {
+            Seer.run(args);
         } else {
             printGeneralUsageAndExit(3);
         }
