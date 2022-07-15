@@ -6,12 +6,18 @@ import java.util.Random;
 public class BinarySearch {
     static public String runBinarySearchIteratively(double[] sortedArray, double key, int low, int high) {
         double diff = Integer.MAX_VALUE;
+
+        //if(key < sortedArray[0]) return 0;
+
         //int value = 0; use if you want value instead
         int index = 0;
         while (low <= high) {
             int mid = low + ((high - low) / 2);
             // Checks distance of current term. Keeps track of the previous smallest distance from key.
             // If the distance is greater, updates distance and index.
+
+            // left_val < key <= right_value
+            
             if (Math.abs(key - sortedArray[mid]) < diff) {
                 diff = Math.abs(key - sortedArray[mid]);
                 //value = sortedArray[mid]; use this if you want the value
