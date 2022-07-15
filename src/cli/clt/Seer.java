@@ -1,9 +1,9 @@
 package cli.clt;
 
 import javastraw.reader.Dataset;
-import javastraw.reader.Matrix;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
+import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.tools.HiCFileTools;
