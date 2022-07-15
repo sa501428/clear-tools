@@ -1,5 +1,6 @@
 # CLEAR Tools
 
+Chromatin Landscape Exploration, Analysis, and Research Tools
 Chromatin Loop Enhancement, Analysis, and Revision Tools
 
 ## PINPOINT
@@ -31,6 +32,12 @@ COMParing Interactions from Loops across Experiments
 Highly Observable Transitions in Selective Pixels Of Tissues
 
 ## additional tools
+
+## SIFT / SIEVE
+
+Search and Identify Focal Targets
+Simple Identification of Focal Target
+Simple Identification of Enrichments
 
 probability
 

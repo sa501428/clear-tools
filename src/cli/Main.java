@@ -7,7 +7,7 @@ import java.io.IOException;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.13.00";
+    public static final String VERSION_NUM = "0.18.1";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
@@ -28,7 +28,9 @@ public class Main {
                 "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
                 "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
                 "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
-                "hotspot [--res int] [--norm string] [--window int] <file1.hic,file2.hic,...> <name1, name2...> <out_folder>\n" +
+                "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <outfile>\n" +
+                "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
+                "sift [--widow int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +
                 "seer <file> <out_folder>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
@@ -71,7 +73,10 @@ public class Main {
             new Recap(args, parser);
         } else if (command.startsWith("hotspot")) {
             HotSpot.run(args, parser);
-            // added line
+        } else if (command.startsWith("sift")) {
+            new Sift(args, parser);
+        } else if (command.startsWith("fuse") || command.startsWith("fusion")) {
+            new Fusion(args, parser);
         } else if (command.startsWith("seer")) {
             Seer.run(args);
         } else {

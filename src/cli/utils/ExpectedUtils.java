@@ -14,6 +14,63 @@ public class ExpectedUtils {
         long[] counts = new long[maxBinDist];
 
         Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
+        updateExpectedAndCounts(maxBinDist, useLog, expected, counts, iterator);
+
+        normalizeByCounts(expected, counts);
+
+        if (useLog) {
+            expm1(expected);
+        }
+
+        return expected;
+    }
+
+    private static void normalizeByCounts(double[] vector, long[] counts) {
+        for (int z = 0; z < vector.length; z++) {
+            if (counts[z] > 0) {
+                vector[z] /= counts[z];
+            }
+        }
+    }
+
+    public static double[] calculateRawExpected(MatrixZoomData zd, int maxBinDist,
+                                                boolean useLog, int smoothingWindow) {
+        double[] expected = new double[maxBinDist];
+        long[] counts = new long[maxBinDist];
+
+        Iterator<ContactRecord> iterator = zd.getDirectIterator();
+        while (iterator.hasNext()) {
+            ContactRecord record = iterator.next();
+            if (record.getCounts() > 1) {
+                int dist = getDist(record);
+                if (dist < maxBinDist) {
+                    expected[dist] += Math.log(1 + record.getCounts());
+                    counts[dist]++;
+                }
+            }
+        }
+
+        if (smoothingWindow > 0) {
+            smooth(expected, counts, smoothingWindow);
+        } else {
+            normalizeByCounts(expected, counts);
+        }
+
+        expm1(expected);
+        return expected;
+    }
+
+    private static void smooth(double[] expected, long[] counts, int smoothingWindow) {
+
+    }
+
+    private static void expm1(double[] vector) {
+        for (int z = 0; z < vector.length; z++) {
+            vector[z] = Math.expm1(vector[z]);
+        }
+    }
+
+    private static void updateExpectedAndCounts(int maxBinDist, boolean useLog, double[] expected, long[] counts, Iterator<ContactRecord> iterator) {
         while (iterator.hasNext()) {
             ContactRecord record = iterator.next();
             int dist = getDist(record);
@@ -26,20 +83,6 @@ public class ExpectedUtils {
                 counts[dist]++;
             }
         }
-
-        for (int z = 0; z < maxBinDist; z++) {
-            if (counts[z] > 0) {
-                expected[z] /= counts[z];
-            }
-        }
-
-        if (useLog) {
-            for (int z = 0; z < maxBinDist; z++) {
-                expected[z] = Math.expm1(expected[z]);
-            }
-        }
-
-        return expected;
     }
 
     public static int getDist(Feature2D loop, int resolution) {
