@@ -16,7 +16,7 @@ public class BinarySearch {
             // Checks distance of current term. Keeps track of the previous smallest distance from key.
             // If the distance is greater, updates distance and index.
 
-            // left_val < key <= right_value
+            // todo @Allen left_val < key <= right_value
 
             if (Math.abs(key - sortedArray[mid]) < diff) {
                 diff = Math.abs(key - sortedArray[mid]);

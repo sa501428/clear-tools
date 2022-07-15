@@ -1,17 +1,14 @@
 package cli.clt;
 
-import cli.utils.seer.SeerUtils;
+import cli.utils.seer.CumulativeDistributionFunction;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
+import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.UNIXTools;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class Seer {
     /* takes in one file currently (for ease of testing: can change later to a list of files and easily iterate over).
@@ -20,10 +17,13 @@ public class Seer {
 
     // run file with chromosome file, create main class, output as numpy (desktop)
 
-    public static void calculateRowSums(String filename, Map<Chromosome, int[]> chromToRowSumsMap, int lowResolution, int highResolution) {
+    public static void generateNewReads(String filename, int lowResolution, int highResolution,
+                                        String outFolderPath, String possibleNorm) {
 
         // create a hic dataset object
         Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, true);
+
+        NormalizationType norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
 
         // iterate over a chromosome for now (chromosome 10)
         for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
@@ -32,27 +32,40 @@ public class Seer {
             MatrixZoomData zd = matrix.getZoomData(new HiCZoom(highResolution));
             if (zd == null) continue;
 
-            int[] rowSummation = SeerUtils.getRowSumsForZD(chromosome, highResolution, zd.getDirectIterator());
 
-            chromToRowSumsMap.put(chromosome, rowSummation);
+            // int[] rowSummation = SeerUtils.getRowSumsForZD(chromosome, highResolution, zd.getDirectIterator());
+
+            MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowResolution));
+            if (zdLow == null) continue;
+
+            // create your pdf, cdf (delete the pdf)
+            CumulativeDistributionFunction cdf = new CumulativeDistributionFunction(zdLow.getNormalizedIterator(norm),
+                    10000000, lowResolution);
+
+            // todo @Allen
+            // generate points at random
+            // chromosome.getName()
+            // <chr1> <pos1> <chr2> <pos2>
+            // position =
+
+
+            //chromToRowSumsMap.put(chromosome, rowSummation);
         }
     }
 
     public static void run(String[] args, CommandLineParser parser) {
         // check length of arguments equal to 3
 
-        Map<Chromosome, int[]> chromToRowSumsMap = new HashMap<>();
+        //Map<Chromosome, int[]> chromToRowSumsMap = new HashMap<>();
 
         int highResolution = parser.getResolutionOption(50);
         int lowResolution = parser.getLowResolutionOption(5000);
 
-        calculateRowSums(args[1], chromToRowSumsMap, lowResolution, highResolution);
+        String possibleNorm = parser.getNormalizationStringOption();
+
         UNIXTools.makeDir(args[2]);
-        try {
-            SeerUtils.exportRowSumsToBedgraph(chromToRowSumsMap, args[2], highResolution);
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Unable to export sums to bedgraph");
-        }
+
+        generateNewReads(args[1], lowResolution, highResolution, args[2], possibleNorm);
+        //SeerUtils.exportRowSumsToBedgraph(chromToRowSumsMap, args[2], highResolution);
     }
 }
