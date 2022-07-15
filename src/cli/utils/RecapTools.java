@@ -1,5 +1,6 @@
 package cli.utils;
 
+import cli.utils.expected.LogExpectedModel;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.block.ContactRecord;
@@ -45,8 +46,8 @@ public class RecapTools {
         if (eMatrix != null) {
             float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
             float expected = eMatrix[window][window];
-            loopAttributes.put("PRESENCE", String.valueOf(getP(obs, expected, superDiagonal)));
-            loopAttributes.put("PRESENCE_INF", String.valueOf(getP(obs, pseudoCount, superDiagonal)));
+            loopAttributes.put("PRESENCE", String.valueOf(LogExpectedModel.getP(obs, expected, superDiagonal)));
+            loopAttributes.put("PRESENCE_INF", String.valueOf(LogExpectedModel.getP(obs, pseudoCount, superDiagonal)));
             addAttributes(loopAttributes, "OE_", oeMatrix, window);
         }
 
@@ -137,11 +138,6 @@ public class RecapTools {
             }
         }
         return oeMatrix;
-    }
-
-    private static float getP(float obs, float expected, double superDiagonal) {
-        // P = (O - E)/(SD - E)
-        return (float) ((obs - expected) / (superDiagonal - expected));
     }
 
     private static double getExpected(ContactRecord rec, ExpectedValueFunction df, int chrIndex) {

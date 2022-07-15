@@ -33,4 +33,12 @@ public class SimpleLocation {
     public int hashCode() {
         return Objects.hash(binX, binY);
     }
+
+    public int getBinX() {
+        return this.binX;
+    }
+
+    public int getBinY() {
+        return this.binY;
+    }
 }
