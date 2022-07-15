@@ -75,7 +75,7 @@ public class Seer {
         System.exit(19);
     }
 
-    public static void run(String[] args) throws IOException {
+    public static void run(String[] args) {
         // check length of arguments equal to 3
 
         Map<Chromosome, int[]> chromToRowSumsMap = new HashMap<>();
@@ -83,7 +83,12 @@ public class Seer {
         int highResolution = 50;
         calculateRowSums(args[1], chromToRowSumsMap, lowResolution, highResolution);
         UNIXTools.makeDir(args[2]);
-        exportRowSumsToBedgraph(chromToRowSumsMap, args[2], highResolution);
+        try {
+            exportRowSumsToBedgraph(chromToRowSumsMap, args[2], highResolution);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("Unable to export sums to bedgraph");
+        }
         // MatrixTools.saveMatrixTextNumpy(outputFileName, results);
     }
 

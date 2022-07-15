@@ -3,8 +3,6 @@ package cli;
 import cli.clt.*;
 import jargs.gnu.CmdLineParser;
 
-import java.io.IOException;
-
 public class Main {
 
     public static final String VERSION_NUM = "0.18.1";
@@ -36,7 +34,7 @@ public class Main {
         System.exit(exitCode);
     }
 
-    public static void main(String[] argv) throws CmdLineParser.UnknownOptionException, CmdLineParser.IllegalOptionValueException, IOException {
+    public static void main(String[] argv) throws CmdLineParser.UnknownOptionException, CmdLineParser.IllegalOptionValueException {
         if (argv.length == 0 || argv[0].equals("-h") || argv[0].equals("--help") || argv[0].equals("-V") || argv[0].equals("--version")) {
             printGeneralUsageAndExit(1);
         }
