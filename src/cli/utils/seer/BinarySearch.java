@@ -1,4 +1,4 @@
-package cli.utils;
+package cli.utils.seer;
 
 import java.util.Random;
 
@@ -17,7 +17,7 @@ public class BinarySearch {
             // If the distance is greater, updates distance and index.
 
             // left_val < key <= right_value
-            
+
             if (Math.abs(key - sortedArray[mid]) < diff) {
                 diff = Math.abs(key - sortedArray[mid]);
                 //value = sortedArray[mid]; use this if you want the value
