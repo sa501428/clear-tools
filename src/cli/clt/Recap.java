@@ -80,17 +80,20 @@ public class Recap {
             window = 5;
         }
 
+
+        boolean isDeepLoopAnalysis = parser.getIsLoopAnalysis();
+
         System.out.println("Using resolution: " + resolution);
 
-        Feature2DList refinedLoops = recapStats(filepaths, names, loopList, handler, resolution, window, norm);
+        Feature2DList refinedLoops = recapStats(filepaths, names, loopList, handler, resolution, window, norm, isDeepLoopAnalysis);
         refinedLoops.exportFeatureList(new File(outFolder, "recap.bedpe"), false, Feature2DList.ListFormat.NA);
-        RecapTools.exportAllMatrices(refinedLoops, names, outFolder);
+        RecapTools.exportAllMatrices(refinedLoops, names, outFolder, isDeepLoopAnalysis, window);
         System.out.println("pinpoint complete");
     }
 
     private static Feature2DList recapStats(String[] filepaths, String[] names, Feature2DList loopList,
                                             ChromosomeHandler handler, int resolution, int window,
-                                            NormalizationType norm) {
+                                            NormalizationType norm, boolean isDeepLoopAnalysis) {
 
         if (Main.printVerboseComments) {
             System.out.println("Start Recap/Compile process");
@@ -156,7 +159,7 @@ public class Recap {
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
                                 Map<String, String> attributes = RecapTools.getStats(obsMatrix, eMatrix,
-                                        window, superDiagonal, pseudoCount);
+                                        window, superDiagonal, pseudoCount, isDeepLoopAnalysis);
                                 for (String akey : attributes.keySet()) {
                                     loop.addStringAttribute(prefix + akey, attributes.get(akey));
                                 }
