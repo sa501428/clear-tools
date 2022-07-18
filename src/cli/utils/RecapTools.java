@@ -14,10 +14,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class RecapTools {
 
+    public final static String FULL_DECAY = "DECAY_FULL";
+    public final static String DECAY_A = "DECAY_A";
+    public final static String DECAY_k = "DECAY_k";
+
     public static List<String> getCategories(boolean isLoopAnalysis) {
         List<String> categories = new ArrayList<>();
         String[] types = new String[]{"OBS_", "OE_"};
-        String[] properties = new String[]{"DECAY_A", "DECAY_k", "DECAY_FULL"};
+        String[] properties = new String[]{DECAY_A, DECAY_k, FULL_DECAY};
         //new String[]{"VAL", "STD_DEV", "KURTOSIS", "SKEWNESS", "MEAN_ENRICHMENT",
         //"MEDIAN_ENRICHMENT", "GEO_ENRICHMENT", "MAX_ENRICHMENT", "MIN_ENRICHMENT", "DECAY_A", "DECAY_k"};
 
@@ -85,9 +89,9 @@ public class RecapTools {
         // y = Ae^(kx)  for each (xi, yi) --> wi = log(yi)
         // solve w = a + bx
         // e^a = A  ;  b = k
-        attributes.put(stem + "DECAY_A", String.valueOf(Math.exp(regression.getIntercept())));
-        attributes.put(stem + "DECAY_k", String.valueOf(regression.getSlope()));
-        attributes.put(stem + "DECAY_FULL", convertVectorToString(decay));
+        attributes.put(stem + DECAY_A, String.valueOf(Math.exp(regression.getIntercept())));
+        attributes.put(stem + DECAY_k, String.valueOf(regression.getSlope()));
+        attributes.put(stem + FULL_DECAY, convertVectorToString(decay));
     }
 
     private static String convertVectorToString(float[] vector) {
@@ -172,7 +176,7 @@ public class RecapTools {
 
         List<float[][]> outputs = new ArrayList<>();
         for (int k = 0; k < categories.size(); k++) {
-            if (categories.get(k).endsWith("DECAY_ALL")) {
+            if (categories.get(k).contains(FULL_DECAY)) {
                 outputs.add(new float[n][m * (window + 1)]);
             } else {
                 outputs.add(new float[n][m]);
@@ -186,7 +190,7 @@ public class RecapTools {
                 for (int k = 0; k < categories.size(); k++) {
                     for (int w = 0; w < names.length; w++) {
                         String key = names[w] + "_" + categories.get(k);
-                        if (categories.get(k).endsWith("DECAY_ALL")) {
+                        if (categories.get(k).contains(FULL_DECAY)) {
                             fillInVector(outputs.get(k), loop.getAttribute(key), currIndex, w, window);
                         } else {
                             outputs.get(k)[currIndex][w] = Float.parseFloat(loop.getAttribute(key));
