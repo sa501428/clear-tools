@@ -17,13 +17,15 @@ public class RecapTools {
     public final static String FULL_DECAY = "DECAY_FULL";
     public final static String DECAY_A = "DECAY_A";
     public final static String DECAY_k = "DECAY_k";
+    public final static String ROW_STD = "ROW_STD";
+    public final static String COL_STD = "COL_STD";
     public final static String ROW_SUM = "ROW_SUM";
     public final static String COL_SUM = "COL_SUM";
 
     public static List<String> getCategories(boolean isLoopAnalysis) {
         List<String> categories = new ArrayList<>();
         String[] types = new String[]{"OBS_", "OE_"};
-        String[] properties = new String[]{DECAY_A, DECAY_k, FULL_DECAY, ROW_SUM, COL_SUM};
+        String[] properties = new String[]{DECAY_A, DECAY_k, FULL_DECAY, ROW_SUM, COL_SUM, ROW_STD, COL_STD};
         //new String[]{"VAL", "STD_DEV", "KURTOSIS", "SKEWNESS", "MEAN_ENRICHMENT",
         //"MEDIAN_ENRICHMENT", "GEO_ENRICHMENT", "MAX_ENRICHMENT", "MIN_ENRICHMENT", "DECAY_A", "DECAY_k"};
 
@@ -92,6 +94,9 @@ public class RecapTools {
         float[] rowSums = new float[1];
         float[] colSums = new float[1];
         //TODO normalize them by the respective middle values of the vector
+
+        // TODO get the std dev from the row and column sums
+        // save them
 
         attributes.put(stem + ROW_SUM, convertVectorToString(rowSums));
         attributes.put(stem + COL_SUM, convertVectorToString(colSums));
