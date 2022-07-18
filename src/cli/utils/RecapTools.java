@@ -201,8 +201,7 @@ public class RecapTools {
                 outputs.add(new float[n][m * (window + 1)]);
             } else if (categories.get(k).contains(ROW_SUM) || categories.get(k).contains(COL_SUM)) {
                 outputs.add(new float[n][m * (2 * window + 1)]);
-            }
-            {
+            } else {
                 outputs.add(new float[n][m]);
             }
         }
@@ -218,8 +217,7 @@ public class RecapTools {
                             fillInVector(outputs.get(k), loop.getAttribute(key), currIndex, w, window + 1);
                         } else if (categories.get(k).contains(ROW_SUM) || categories.get(k).contains(COL_SUM)) {
                             fillInVector(outputs.get(k), loop.getAttribute(key), currIndex, w, 2 * window + 1);
-                        }
-                        {
+                        } else {
                             outputs.get(k)[currIndex][w] = Float.parseFloat(loop.getAttribute(key));
                         }
                     }
