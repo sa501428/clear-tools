@@ -55,8 +55,8 @@ public class RecapTools {
             float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
             if (!isDeepLoopAnalysis) {
                 float expected = eMatrix[window][window];
-                loopAttributes.put("PRESENCE", String.valueOf(getP(obs, expected, superDiagonal)));
-                loopAttributes.put("PRESENCE_INF", String.valueOf(getP(obs, pseudoCount, superDiagonal)));
+                loopAttributes.put("PRESENCE", String.valueOf(LogExpectedModel.getP(obs, expected, superDiagonal)));
+                loopAttributes.put("PRESENCE_INF", String.valueOf(LogExpectedModel.getP(obs, pseudoCount, superDiagonal)));
             }
             addAttributes(loopAttributes, "OE_", oeMatrix, window, isDeepLoopAnalysis);
         }
