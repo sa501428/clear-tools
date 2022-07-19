@@ -127,18 +127,24 @@ public class Seer {
     }
 
     public static void run(String[] args, CommandLineParser parser) {
-        // check length of arguments equal to 3
-
-        //Map<Chromosome, int[]> chromToRowSumsMap = new HashMap<>();
+        // check length of arguments equal to 4
+        if (args.length != 4) {
+            printUsageAndExit();
+        }
 
         int highResolution = parser.getResolutionOption(50);
         int lowResolution = parser.getLowResolutionOption(5000);
-
         String possibleNorm = parser.getNormalizationStringOption();
-
+        long seed = parser.getSeedOption(0);
         UNIXTools.makeDir(args[2]);
+        long numContactsToGenerate = Long.parseLong(args[3]);
+        generateNewReads(args[1], lowResolution, highResolution, args[2], possibleNorm, seed, numContactsToGenerate);
+    }
 
-        generateNewReads(args[1], lowResolution, highResolution, args[2], possibleNorm, 0, 500000);
-        //SeerUtils.exportRowSumsToBedgraph(chromToRowSumsMap, args[2], highResolution);
+    private static void printUsageAndExit() {
+        System.out.println("seer [-r 50 (high res)] [--low-res 5000 (low res)] [-k SCALE (normalization)] " +
+                "[--seed 0 (seed for random number generator)] " +
+                "<input.hic> <output_folder> <number of contacts to generate>");
+        System.exit(19);
     }
 }

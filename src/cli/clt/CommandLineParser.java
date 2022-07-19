@@ -41,6 +41,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option logOption = addBooleanOption("log");
     private final Option resolutionsOption = addIntegerOption('r', "res");
     private final Option lowResolutionsOption = addIntegerOption("low-res");
+    private final Option seedOption = addIntegerOption("seed");
     private final Option normalizationTypeOption = addStringOption('k', "norm");
     private final Option cutoffOption = addIntegerOption("cutoff");
     private final Option minOption = addDoubleOption("min");
@@ -122,6 +123,10 @@ public class CommandLineParser extends CmdLineParser {
 
     public int getLowResolutionOption(int defaultVal) {
         return optionToInteger(lowResolutionsOption, defaultVal);
+    }
+
+    public long getSeedOption(int defaultVal) {
+        return optionToInteger(seedOption, defaultVal);
     }
 
     public String getNormalizationStringOption() {
