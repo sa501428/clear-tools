@@ -12,7 +12,6 @@ import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
-import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
@@ -91,8 +90,7 @@ public class HotSpot {
 
         for (String file : files) {
             Dataset ds = HiCFileTools.extractDatasetForCLT(file, false, false, false);
-
-            NormalizationType norm = normSelector(ds, normStringOption);
+            NormalizationType norm = ds.getNormalizationHandler().getNormTypeFromString(normStringOption);
 
             Matrix matrix = ds.getMatrix(chrom, chrom);
             if (matrix == null) {
@@ -160,22 +158,6 @@ public class HotSpot {
         return overallWelford.getZscore();
     }
 
-
-    public static NormalizationType normSelector(Dataset ds, String normStringOption) {
-        NormalizationType norm;
-        if (normStringOption != null && normStringOption.length() > 0) {
-            try {
-                norm = ds.getNormalizationHandler().getNormTypeFromString(normStringOption);
-            } catch (Exception e) {
-                norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{normStringOption, "SCALE", "KR", "NONE"});
-            }
-        } else {
-            norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "KR", "NONE"});
-        }
-        System.out.println("Norm being used: " + norm.getLabel());
-        return norm;
-    }
-
     private static void iterateThruAllTheValues(MatrixZoomData zd, int maxBin, int minBin,
                                                 NormalizationType norm,
                                                 Map<SimpleLocation, Welford> results) {
@@ -188,9 +170,7 @@ public class HotSpot {
             if (cr.getCounts() > 0) {
                 int dist = ExpectedUtils.getDist(cr);
                 if (dist > minBin && dist < maxBin) {
-
                     float percentContact = expected.getPercentContact(dist, cr.getCounts());
-
                     percentContact = Math.min(1, Math.max(0, percentContact));
                     //percentContact2 = Math.exp(percentContact0 - 1);
 
