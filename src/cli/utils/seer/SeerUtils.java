@@ -60,6 +60,23 @@ public class SeerUtils {
     public static SimpleLocation updateToHigherResPosition(SimpleLocation genomePosition, int[] hiResRowSums,
                                                            int lowResolution, int highResolution) {
 
-        return null;
+        int window = lowResolution / highResolution; // e.g. 100
+        int startBinX = genomePosition.getBinX() / highResolution;
+        int startBinY = genomePosition.getBinY() / highResolution;
+
+        // todo @Allen
+        // int [] rowSumsX, rowSumsY // size window
+
+        // double[] cdf rowsumsX in your window
+        // double[] cdf rowsumsY in your window
+
+        int indexX = 0, indexY = 0; // get new indexX
+        // get new indexY
+
+        int genomeX = (startBinX + indexX) * highResolution;
+        int genomeY = (startBinY + indexY) * highResolution;
+
+
+        return new SimpleLocation(genomeX, genomeY);
     }
 }
