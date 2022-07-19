@@ -75,13 +75,16 @@ public class Recap {
             resolution = 1000;
         }
 
+        boolean isDeepLoopAnalysis = parser.getIsLoopAnalysis();
+
         int window = parser.getWindowSizeOption(0);
         if (window < 1) {
-            window = 5;
+            if (isDeepLoopAnalysis) {
+                window = 10;
+            } else {
+                window = 1;
+            }
         }
-
-
-        boolean isDeepLoopAnalysis = parser.getIsLoopAnalysis();
 
         System.out.println("Using resolution: " + resolution);
 

@@ -59,7 +59,7 @@ public class HotSpot {
         }
 
         NormalizationType norm = datasets[0].getNormalizationHandler().getNormTypeFromString(normString);
-        Chromosome[] chromosomes = datasets[0].getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
+        Chromosome[] chromosomes = datasets[0].getChromosomeHandler().getAutosomalChromosomesArray();
         AtomicInteger cIndex = new AtomicInteger(0);
         // this code can be commented out when running small-scale tests on local machine
 
