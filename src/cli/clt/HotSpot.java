@@ -63,8 +63,10 @@ public class HotSpot {
             while (currIndex < chromosomes.length) {
                 Chromosome chrom = chromosomes[currIndex];
                 List<Feature2D> hotspots = findTheHotspots(chrom, files, resolution, norm);
-                synchronized (result) {
-                    result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
+                if (hotspots.size() > 0) {
+                    synchronized (result) {
+                        result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
+                    }
                 }
                 currIndex = cIndex.getAndIncrement();
             }
@@ -78,9 +80,6 @@ public class HotSpot {
                                                    String normStringOption) {
         // 2 ints (positions) row and column
         Map<SimpleLocation, Welford> results = new HashMap<>();
-        List<SimpleLocation> removeList = new ArrayList<>();
-        List<Feature2D> hotspots = new ArrayList<>();
-        Map<String, String> attributes = new HashMap<>();
 
         //int NUM_NONZERO_VALUES_THRESHOLD = Math.max(files.length / 2, 2);
         //System.out.println("validCountThreshold: " + NUM_NONZERO_VALUES_THRESHOLD);
@@ -109,7 +108,7 @@ public class HotSpot {
             ds = null;
         }
 
-
+        List<SimpleLocation> removeList = new ArrayList<>();
         for (SimpleLocation key : results.keySet()) {
             Welford value = results.get(key);
             //value.addZeroIfBelow(files.length);
@@ -119,7 +118,6 @@ public class HotSpot {
             //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
             //    removeList.add(entry.getKey());
         }
-
         int n1 = results.size();
         int n2 = removeList.size();
         // test print
@@ -134,11 +132,13 @@ public class HotSpot {
 
         removeList.clear();
 
+        List<Feature2D> hotspots = new ArrayList<>();
         if (results.values().size() > 1) {
             Zscore zscore = getOverallZscoreMetric(results.values());
             for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
                 Welford welford = entry.getValue();
                 if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
+                    Map<String, String> attributes = new HashMap<>();
                     attributes.put("sigma", "" + welford.getStdDev());
                     attributes.put("range", "" + welford.getRange());
                     long startX = (long) entry.getKey().getBinX() * resolution;
