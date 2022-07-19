@@ -52,6 +52,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option cornerRegionDimensionsOption = addIntegerOption("corner-width");
     private final Option interChromosomalOption = addBooleanOption("include-inter");
     private final Option aggregateNormalization = addBooleanOption("ag-norm");
+    private final Option isLoopAnalysis = addBooleanOption("loop");
 
     public CommandLineParser() {
     }
@@ -131,6 +132,10 @@ public class CommandLineParser extends CmdLineParser {
 
     public boolean getAggregateNormalization() {
         return optionToBoolean(aggregateNormalization);
+    }
+
+    public boolean getIsLoopAnalysis() {
+        return optionToBoolean(isLoopAnalysis);
     }
 
     public int getMinDistVal(int val) {
