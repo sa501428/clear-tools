@@ -107,7 +107,6 @@ public class HotSpot {
             iterateThruAllTheValues(zd, maxBin, minBin, norm, results);
         }
 
-        System.out.println("Total recorded locations before removal: " + results.size());
 
         for (SimpleLocation key : results.keySet()) {
             Welford value = results.get(key);
@@ -118,33 +117,41 @@ public class HotSpot {
             //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
             //    removeList.add(entry.getKey());
         }
+
+        int n1 = results.size();
+        int n2 = removeList.size();
         // test print
-        System.out.println("removeList size: " + removeList.size());
+
 
         for (SimpleLocation key : removeList) {
             results.remove(key);
         }
         // test print
-        System.out.println("num. remaining entries after removal: " + results.size());
+
+        int n3 = results.size();
+
         removeList.clear();
 
-        Zscore zscore = getOverallZscoreMetric(results.values());
-
-        for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
-            Welford welford = entry.getValue();
-            if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
-                attributes.put("sigma", "" + welford.getStdDev());
-                attributes.put("range", "" + welford.getRange());
-                long startX = (long) entry.getKey().getBinX() * resolution;
-                long endX = startX + resolution;
-                long startY = (long) entry.getKey().getBinY() * resolution;
-                long endY = startY + resolution;
-                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
-                hotspots.add(feature);
+        if (results.values().size() > 1) {
+            Zscore zscore = getOverallZscoreMetric(results.values());
+            for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
+                Welford welford = entry.getValue();
+                if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
+                    attributes.put("sigma", "" + welford.getStdDev());
+                    attributes.put("range", "" + welford.getRange());
+                    long startX = (long) entry.getKey().getBinX() * resolution;
+                    long endX = startX + resolution;
+                    long startY = (long) entry.getKey().getBinY() * resolution;
+                    long endY = startY + resolution;
+                    Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
+                    hotspots.add(feature);
+                }
             }
         }
 
-        System.out.println("final number of hotspots: " + hotspots.size());
+        int n4 = hotspots.size();
+        System.out.println("Hotspots " + chrom.getName() + " pre-filter: " + n1 +
+                " removed: " + n2 + " post-filter: " + n3 + " final: " + n4);
         return hotspots;
     }
 
@@ -180,6 +187,7 @@ public class HotSpot {
                 }
             }
         }
-        System.out.println("finished recording locations for this file");
+        System.out.print(".");
+        //System.out.println("Finished recording locations for this file");
     }
 }
