@@ -1,5 +1,6 @@
 package cli.utils.seer;
 
+import cli.utils.ExpectedUtils;
 import cli.utils.sift.SimpleLocation;
 import javastraw.reader.block.ContactRecord;
 
@@ -19,14 +20,17 @@ public class CumulativeDistributionFunction {
         cdf = new double[toSave.size()];
         genomeLocations = new SimpleLocation[toSave.size()];
         populateCDFandLocations(cdf, genomeLocations, toSave);
+        toSave.clear();
     }
 
     private List<ContactRecord> extractTheRecordsWeWantToSave(Iterator<ContactRecord> normalizedIterator, int maxDist) {
         List<ContactRecord> toSave = new LinkedList<>();
-
-        // todo @Allen iterate on all the contacts
-        // check that the counts > 0, and that the dist < maxDist
-        // save ContactRecord to a valid list
+        while (normalizedIterator.hasNext()) {
+            ContactRecord record = normalizedIterator.next();
+            if (record.getCounts() > 0 & ExpectedUtils.getDist(record) < maxDist) {
+                toSave.add(record);
+            }
+        }
         return toSave;
     }
 
