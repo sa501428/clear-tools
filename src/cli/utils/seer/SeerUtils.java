@@ -1,5 +1,6 @@
 package cli.utils.seer;
 
+import cli.utils.sift.SimpleLocation;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
 
@@ -54,5 +55,11 @@ public class SeerUtils {
             }
         }
         return rowSums;
+    }
+
+    public static SimpleLocation updateToHigherResPosition(SimpleLocation genomePosition, int[] hiResRowSums,
+                                                           int lowResolution, int highResolution) {
+
+        return null;
     }
 }

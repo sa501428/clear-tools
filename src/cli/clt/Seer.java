@@ -1,6 +1,7 @@
 package cli.clt;
 
 import cli.utils.seer.CumulativeDistributionFunction;
+import cli.utils.seer.SeerUtils;
 import cli.utils.sift.SimpleLocation;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
@@ -44,7 +45,7 @@ public class Seer {
             MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(highResolution));
             if (zdHigh == null) continue;
 
-            // int[] rowSummation = SeerUtils.getRowSumsForZD(chromosome, highResolution, zdHigh.getDirectIterator());
+            int[] hiResRowSums = SeerUtils.getRowSumsForZD(chromosome, highResolution, zdHigh.getDirectIterator());
 
             MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowResolution));
             if (zdLow == null) continue;
@@ -65,6 +66,7 @@ public class Seer {
                 long numPointsToGenerate = countsToGeneratePerChr.get(chromosome);
                 for (long i = 0; i < numPointsToGenerate; i++) {
                     SimpleLocation position = cdf.createRandomPoint(rand);
+                    position = SeerUtils.updateToHigherResPosition(position, hiResRowSums, lowResolution, highResolution);
                     bw.write(name + " " + position.getBinX() + " " + name + " " + position.getBinY());
                     bw.newLine();
                 }
