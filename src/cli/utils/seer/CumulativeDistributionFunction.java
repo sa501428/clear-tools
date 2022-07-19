@@ -7,6 +7,7 @@ import javastraw.reader.block.ContactRecord;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 public class CumulativeDistributionFunction {
 
@@ -48,5 +49,11 @@ public class CumulativeDistributionFunction {
         for (int i = 0; i < cdf.length; i++) {
             cdf[i] /= total;
         }
+    }
+
+    public SimpleLocation createRandomPoint(Random rand) {
+        double target = rand.nextDouble();
+        int index = BinarySearch.runBinarySearchIteratively(cdf, target, 0, cdf.length - 1);
+        return genomeLocations[index];
     }
 }
