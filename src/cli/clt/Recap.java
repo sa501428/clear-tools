@@ -33,25 +33,35 @@ public class Recap {
 
     public Recap(String[] args, CommandLineParser parser) {
 
-
+        // if input doesn't follow required Recap syntax/format, then exit
         if (args.length != 5) {
             Main.printGeneralUsageAndExit(5);
         }
 
         // recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>
+        // makeDir creates a new directory if there isn't one already, stores directory in outFolder var
+
+        // recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>
         String loopListPath = args[1];
         File outFolder = UNIXTools.makeDir(new File(args[2]));
 
+        // filepaths = [file1.hic, file2.hic, ...]
+        // names = [name1, name2, ...]
         String[] filepaths = args[3].split(",");
         String[] names = args[4].split(",");
 
+        // create a hic dataset object from file1
         Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[0], false, false,
                 true);
 
+
+        // grabs chromosomes...
+        // todo: what is this Feature2DList object? I think it is storing arg[0] (bedpe file) as an object
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
                 false, null, false);
 
+        // get a norm and print norm
         String possibleNorm = parser.getNormalizationStringOption();
         try {
             if (possibleNorm != null && possibleNorm.length() > 0) {
@@ -67,14 +77,23 @@ public class Recap {
         ds.clearCache(false);
         ds = null;
 
+        // I'm guessing getNumTotalFeatures gets the number of loops in the looplist?
         int numRows = loopList.getNumTotalFeatures();
         System.out.println("Number of loops: " + numRows);
 
+        // since parser stores the options and their values from when you input arguments in the command line
+        // parser.getResolutionOption takes the option stored
+        // stores it in int resolution
+        // by default, 1kb res
         int resolution = parser.getResolutionOption(1000);
         if (resolution < 1) {
             resolution = 1000;
         }
+        System.out.println("Using resolution: " + resolution);
 
+
+        // same thing as above, but for window size...
+        // todo: what is window size again? to clarify
         int window = parser.getWindowSizeOption(0);
         if (window < 1) {
             window = 5;
@@ -83,8 +102,7 @@ public class Recap {
 
         boolean isDeepLoopAnalysis = parser.getIsLoopAnalysis();
 
-        System.out.println("Using resolution: " + resolution);
-
+        //
         Feature2DList refinedLoops = recapStats(filepaths, names, loopList, handler, resolution, window, norm, isDeepLoopAnalysis);
         refinedLoops.exportFeatureList(new File(outFolder, "recap.bedpe"), false, Feature2DList.ListFormat.NA);
         RecapTools.exportAllMatrices(refinedLoops, names, outFolder, isDeepLoopAnalysis, window);
@@ -95,10 +113,13 @@ public class Recap {
                                             ChromosomeHandler handler, int resolution, int window,
                                             NormalizationType norm, boolean isDeepLoopAnalysis) {
 
+        // VerboseComments is a boolean that, if true, will have extra print statements describing task progress
+        // probably for debugging
         if (Main.printVerboseComments) {
             System.out.println("Start Recap/Compile process");
         }
 
+        // todo: ask Muhammad about this... what exactly is the zoom object
         HiCZoom zoom = new HiCZoom(resolution);
         int matrixWidth = 1 + 2 * window;
 
@@ -120,6 +141,7 @@ public class Recap {
             final AtomicInteger currChromPair = new AtomicInteger(0);
             final AtomicInteger currNumLoops = new AtomicInteger(0);
 
+            // okay, i have no clue what this is about
             ParallelizationTools.launchParallelizedCode(() -> {
 
                 int threadPair = currChromPair.getAndIncrement();
@@ -128,6 +150,7 @@ public class Recap {
                     Chromosome chrom1 = config.getChr1();
                     Chromosome chrom2 = config.getChr2();
 
+         
 
                     List<Feature2D> loops = loopList.get(chrom1.getIndex(), chrom2.getIndex());
                     if (loops != null && loops.size() > 0) {

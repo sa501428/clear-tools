@@ -13,20 +13,25 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static cli.utils.apa.APADataExporter.normalizeBySum;
+
 public class RecapTools {
 
     public final static String FULL_DECAY = "DECAY_FULL";
     public final static String DECAY_A = "DECAY_A";
     public final static String DECAY_k = "DECAY_k";
-    public final static String ROW_STD = "ROW_STD";
-    public final static String COL_STD = "COL_STD";
     public final static String ROW_SUM = "ROW_SUM";
     public final static String COL_SUM = "COL_SUM";
+    public final static String AMP_ROW = "AMP_ROW";
+    public final static String AMP_COL = "AMP_COL";
+    public final static String SPREAD_ROW = "SPREAD_ROW";
+    public final static String SPREAD_COL = "SPREAD_COL";
 
     public static List<String> getCategories(boolean isLoopAnalysis) {
         List<String> categories = new ArrayList<>();
         String[] types = new String[]{"OBS_", "OE_"};
-        String[] properties = new String[]{DECAY_A, DECAY_k, FULL_DECAY, ROW_SUM, COL_SUM, ROW_STD, COL_STD};
+        String[] properties = new String[]{DECAY_A, DECAY_k, FULL_DECAY, ROW_SUM, COL_SUM, AMP_ROW, AMP_COL,
+                SPREAD_ROW, SPREAD_COL};
         //new String[]{"VAL", "STD_DEV", "KURTOSIS", "SKEWNESS", "MEAN_ENRICHMENT",
         //"MEDIAN_ENRICHMENT", "GEO_ENRICHMENT", "MAX_ENRICHMENT", "MIN_ENRICHMENT", "DECAY_A", "DECAY_k"};
 
@@ -55,8 +60,8 @@ public class RecapTools {
             float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
             if (!isDeepLoopAnalysis) {
                 float expected = eMatrix[window][window];
-                loopAttributes.put("PRESENCE", String.valueOf(getP(obs, expected, superDiagonal)));
-                loopAttributes.put("PRESENCE_INF", String.valueOf(getP(obs, pseudoCount, superDiagonal)));
+                loopAttributes.put("PRESENCE", String.valueOf(LogExpectedModel.getP(obs, expected, superDiagonal)));
+                loopAttributes.put("PRESENCE_INF", String.valueOf(LogExpectedModel.getP(obs, pseudoCount, superDiagonal)));
             }
             addAttributes(loopAttributes, "OE_", oeMatrix, window, isDeepLoopAnalysis);
         }
@@ -89,18 +94,93 @@ public class RecapTools {
         }
     }
 
+
+
     private static void addMatrixSums(float[][] matrix, Map<String, String> attributes, String stem) {
 
-        // TODO @Justin calculate the row and column sums of matrix
-        float[] rowSums = new float[1];
-        float[] colSums = new float[1];
-        //TODO normalize them by the respective middle values of the vector
+        // initializes variables
+        int numRows = matrix.length;
+        int numCols = matrix[0].length;
+        float[] rowSum = new float[numRows];
+        float[] colSum = new float[numCols];
 
-        // TODO get the std dev from the row and column sums
-        // save them
+        // calculates row and col sums, and produces normalized row and col sums
+        populateRowColSums(matrix, rowSum, colSum);
+        float[] normalizedRowSum = getNormalizedSum(rowSum);
+        float[] normalizedColSum = getNormalizedSum(colSum);
 
-        attributes.put(stem + ROW_SUM, convertVectorToString(rowSums));
-        attributes.put(stem + COL_SUM, convertVectorToString(colSums));
+
+        // calculate std deviations (amplitude and spread)
+        // getStd functions return doubles
+        double ampRow = getAmplitudeStdDev(rowSum);
+        double ampCol = getAmplitudeStdDev(colSum);
+        double spreadRow = getSpreadStdDev(normalizedRowSum);
+        double spreadCol = getSpreadStdDev(normalizedRowSum);
+
+        // adds these metrics to the attributes object
+        attributes.put(stem + ROW_SUM, convertVectorToString(rowSum));
+        attributes.put(stem + COL_SUM, convertVectorToString(colSum));
+        attributes.put(stem + AMP_ROW, String.valueOf(ampRow));
+        attributes.put(stem + AMP_COL, String.valueOf(ampCol));
+        attributes.put(stem + SPREAD_ROW, String.valueOf(spreadRow));
+        attributes.put(stem + SPREAD_COL, String.valueOf(spreadCol));
+    }
+
+    private static double getAmplitudeStdDev(float[] sumVector) {
+        // helper fxn
+        // moves rowSum elements to rowStats container to use getStandardDeviation method
+        // note: amplitude std dev is like the "vertical" std dev
+        DescriptiveStatistics rowStats = new DescriptiveStatistics();
+        for (float val : sumVector) {
+            rowStats.addValue(val);
+        }
+        return rowStats.getStandardDeviation();
+    }
+
+    private static double getSpreadStdDev(float[] pdf) {
+        // helper fxn
+        // NOTE: assumption here is that the "average" (mu) is the center of the window, may not always be true
+        // note 2: spread std dev is like the "horizontal" std dev
+        int mu = pdf.length / 2;
+        double total = 0;
+        for(int k = 0; k < pdf.length; k++){
+            total += (k - mu)*(k - mu)*pdf[k];
+        }
+        return Math.sqrt(total);
+    }
+
+    private static float[] getNormalizedSum(float[] vector) {
+        // output: normalized vector, each element of vector is divided by the sum of all the elements
+        // this produces a vector whose elements all sum to 1
+        // aka, a probability distribution
+        float sum = getSum(vector);
+        if (sum != 0) {
+            for (int k = 0; k < vector.length; k++) {
+                vector[k] /= sum;
+            }
+        }
+        return vector;
+    }
+
+    private static float getSum(float[] vector) {
+        // helper fxn for helper fxn getNormalizedSum
+        // output: sum of elements in vector
+        float sum = 0;
+        for (float v : vector) {
+            sum += v;
+        }
+        return sum;
+    }
+
+
+    private static void populateRowColSums(float[][] matrix, float[] rowSum, float[] colSum) {
+
+        for (int row = 0; row < rowSum.length; row++) {
+            for (int col = 0; col < colSum.length; col++) {
+                rowSum[row] += matrix[row][col];
+                colSum[col] += matrix[row][col];
+            }
+        }
     }
 
     private static void addRegressionStats(float[] decay, Map<String, String> attributes, String stem) {
