@@ -47,22 +47,27 @@ public class HotSpot {
 
         String[] files = args[1].split(",");
         String outputFileName = args[2];
-        Dataset ds = HiCFileTools.extractDatasetForCLT(files[0], false, false, true);
         int resolution = parser.getResolutionOption(5000);
-        String norm = parser.getNormalizationStringOption();
+        String normString = parser.getNormalizationStringOption();
 
         final Feature2DList result = new Feature2DList();
 
-        Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
-        AtomicInteger cIndex = new AtomicInteger(0);
+        Dataset[] datasets = new Dataset[files.length];
+        for (int k = 0; k < files.length; k++) {
+            datasets[k] = HiCFileTools.extractDatasetForCLT(files[k],
+                    false, false, false);
+        }
 
+        NormalizationType norm = datasets[0].getNormalizationHandler().getNormTypeFromString(normString);
+        Chromosome[] chromosomes = datasets[0].getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
+        AtomicInteger cIndex = new AtomicInteger(0);
         // this code can be commented out when running small-scale tests on local machine
 
         ParallelizationTools.launchParallelizedCode(() -> {
             int currIndex = cIndex.getAndIncrement();
             while (currIndex < chromosomes.length) {
                 Chromosome chrom = chromosomes[currIndex];
-                List<Feature2D> hotspots = findTheHotspots(chrom, files, resolution, norm);
+                List<Feature2D> hotspots = findTheHotspots(chrom, datasets, resolution, norm);
                 if (hotspots.size() > 0) {
                     synchronized (result) {
                         result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
@@ -76,43 +81,38 @@ public class HotSpot {
         System.out.println("hotspot complete");
     }
 
-    private static List<Feature2D> findTheHotspots(Chromosome chrom, String[] files, int resolution,
-                                                   String normStringOption) {
-        // 2 ints (positions) row and column
+    private static List<Feature2D> findTheHotspots(Chromosome chrom, Dataset[] datasets, int resolution,
+                                                   NormalizationType norm) {
         Map<SimpleLocation, Welford> results = new HashMap<>();
-
-        //int NUM_NONZERO_VALUES_THRESHOLD = Math.max(files.length / 2, 2);
-        //System.out.println("validCountThreshold: " + NUM_NONZERO_VALUES_THRESHOLD);
-
         int minBin = MIN_DIST / resolution;
         int maxBin = MAX_DIST / resolution;
 
-        for (String file : files) {
-            Dataset ds = HiCFileTools.extractDatasetForCLT(file, false, false, false);
-            NormalizationType norm = ds.getNormalizationHandler().getNormTypeFromString(normStringOption);
-
-            Matrix matrix = ds.getMatrix(chrom, chrom);
+        for (Dataset ds : datasets) {
+            Matrix matrix;
+            synchronized (ds) {
+                matrix = ds.getMatrix(chrom, chrom, resolution);
+            }
             if (matrix == null) {
-                System.out.println("matrix for " + chrom.getName() + " of file " + file + " == null -> continuing");
+                System.err.println("matrix for " + chrom.getName() + " == null -> continuing");
                 continue;
             }
             MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
             if (zd == null) {
-                System.out.println("zd for " + chrom.getName() + " of file " + file + " == null -> continuing");
+                System.err.println("zd for " + chrom.getName() + " == null -> continuing");
                 continue;
             }
 
             // iterating through chrom using type 1 iteration
             iterateThruAllTheValues(zd, maxBin, minBin, norm, results);
-            ds.clearCache(false);
-            ds = null;
+            matrix.clearCache();
         }
 
         List<SimpleLocation> removeList = new ArrayList<>();
         for (SimpleLocation key : results.keySet()) {
-            Welford value = results.get(key);
+            double range = results.get(key).getRange();
+            int counts = (int) results.get(key).getCounts();
             //value.addZeroIfBelow(files.length);
-            if (value.getRange() < .005 || value.getRange() > 0.5) {
+            if (range < .005 || range > 0.5 || counts < 2) {
                 removeList.add(key);
             }
             //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
