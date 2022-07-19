@@ -10,30 +10,33 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.UNIXTools;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+
 public class Seer {
     /* takes in one file currently (for ease of testing: can change later to a list of files and easily iterate over).
     resolution also input but currently set to 50 manually.
     */
 
-    // run file with chromosome file, create main class, output as numpy (desktop)
-
     public static void generateNewReads(String filename, int lowResolution, int highResolution,
-                                        String outFolderPath, String possibleNorm) {
+                                        String outFolderPath, String possibleNorm, long seed, long numberOfContacts) {
 
-        // create a hic dataset object
+        // create a hic dataset objects
         Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, true);
 
         NormalizationType norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+        Map<Chromosome, Long> countsPerChr = generateCountsToMake(numberOfContacts, ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll());
+        Random rand = new Random(seed);
 
         // iterate over a chromosome for now (chromosome 10)
         for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
             Matrix matrix = ds.getMatrix(chromosome, chromosome);
             if (matrix == null) continue;
-            MatrixZoomData zd = matrix.getZoomData(new HiCZoom(highResolution));
-            if (zd == null) continue;
+            MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(highResolution));
+            if (zdHigh == null) continue;
 
-
-            // int[] rowSummation = SeerUtils.getRowSumsForZD(chromosome, highResolution, zd.getDirectIterator());
+            // int[] rowSummation = SeerUtils.getRowSumsForZD(chromosome, highResolution, zdHigh.getDirectIterator());
 
             MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowResolution));
             if (zdLow == null) continue;
@@ -43,6 +46,11 @@ public class Seer {
                     10000000, lowResolution);
 
             // todo @Allen
+            // base number of random points on a low Resolution (will be adjusted later on)
+
+            // find name using .getName, but unsure on position (or bin length here)
+
+
             // generate points at random
             // chromosome.getName()
             // <chr1> <pos1> <chr2> <pos2>
@@ -51,6 +59,14 @@ public class Seer {
 
             //chromToRowSumsMap.put(chromosome, rowSummation);
         }
+    }
+
+    private static Map<Chromosome, Long> generateCountsToMake(long numberOfContacts, Chromosome[] chromosomes) {
+        long genLength = 0;
+        for (int i = 0; i < chromosomes.length; i++) {
+            genLength += chromosomes[i].getLength();
+        }
+        return new HashMap<>();
     }
 
     public static void run(String[] args, CommandLineParser parser) {
@@ -65,7 +81,7 @@ public class Seer {
 
         UNIXTools.makeDir(args[2]);
 
-        generateNewReads(args[1], lowResolution, highResolution, args[2], possibleNorm);
+        generateNewReads(args[1], lowResolution, highResolution, args[2], possibleNorm, 0, 500000);
         //SeerUtils.exportRowSumsToBedgraph(chromToRowSumsMap, args[2], highResolution);
     }
 }
