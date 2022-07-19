@@ -105,13 +105,15 @@ public class HotSpot {
 
             // iterating through chrom using type 1 iteration
             iterateThruAllTheValues(zd, maxBin, minBin, norm, results);
+            ds.clearCache(false);
+            ds = null;
         }
 
 
         for (SimpleLocation key : results.keySet()) {
             Welford value = results.get(key);
             //value.addZeroIfBelow(files.length);
-            if (value.getRange() < .005) {
+            if (value.getRange() < .005 || value.getRange() > 0.5) {
                 removeList.add(key);
             }
             //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
