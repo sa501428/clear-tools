@@ -107,41 +107,42 @@ public class HotSpot {
 
             // iterating through chrom using type 1 iteration
             iterateThruAllTheValues(zd, maxBin, minBin, norm, results);
-            // test print
-            System.out.println("Total recorded locations before removal: " + results.size());
+        }
 
-            for (SimpleLocation key : results.keySet()) {
-                Welford value = results.get(key);
-                value.addZeroIfBelow(files.length);
-                if (value.getRange() < .005) {
-                    removeList.add(key);
-                }
-                //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
-                //    removeList.add(entry.getKey());
+        System.out.println("Total recorded locations before removal: " + results.size());
+
+        for (SimpleLocation key : results.keySet()) {
+            Welford value = results.get(key);
+            //value.addZeroIfBelow(files.length);
+            if (value.getRange() < .005) {
+                removeList.add(key);
             }
-            // test print
-            System.out.println("removeList size: " + removeList.size());
+            //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
+            //    removeList.add(entry.getKey());
+        }
+        // test print
+        System.out.println("removeList size: " + removeList.size());
 
-            for (SimpleLocation key : removeList) {
-                results.remove(key);
-            }
-            // test print
-            System.out.println("num. remaining entries after removal: " + results.size());
-            removeList.clear();
+        for (SimpleLocation key : removeList) {
+            results.remove(key);
+        }
+        // test print
+        System.out.println("num. remaining entries after removal: " + results.size());
+        removeList.clear();
 
-            Zscore zscore = getOverallZscoreMetric(results.values());
+        Zscore zscore = getOverallZscoreMetric(results.values());
 
-            for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
-                Welford welford = entry.getValue();
-                if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
-                    attributes.put("std", "" + welford.getStdDev());
-                    long startX = (long) entry.getKey().getBinX() * resolution;
-                    long endX = startX + resolution;
-                    long startY = (long) entry.getKey().getBinY() * resolution;
-                    long endY = startY + resolution;
-                    Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
-                    hotspots.add(feature);
-                }
+        for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
+            Welford welford = entry.getValue();
+            if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
+                attributes.put("sigma", "" + welford.getStdDev());
+                attributes.put("range", "" + welford.getRange());
+                long startX = (long) entry.getKey().getBinX() * resolution;
+                long endX = startX + resolution;
+                long startY = (long) entry.getKey().getBinY() * resolution;
+                long endY = startY + resolution;
+                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
+                hotspots.add(feature);
             }
         }
 
