@@ -51,6 +51,14 @@ public class Welford {
     public String getSummary() {
         return " mu " + getMean() + " sigma " + getStdDev() + " min " + min + " max " + max;
     }
+
+    public double getMin() {
+        return min;
+    }
+
+    public double getMax() {
+        return max;
+    }
 }
 
 

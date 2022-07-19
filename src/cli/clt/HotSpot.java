@@ -111,8 +111,9 @@ public class HotSpot {
         for (SimpleLocation key : results.keySet()) {
             double range = results.get(key).getRange();
             int counts = (int) results.get(key).getCounts();
+            double min = results.get(key).getMin();
             //value.addZeroIfBelow(files.length);
-            if (range < .005 || range > 0.5 || counts < 2) {
+            if (range < .005 || range > 0.5 || counts < 2 || min > .001) {
                 removeList.add(key);
             }
             //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
@@ -141,6 +142,8 @@ public class HotSpot {
                     Map<String, String> attributes = new HashMap<>();
                     attributes.put("sigma", "" + welford.getStdDev());
                     attributes.put("range", "" + welford.getRange());
+                    attributes.put("min", "" + welford.getMin());
+                    attributes.put("max", "" + welford.getMax());
                     long startX = (long) entry.getKey().getBinX() * resolution;
                     long endX = startX + resolution;
                     long startY = (long) entry.getKey().getBinY() * resolution;
