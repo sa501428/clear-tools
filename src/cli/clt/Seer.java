@@ -56,7 +56,7 @@ public class Seer {
             String name = chromosome.getName();
 
             try {
-                File outputFileName = new File(name + ".generated.contacts.mnd.txt");
+                File outputFileName = new File(outFolderPath, name + ".generated.contacts.mnd.txt");
                 outputFileName.createNewFile();
                 FileWriter fw = new FileWriter(outputFileName);
                 BufferedWriter bw = new BufferedWriter(fw);
