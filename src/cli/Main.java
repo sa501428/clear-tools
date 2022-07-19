@@ -28,7 +28,8 @@ public class Main {
                 "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
                 "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <outfile>\n" +
                 "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
-                "sift [--widow int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>");
+                "sift [--widow int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +
+                "seer [--res int] [--low-res int] <file> <out_folder>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
@@ -74,6 +75,8 @@ public class Main {
             new Sift(args, parser);
         } else if (command.startsWith("fuse") || command.startsWith("fusion")) {
             new Fusion(args, parser);
+        } else if (command.startsWith("seer")) {
+            Seer.run(args, parser);
         } else {
             printGeneralUsageAndExit(3);
         }
