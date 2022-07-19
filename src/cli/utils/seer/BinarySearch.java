@@ -4,7 +4,7 @@ import java.util.Random;
 
 // Finds closest term in Binary search if the key we're searching for isn't in the sequence.
 public class BinarySearch {
-    static public String runBinarySearchIteratively(double[] sortedArray, double key, int low, int high) {
+    public static int runBinarySearchIteratively(double[] sortedArray, double key, int low, int high) {
         //double diff = Integer.MAX_VALUE;
         //if(key < sortedArray[0]) return 0;
 
@@ -39,8 +39,8 @@ public class BinarySearch {
         }
          */
 
-        return "Target: " + key + " Index:" + sortedArray[index] + " index + 1:" + sortedArray[index + 1] +
-                " pass? " + (key <= sortedArray[index + 1] && key > sortedArray[index]);
+        return index;
+
     }
 
     public static void main(String[] args) {
@@ -59,7 +59,6 @@ public class BinarySearch {
         for (int i = 1; i < numbers.length; i++) {
             cumSums[i] = cumSums[i - 1] + numbers[i];
         }
-
         //
         double sum = cumSums[cumSums.length - 1];
 
@@ -72,7 +71,9 @@ public class BinarySearch {
             // generate random num btwn 0-1, find closest index to that number
             double target = Math.random();
             // print indexes close to the index we find (one below, one higher and index).
-            System.out.println(runBinarySearchIteratively(cumSums, target, 0, cumSums.length - 1));
+            int index = runBinarySearchIteratively(cumSums, target, 0, cumSums.length - 1);
+            System.out.println("Target: " + target + " Index:" + cumSums[index] + " index + 1:" + cumSums[index + 1] +
+                    " pass? " + (target <= cumSums[index + 1] && target > cumSums[index]));
         }
     }
 }
