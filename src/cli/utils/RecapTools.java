@@ -1,5 +1,6 @@
 package cli.utils;
 
+import cli.utils.expected.LogExpectedModel;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.block.ContactRecord;
@@ -174,11 +175,6 @@ public class RecapTools {
             }
         }
         return oeMatrix;
-    }
-
-    private static float getP(float obs, float expected, double superDiagonal) {
-        // P = (O - E)/(SD - E)
-        return (float) ((obs - expected) / (superDiagonal - expected));
     }
 
     private static double getExpected(ContactRecord rec, ExpectedValueFunction df, int chrIndex) {

@@ -17,6 +17,11 @@ public class SimpleLocation {
         this.binY = cr.getBinY();
     }
 
+    public SimpleLocation(ContactRecord cr, int resolution) {
+        this.binX = cr.getBinX() * resolution;
+        this.binY = cr.getBinY() * resolution;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -32,5 +37,13 @@ public class SimpleLocation {
     @Override
     public int hashCode() {
         return Objects.hash(binX, binY);
+    }
+
+    public int getBinX() {
+        return this.binX;
+    }
+
+    public int getBinY() {
+        return this.binY;
     }
 }

@@ -1,145 +1,198 @@
 package cli.clt;
 
+import cli.utils.ExpectedUtils;
+import cli.utils.Welford;
+import cli.utils.expected.LogExpectedModel;
+import cli.utils.sift.SimpleLocation;
+import cli.utils.sift.Zscore;
+import javastraw.feature2D.Feature2D;
+import javastraw.feature2D.Feature2DList;
+import javastraw.reader.Dataset;
+import javastraw.reader.basics.Chromosome;
+import javastraw.reader.block.ContactRecord;
+import javastraw.reader.mzd.Matrix;
+import javastraw.reader.mzd.MatrixZoomData;
+import javastraw.reader.type.HiCZoom;
+import javastraw.reader.type.NormalizationType;
+import javastraw.tools.HiCFileTools;
+import javastraw.tools.ParallelizationTools;
 
+import java.awt.*;
+import java.io.File;
 import java.util.List;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class HotSpot {
-    private static List<float[][]> getMatrices(int res, int window, String strNorm, String filename, String[] names) {
-        /*
-        boolean useCache = false;
-        // create a hic dataset object
-        Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, useCache, true);
-        // choose norm: we know the datasets we're using will have SCALE available
-        NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{strNorm, "NONE"});
+    private static final int MAX_DIST = 10000000;
+    private static final int MIN_DIST = 25000;
 
-        // choose to use 2Kb resolution
-        int resolution = res;
-        // Get a list of the chromosome objects
-        Chromosome chr5 = ds.getChromosomeHandler().getChromosomeFromName("chr5");
-        Matrix matrix = ds.getMatrix(chr5, chr5);
-        MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
-        boolean getDataUnderTheDiagonal = true;
-        // our bounds will be binXStart, binYStart, binXEnd, binYEnd
-        // these are in BIN coordinates, not genome coordinates
-        int chrLength = (int) chr5.getLength();
-
-        int binXStart = 1 / resolution;
-        int binXEnd = 1 / resolution;
-        int binYStart = chrLength / resolution;
-        int binYEnd = chrLength / resolution;
-        int numRows = binXEnd - binXStart + 1; // replace with actual number later
-        int numCols = binYEnd - binYStart + 1; // replace later
-        float[][] float2DArray = new float[0][];
-        try {
-            float2DArray = HiCFileTools.extractLocalBoundedRegionFloatMatrix(zd, binXStart, binXEnd, binYStart, binYEnd, numRows, numCols, norm, getDataUnderTheDiagonal);
-            MatrixTools.saveMatrixTextNumpy(tissue + "numpymatrix.to.output.npy", float2DArray);
-        } catch (IOException e) {
-            //throw new RuntimeException(e);
-            System.err.println(e.getLocalizedMessage());
-            //System.exit(10);
-        }
-        */
-        return null;
-    }
-
-    /*
-    private static List<float[][]> getMatrices(int res, int window, String strNorm, String[] files, String[] names) {
-        boolean useCache = false;
-
-        for (String filename : files) {
-
-            // create a hic dataset object
-            Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, useCache, true);
-            // choose norm: we know the datasets we're using will have SCALE available
-            NormalizationType norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{strNorm, "NONE"});
-
-            // choose to use 2Kb resolution
-            int resolution = res;
-
-            // Get a list of the chromosome objects
-            // Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
-
-            for (Chromosome chromosome : chromosomes) {
-
-                Matrix matrix = ds.getMatrix(chromosome, chromosome);
-                if (matrix == null) continue;
-                MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
-                if (zd == null) continue;
-
-                boolean getDataUnderTheDiagonal = false;
-                // zd is now a data structure that contains pointers to the data
-                // *** Let's show 2 different ways to access data ***
-
-                // OPTION 1
-                // iterate on all the data for the whole chromosome in sparse format
-                Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
-                while (iterator.hasNext()) {
-                    ContactRecord record = iterator.next();
-                    // now do whatever you want with the contact record
-                    int binX = record.getBinX();
-                    int binY = record.getBinY();
-                    float counts = record.getCounts();
-
-                    // binX and binY are in BIN coordinates, not genome coordinates
-                    // to switch, we can just multiply by the resolution
-                    int genomeX = binX * resolution;
-                    int genomeY = binY * resolution;
-
-                    if (counts > 0) { // will skip NaNs
-
-                        // do task
-
-                        // the iterator only iterates above the diagonal
-                        // to also fill in data below the diagonal, flip it
-                        if (binX != binY) {
-                            binX = record.getBinY();
-                            binY = record.getBinX();
-                            counts = record.getCounts();
-
-                        }
-                    }
-                }
-            }
-
-            // our bounds will be binXStart, binYStart, binXEnd, binYEnd
-            // these are in BIN coordinates, not genome coordinates
-            int binXStart = 119848237 / resolution;
-            int binYStart = 119836267 / resolution;
-            int binXEnd = 121000236 / resolution;
-            int binYEnd = 120988666 / resolution;
-
-            int numRows = binXEnd - binXStart + 1; // replace with actual number later
-            int numCols = binYEnd - binYStart + 1; // replace later
-
-            float[][] float2DArray = new float[0][];
-            try {
-                float2DArray = HiCFileTools.extractLocalBoundedRegionFloatMatrix(zd, binXStart, binXEnd, binYStart, binYEnd, numRows, numCols, norm, getDataUnderTheDiagonal);
-                MatrixTools.saveMatrixTextNumpy(tissue + "numpymatrix.to.output.npy", float2DArray);
-            } catch (IOException e) {
-                //throw new RuntimeException(e);
-                System.err.println(e.getLocalizedMessage());
-                //System.exit(10);
-            }
-        }
-    }
-    */
+    // The Z-Score Cutoff is currently hardcoded at 1.65, which has a confidence interval of __%
+    private static final float ZSCORE_CUTOFF = 2f;
 
     private static void printUsageAndExit() {
-        System.out.println("hotspot [--res resolution] [--window window] [--norm normalization] <file1.hic,file2.hic,...> <name1,name2,...> <out_folder>");
+        /* example print: ("apa [--min-dist minval] [--max-dist max_val] [--window window] [-r resolution]" +
+                " [-k NONE/VC/VC_SQRT/KR] [--corner-width corner_width] [--include-inter include_inter_chr] [--ag-norm]" +
+                " <input.hic> <loops.bedpe> <outfile>"); */
+        System.out.println("hotspot [--res resolution] [--norm normalization] <file1.hic,file2.hic,...> <out_file>");
         System.exit(19);
     }
 
     public static void run(String[] args, CommandLineParser parser) {
-        /*
-        if (args.length != 6 || args[3].length() != args[4].length()) {
+
+        // hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <out_file>
+        if (args.length != 3) {
             printUsageAndExit();
         }
-        final int DEFAULT_RES = 0;
-        final int DEFAULT_WINDOW = 0;
-        // hotspot [--res int] [--window int] [--norm string] <file1.hic,file2.hic,...> <name1,name2,...> <out_folder>
-        List<float[][]> mtxList = getMatrices(parser.getResolutionOption(DEFAULT_RES), parser.getWindowSizeOption(DEFAULT_WINDOW), parser.getNormalizationStringOption(), args[3], args[4]);
-        StandardDevUtils stdDevObj = new StandardDevUtils();
-        System.out.println(stdDevObj.StdDeviationFinder(mtxList));
-        */
+
+        String[] files = args[1].split(",");
+        String outputFileName = args[2];
+        int resolution = parser.getResolutionOption(5000);
+        String normString = parser.getNormalizationStringOption();
+
+        final Feature2DList result = new Feature2DList();
+
+        Dataset[] datasets = new Dataset[files.length];
+        for (int k = 0; k < files.length; k++) {
+            datasets[k] = HiCFileTools.extractDatasetForCLT(files[k],
+                    false, false, false);
+        }
+
+        NormalizationType norm = datasets[0].getNormalizationHandler().getNormTypeFromString(normString);
+        Chromosome[] chromosomes = datasets[0].getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
+        AtomicInteger cIndex = new AtomicInteger(0);
+        // this code can be commented out when running small-scale tests on local machine
+
+        ParallelizationTools.launchParallelizedCode(() -> {
+            int currIndex = cIndex.getAndIncrement();
+            while (currIndex < chromosomes.length) {
+                Chromosome chrom = chromosomes[currIndex];
+                List<Feature2D> hotspots = findTheHotspots(chrom, datasets, resolution, norm);
+                if (hotspots.size() > 0) {
+                    synchronized (result) {
+                        result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
+                    }
+                }
+                currIndex = cIndex.getAndIncrement();
+            }
+        });
+
+        result.exportFeatureList(new File(outputFileName + ".hotspot.bedpe"), false, Feature2DList.ListFormat.NA);
+        System.out.println("hotspot complete");
+    }
+
+    private static List<Feature2D> findTheHotspots(Chromosome chrom, Dataset[] datasets, int resolution,
+                                                   NormalizationType norm) {
+        Map<SimpleLocation, Welford> results = new HashMap<>();
+        int minBin = MIN_DIST / resolution;
+        int maxBin = MAX_DIST / resolution;
+
+        for (Dataset ds : datasets) {
+            Matrix matrix;
+            synchronized (ds) {
+                matrix = ds.getMatrix(chrom, chrom, resolution);
+            }
+            if (matrix == null) {
+                System.err.println("matrix for " + chrom.getName() + " == null -> continuing");
+                continue;
+            }
+            MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
+            if (zd == null) {
+                System.err.println("zd for " + chrom.getName() + " == null -> continuing");
+                continue;
+            }
+
+            // iterating through chrom using type 1 iteration
+            iterateThruAllTheValues(zd, maxBin, minBin, norm, results);
+            matrix.clearCache();
+        }
+
+        List<SimpleLocation> removeList = new ArrayList<>();
+        for (SimpleLocation key : results.keySet()) {
+            double range = results.get(key).getRange();
+            int counts = (int) results.get(key).getCounts();
+            double min = results.get(key).getMin();
+            //value.addZeroIfBelow(files.length);
+            if (range < .005 || range > 0.5 || counts < 2 || min > .001) {
+                removeList.add(key);
+            }
+            //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
+            //    removeList.add(entry.getKey());
+        }
+        int n1 = results.size();
+        int n2 = removeList.size();
+        // test print
+
+
+        for (SimpleLocation key : removeList) {
+            results.remove(key);
+        }
+        // test print
+
+        int n3 = results.size();
+
+        removeList.clear();
+
+        List<Feature2D> hotspots = new ArrayList<>();
+        if (results.values().size() > 1) {
+            Zscore zscore = getOverallZscoreMetric(results.values());
+            for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
+                Welford welford = entry.getValue();
+                if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
+                    Map<String, String> attributes = new HashMap<>();
+                    attributes.put("sigma", "" + welford.getStdDev());
+                    attributes.put("range", "" + welford.getRange());
+                    attributes.put("min", "" + welford.getMin());
+                    attributes.put("max", "" + welford.getMax());
+                    long startX = (long) entry.getKey().getBinX() * resolution;
+                    long endX = startX + resolution;
+                    long startY = (long) entry.getKey().getBinY() * resolution;
+                    long endY = startY + resolution;
+                    Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
+                    hotspots.add(feature);
+                }
+            }
+        }
+
+        int n4 = hotspots.size();
+        System.out.println("Hotspots " + chrom.getName() + " pre-filter: " + n1 +
+                " removed: " + n2 + " post-filter: " + n3 + " final: " + n4);
+        return hotspots;
+    }
+
+    private static Zscore getOverallZscoreMetric(Collection<Welford> values) {
+        Welford overallWelford = new Welford();
+        for (Welford welford : values) {
+            //overallWelford.addValue(welford.getStdDev());
+            overallWelford.addValue(welford.getRange());
+        }
+        System.out.println("Overall welford: " + overallWelford.getSummary());
+        return overallWelford.getZscore();
+    }
+
+    private static void iterateThruAllTheValues(MatrixZoomData zd, int maxBin, int minBin,
+                                                NormalizationType norm,
+                                                Map<SimpleLocation, Welford> results) {
+
+        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin);
+
+        Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
+        while (iterator.hasNext()) {
+            ContactRecord cr = iterator.next();
+            if (cr.getCounts() > 0) {
+                int dist = ExpectedUtils.getDist(cr);
+                if (dist > minBin && dist < maxBin) {
+                    float percentContact = expected.getPercentContact(dist, cr.getCounts());
+                    percentContact = Math.min(1, Math.max(0, percentContact));
+                    //percentContact2 = Math.exp(percentContact0 - 1);
+
+                    SimpleLocation location = new SimpleLocation(cr);
+                    results.putIfAbsent(location, new Welford());
+                    results.get(location).addValue(percentContact);
+                }
+            }
+        }
+        System.out.print(".");
+        //System.out.println("Finished recording locations for this file");
     }
 }
