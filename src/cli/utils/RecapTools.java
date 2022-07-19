@@ -13,7 +13,7 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static cli.utils.apa.APADataExporter.normalizeBySum;
+// import static cli.utils.apa.APADataExporter.normalizeBySum;
 
 public class RecapTools {
 
