@@ -5,33 +5,42 @@ import java.util.Random;
 // Finds closest term in Binary search if the key we're searching for isn't in the sequence.
 public class BinarySearch {
     static public String runBinarySearchIteratively(double[] sortedArray, double key, int low, int high) {
-        double diff = Integer.MAX_VALUE;
-
+        //double diff = Integer.MAX_VALUE;
         //if(key < sortedArray[0]) return 0;
 
         //int value = 0; use if you want value instead
         int index = 0;
         while (low <= high) {
+            if (low == high) {
+                index = low;
+                break;
+            }
             int mid = low + ((high - low) / 2);
             // Checks distance of current term. Keeps track of the previous smallest distance from key.
             // If the distance is greater, updates distance and index.
 
             // todo @Allen left_val < key <= right_value
 
-            if (Math.abs(key - sortedArray[mid]) < diff) {
-                diff = Math.abs(key - sortedArray[mid]);
+            // can also just change this to
+            if (sortedArray[mid] < key && key <= sortedArray[mid + 1]) {
                 //value = sortedArray[mid]; use this if you want the value
                 index = mid;
-            }
-            // standard binary search operations to progress through the list.
-            if (sortedArray[mid] < key) {
+                break;
+                // standard binary search operations to progress through the list.
+            } else if (sortedArray[mid + 1] < key) {
                 low = mid + 1;
-            } else if (sortedArray[mid] > key) {
-                high = mid - 1;
+            } else if (sortedArray[mid] >= key) {
+                high = mid;
             }
         }
-        return "Target: " + key + " index - 1:" + sortedArray[index - 1] + " index:" + sortedArray[index] +
-                " pass? " + (key <= sortedArray[index] && key > sortedArray[index - 1]);
+        // to ensure left_val < key <= right_value
+        /* while (key > sortedArray[index]){
+            index = index + 1;
+        }
+         */
+
+        return "Target: " + key + " Index:" + sortedArray[index] + " index + 1:" + sortedArray[index + 1] +
+                " pass? " + (key <= sortedArray[index + 1] && key > sortedArray[index]);
     }
 
     public static void main(String[] args) {
