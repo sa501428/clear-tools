@@ -16,22 +16,24 @@ import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
+import javastraw.tools.ParallelizationTools;
 
 import java.awt.*;
 import java.io.File;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class Sift {
-    private final int MAX_DIST = 10000000;
+    private static final int MAX_DIST = 10000000;
 
     private static final int HIRES_ZSCORE_CUTOFF = 2;
-    private static final int LOWRES_ZSCORE_CUTOFF = 2;
+    private static final float LOWRES_ZSCORE_CUTOFF = 1.5f;
     private static final NormalizationType SCALE = NormalizationHandler.SCALE;
     private static final NormalizationType VC = NormalizationHandler.VC;
     private static final NormalizationType VC_SQRT = NormalizationHandler.VC_SQRT;
-    private final int MIN_DIST = 10000;
+    private static final int MIN_DIST = 10000;
     private final int window = 5;
 
     public Sift(String[] args, CommandLineParser parser) {
@@ -41,16 +43,14 @@ public class Sift {
 
         Dataset ds = HiCFileTools.extractDatasetForCLT(args[1], false, false, false);
 
-        Feature2DList[] refinedLoops = siftThroughCalls(ds);
-        //refinedLoops[0].exportFeatureList(new File(args[2] + ".c1.sift.bedpe"), false, Feature2DList.ListFormat.NA);
-        refinedLoops[1].exportFeatureList(new File(args[2] + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
-        //refinedLoops[2].exportFeatureList(new File(args[2] + ".c3.sift.bedpe"), false, Feature2DList.ListFormat.NA);
+        Feature2DList refinedLoops = siftThroughCalls(ds);
+        refinedLoops.exportFeatureList(new File(args[2] + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("sift complete");
     }
 
     private static Set<ContactRecord> getHiResExtremePixels(MatrixZoomData zd, int maxBin, int minBin) {
 
-        LogExpectedModel model = new LogExpectedModel(zd, SCALE, maxBin, true);
+        LogExpectedModel model = new LogExpectedModel(zd, SCALE, maxBin, true, 1);
         ZScores zScores = model.getZscores();
 
         Set<ContactRecord> records = new HashSet<>();
@@ -76,7 +76,7 @@ public class Sift {
 
         double[] nvSCALE = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), SCALE).getData().getValues().get(0);
 
-        LogExpectedModel model = new LogExpectedModel(zd, SCALE, maxBin, false);
+        LogExpectedModel model = new LogExpectedModel(zd, SCALE, maxBin, false, 1);
         ZScores zScores = model.getZscores();
 
         Set<SimpleLocation> records = new HashSet<>();
@@ -89,8 +89,10 @@ public class Sift {
                 if (dist > minBin && dist < maxBin) {
                     double percentContact = model.getPercentContact(dist, cr.getCounts());
                     if (isReasonableEnrichment(percentContact)) {
-                        double denomScale = nvSCALE[cr.getBinX()] * nvSCALE[cr.getBinY()];
-                        if (denomScale > 1) { // denomVC > 1 && denomVCSqrt > 1 &&
+                        double nv1 = nvSCALE[cr.getBinX()];
+                        double nv2 = nvSCALE[cr.getBinY()];
+                        double denomScale = nv1 * nv2;
+                        if (denomScale > 1 && nv1 > 1 && nv2 > 1) {
                             double valScale = (cr.getCounts() / denomScale);
                             if (valScale > 1) {
                                 dist = LogExpectedModel.logp1i(dist);
@@ -124,6 +126,85 @@ public class Sift {
                     c2.getName(), start2, end2, Color.BLACK, new HashMap<>()));
         }
         return features;
+    }
+
+    private static List<Feature2D> findSiftedFeatures(Chromosome chrom, Dataset ds) {
+        Matrix matrix = ds.getMatrix(chrom, chrom);
+
+        if (matrix == null) return new ArrayList<>();
+
+        int hiRes = 200;
+        MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(hiRes));
+        if (Main.printVerboseComments) System.out.println("Start HiRes pass (" + hiRes + ")");
+        Set<ContactRecord> initialPoints = getHiResExtremePixels(zdHigh, MAX_DIST / hiRes, MIN_DIST / hiRes);
+        if (Main.printVerboseComments) System.out.println("HiRes pass done (" + hiRes + ")");
+        matrix.clearCacheForZoom(new HiCZoom(hiRes));
+        if (Main.printVerboseComments) System.out.println("Num initial loops " + initialPoints.size());
+
+        Map<ContactRecord, Short> countsForRecord = new HashMap<>();
+        for (int lowRes : new int[]{1000, 2000, 5000, 10000}) { // 1000,
+            Set<ContactRecord> points = filterInStagesFrom(initialPoints, hiRes, lowRes);
+            if (Main.printVerboseComments) {
+                System.out.println("Num loops after pre filter (overlaps) " + points.size() +
+                        "\nStart LowRes pass (" + lowRes + ")");
+            }
+
+            MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowRes));
+
+            Set<SimpleLocation> enrichedRegions = getExtremeLocations(ds, chrom.getIndex(), lowRes,
+                    zdLow, MAX_DIST / lowRes, MIN_DIST / lowRes); // 2000, 8
+
+            NMSUtils.filterOutByOverlap(points, enrichedRegions, lowRes / hiRes);
+            if (Main.printVerboseComments) System.out.println("Num loops after low res global filter " + points.size());
+
+            enrichedRegions.clear();
+
+            EnrichmentChecker.filterOutIfNotLocalMax(zdLow, points, lowRes / hiRes, SCALE);
+            if (Main.printVerboseComments) {
+                System.out.println("Num loops after low res local filter " + points.size() +
+                        "\nLowRes pass done (" + lowRes + ")\n");
+            }
+
+            matrix.clearCacheForZoom(new HiCZoom(lowRes));
+
+            for (ContactRecord record : points) {
+                if (countsForRecord.containsKey(record)) {
+                    countsForRecord.put(record, (short) (countsForRecord.get(record) + 1));
+                } else {
+                    countsForRecord.put(record, (short) 1);
+                }
+            }
+            points.clear();
+        }
+        matrix.clearCache();
+        initialPoints.clear();
+
+        Set<ContactRecord> finalPoints = getPointWithMoreThan(countsForRecord, 2);
+        countsForRecord.clear();
+
+        SiftUtils.coalesceAndRetainCentroids(finalPoints, hiRes, 5000);
+        if (Main.printVerboseComments) System.out.println("Num loops after final filter " + finalPoints.size());
+        return convertToFeature2Ds(finalPoints, chrom, chrom, hiRes);
+    }
+
+    private static Set<ContactRecord> filterInStagesFrom(Set<ContactRecord> initialPoints, int hiRes, int lowRes) {
+        Set<ContactRecord> points = new HashSet<>(initialPoints);
+        int factor = lowRes / 500;
+        for (int k = 1; k <= factor; k++) {
+            int res = 500 * k;
+            NMSUtils.filterOutByOverlap(points, res / hiRes);
+        }
+        return points;
+    }
+
+    private static Set<ContactRecord> getPointWithMoreThan(Map<ContactRecord, Short> countsForRecord, int cutoff) {
+        Set<ContactRecord> finalSet = new HashSet<>();
+        for (ContactRecord record : countsForRecord.keySet()) {
+            if (countsForRecord.get(record) > cutoff) {
+                finalSet.add(record);
+            }
+        }
+        return finalSet;
     }
 
     /*
@@ -164,89 +245,31 @@ public class Sift {
      * 52 - higher cutoff
      *
      * 55 - try stepwise filtering, full range
+     * 56 - use 1 as min for z score / extreme vals
+     * 57 - norm vector 0.7
+     * 58 - norm vector 0.7 -> 1; low z score 2 -> 1.5
      */
-    private Feature2DList[] siftThroughCalls(Dataset ds) {
+    private Feature2DList siftThroughCalls(Dataset ds) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
-        Feature2DList[] outputs = new Feature2DList[]{new Feature2DList(), new Feature2DList(), new Feature2DList()};
+        Feature2DList output = new Feature2DList();
 
-        for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
-            Matrix matrix = ds.getMatrix(chrom, chrom);
+        Chromosome[] chromosomes = handler.getChromosomeArrayWithoutAllByAll();
 
-            if (matrix != null) {
-                int hiRes = 200;
-                MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(hiRes));
-                System.out.println("Start HiRes pass (" + hiRes + ")");
-                Set<ContactRecord> initialPoints = getHiResExtremePixels(zdHigh, MAX_DIST / hiRes, MIN_DIST / hiRes);
-                System.out.println("HiRes pass done (" + hiRes + ")");
-                matrix.clearCacheForZoom(new HiCZoom(hiRes));
-                System.out.println("Num initial loops " + initialPoints.size());
-
-                Map<ContactRecord, Short> countsForRecord = new HashMap<>();
-                for (int lowRes : new int[]{1000, 2000, 5000, 10000}) { // 1000,
-                    Set<ContactRecord> points = filterInStagesFrom(initialPoints, hiRes, lowRes);
-                    System.out.println("Num loops after pre filter (overlaps) " + points.size() +
-                            "\nStart LowRes pass (" + lowRes + ")");
-
-                    MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowRes));
-
-                    Set<SimpleLocation> enrichedRegions = getExtremeLocations(ds, chrom.getIndex(), lowRes,
-                            zdLow, MAX_DIST / lowRes, MIN_DIST / lowRes); // 2000, 8
-
-                    NMSUtils.filterOutByOverlap(points, enrichedRegions, lowRes / hiRes);
-                    System.out.println("Num loops after low res global filter " + points.size());
-
-                    enrichedRegions.clear();
-
-                    EnrichmentChecker.filterOutIfNotLocalMax(zdLow, points, lowRes / hiRes, SCALE);
-                    System.out.println("Num loops after low res local filter " + points.size() +
-                            "\nLowRes pass done (" + lowRes + ")\n");
-
-                    matrix.clearCacheForZoom(new HiCZoom(lowRes));
-
-                    for (ContactRecord record : points) {
-                        if (countsForRecord.containsKey(record)) {
-                            countsForRecord.put(record, (short) (countsForRecord.get(record) + 1));
-                        } else {
-                            countsForRecord.put(record, (short) 1);
-                        }
+        AtomicInteger cIndex = new AtomicInteger(0);
+        ParallelizationTools.launchParallelizedCode(() -> {
+            int currIndex = cIndex.getAndIncrement();
+            while (currIndex < chromosomes.length) {
+                Chromosome chrom = chromosomes[currIndex];
+                List<Feature2D> sharpLoops = findSiftedFeatures(chrom, ds);
+                if (sharpLoops.size() > 0) {
+                    synchronized (output) {
+                        output.addByKey(Feature2DList.getKey(chrom, chrom), sharpLoops);
                     }
-                    points.clear();
                 }
-                matrix.clearCache();
-                initialPoints.clear();
-
-                for (int c = 0; c < outputs.length; c++) {
-                    Set<ContactRecord> finalPoints = getPointWithMoreThan(countsForRecord, c + 1);
-                    SiftUtils.coalesceAndRetainCentroids(finalPoints, hiRes, 5000);
-                    System.out.println("Num loops after final filter[" + c + "] " + finalPoints.size());
-                    outputs[c].addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(finalPoints,
-                            chrom, chrom, hiRes));
-                    finalPoints.clear();
-                }
-                countsForRecord.clear();
+                currIndex = cIndex.getAndIncrement();
             }
-        }
+        });
 
-        return outputs;
-    }
-
-    private Set<ContactRecord> filterInStagesFrom(Set<ContactRecord> initialPoints, int hiRes, int lowRes) {
-        Set<ContactRecord> points = new HashSet<>(initialPoints);
-        int factor = lowRes / 500;
-        for (int k = 1; k <= factor; k++) {
-            int res = 500 * k;
-            NMSUtils.filterOutByOverlap(points, res / hiRes);
-        }
-        return points;
-    }
-
-    private Set<ContactRecord> getPointWithMoreThan(Map<ContactRecord, Short> countsForRecord, int cutoff) {
-        Set<ContactRecord> finalSet = new HashSet<>();
-        for (ContactRecord record : countsForRecord.keySet()) {
-            if (countsForRecord.get(record) > cutoff) {
-                finalSet.add(record);
-            }
-        }
-        return finalSet;
+        return output;
     }
 }
