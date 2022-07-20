@@ -44,8 +44,9 @@ public class Sift {
 
         Dataset ds = HiCFileTools.extractDatasetForCLT(args[1], false, false, false);
 
-        Feature2DList refinedLoops = siftThroughCalls(ds);
-        refinedLoops.exportFeatureList(new File(args[2] + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
+        Feature2DList[] refinedLoops = siftThroughCalls(ds);
+        refinedLoops[1].exportFeatureList(new File(args[2] + ".sift.all200.bedpe"), false, Feature2DList.ListFormat.NA);
+        refinedLoops[0].exportFeatureList(new File(args[2] + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("sift complete");
     }
 
@@ -160,9 +161,13 @@ public class Sift {
      * 33 - simplify local filtering (medium status)
      * 34 - add back 1kb
      */
-    private Feature2DList siftThroughCalls(Dataset ds) {
+    private Feature2DList[] siftThroughCalls(Dataset ds) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
-        Feature2DList output = new Feature2DList();
+        Feature2DList[] outputs = new Feature2DList[2];
+        for (int i = 0; i < outputs.length; i++) {
+            outputs[i] = new Feature2DList();
+        }
+
         for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
             Matrix matrix = ds.getMatrix(chrom, chrom);
 
@@ -174,6 +179,9 @@ public class Sift {
                 System.out.println("HiRes pass done (" + hiRes + ")");
                 matrix.clearCacheForZoom(new HiCZoom(hiRes));
                 System.out.println("Num initial loops " + initialPoints.size());
+
+                outputs[1].addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
+                        chrom, chrom, hiRes));
 
                 for (int lowRes : new int[]{1000, 5000}) { // 1000,
                     NMSUtils.filterOutByOverlap(initialPoints, lowRes / hiRes);
@@ -199,11 +207,11 @@ public class Sift {
                 SiftUtils.coalesceAndRetainCentroids(initialPoints, hiRes, 5000);
                 System.out.println("Num loops after filter3 " + initialPoints.size());
 
-                output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
+                outputs[0].addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,
                         chrom, chrom, hiRes));
             }
         }
 
-        return output;
+        return outputs;
     }
 }
