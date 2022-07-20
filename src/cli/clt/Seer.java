@@ -35,7 +35,6 @@ public class Seer {
         Map<Chromosome, Long> contactsPerChromosome = generateCountsForEachChromosome(ds, lowestResolution);
         Map<Chromosome, Long> countsToGeneratePerChr = generateCountsToMake(numberOfContacts, contactsPerChromosome);
         contactsPerChromosome.clear();
-
         Random rand = new Random(seed);
 
         // iterate over a chromosome for now (chromosome 10)
@@ -76,8 +75,6 @@ public class Seer {
                 e.printStackTrace();
                 System.exit(9);
             }
-
-
             //chromToRowSumsMap.put(chromosome, rowSummation);
         }
     }
@@ -97,7 +94,6 @@ public class Seer {
                     total += record.getCounts();
                 }
             }
-
             matrix.clearCache();
             results.put(chromosome, total);
         }
@@ -133,7 +129,6 @@ public class Seer {
         if (args.length != 4) {
             printUsageAndExit();
         }
-
         int highResolution = parser.getResolutionOption(50);
         int lowResolution = parser.getLowResolutionOption(5000);
         String possibleNorm = parser.getNormalizationStringOption();

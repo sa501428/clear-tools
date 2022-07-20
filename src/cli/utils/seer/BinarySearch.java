@@ -6,8 +6,7 @@ import java.util.Random;
 public class BinarySearch {
     public static int runBinarySearchIteratively(double[] sortedArray, double key, int low, int high) {
         //double diff = Integer.MAX_VALUE;
-        //if(key < sortedArray[0]) return 0;
-
+        if (key < sortedArray[0]) return 0;
         //int value = 0; use if you want value instead
         int index = 0;
         while (low <= high) {
@@ -18,10 +17,6 @@ public class BinarySearch {
             int mid = low + ((high - low) / 2);
             // Checks distance of current term. Keeps track of the previous smallest distance from key.
             // If the distance is greater, updates distance and index.
-
-            // todo @Allen left_val < key <= right_value
-
-            // can also just change this to
             if (sortedArray[mid] < key && key <= sortedArray[mid + 1]) {
                 //value = sortedArray[mid]; use this if you want the value
                 index = mid;
@@ -37,8 +32,7 @@ public class BinarySearch {
         /* while (key > sortedArray[index]){
             index = index + 1;
         }
-         */
-
+        */
         return index;
 
     }
@@ -47,7 +41,6 @@ public class BinarySearch {
         Random rand = new Random();
         double[] numbers = new double[10000];
         double[] cumSums = new double[10000];
-
         int scalar = 20;
 
         // create random number generator w/ random values
@@ -61,7 +54,6 @@ public class BinarySearch {
         }
         //
         double sum = cumSums[cumSums.length - 1];
-
         // normalizes every term by having last value = 1
         for (int i = 0; i < cumSums.length; i++) {
             cumSums[i] /= sum;

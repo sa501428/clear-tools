@@ -16,13 +16,11 @@ public class SeerUtils {
     public static void exportRowSumsToBedgraph(Map<Chromosome, int[]> chromToRowSumsMap, String arg, int resolution) throws IOException {
         File outputFileName = new File(arg, "rowSums.bedgraph");
         outputFileName.createNewFile();
-
         FileWriter fw = new FileWriter(outputFileName);
         BufferedWriter bw = new BufferedWriter(fw);
 
         for (Chromosome chromosome : chromToRowSumsMap.keySet()) {
             int[] sums = chromToRowSumsMap.get(chromosome);
-
             for (int i = 0; i < sums.length; i++) {
                 int startPosition = i * resolution;
                 int endPosition = startPosition + resolution;
@@ -33,10 +31,8 @@ public class SeerUtils {
                 }
             }
         }
-
         // close the writer
         bw.close();
-
     }
 
     public static int[] getRowSumsForZD(Chromosome chromosome, int highResolution, Iterator<ContactRecord> iterator) {
