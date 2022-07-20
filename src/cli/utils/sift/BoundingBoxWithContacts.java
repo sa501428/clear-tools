@@ -13,7 +13,7 @@ import java.util.Set;
 public class BoundingBoxWithContacts {
 
     public static int buffer = 10;
-    public static int width = 5;
+    public static int width = 2;
 
     private final List<ContactRecord> contacts;
     private final int scalar;
