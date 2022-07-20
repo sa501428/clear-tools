@@ -77,6 +77,8 @@ public class Main {
             new Fusion(args, parser);
         } else if (command.startsWith("seer")) {
             Seer.run(args, parser);
+        } else if (command.startsWith("random")) {
+            RandomLoops.run(args, parser);
         } else {
             printGeneralUsageAndExit(3);
         }
