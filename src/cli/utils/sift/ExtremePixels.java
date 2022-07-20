@@ -22,7 +22,6 @@ public class ExtremePixels {
     private static final NormalizationType SCALE = NormalizationHandler.SCALE;
     private static final int MAX_DIST = 10000000;
     private static final int MIN_DIST = 10000;
-    private final int window = 5;
 
 
     public static Set<ContactRecord> getExtremePixelsForResolution(Set<ContactRecord> initialPoints, Dataset ds,
