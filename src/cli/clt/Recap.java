@@ -114,7 +114,7 @@ public class Recap {
 
         for (int di = 0; di < filepaths.length; di++) {
 
-            System.out.println("File (" + di + "/" + filepaths.length + "): " + filepaths[di]);
+            System.out.println("File (" + (di + 1) + "/" + filepaths.length + "): " + filepaths[di]);
 
             final Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[di], false, false,
                     true);
