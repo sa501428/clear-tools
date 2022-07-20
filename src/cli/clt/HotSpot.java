@@ -174,7 +174,7 @@ public class HotSpot {
                                                 NormalizationType norm,
                                                 Map<SimpleLocation, Welford> results) {
 
-        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin);
+        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin, false);
 
         Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
         while (iterator.hasNext()) {

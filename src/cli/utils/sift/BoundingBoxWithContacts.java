@@ -14,8 +14,6 @@ public class BoundingBoxWithContacts {
 
     public static int buffer = 10;
     public static int width = 5;
-    public static double minEnrichment = 2;
-    public static double maxEnrichment = 50;
 
     private final List<ContactRecord> contacts;
     private final int scalar;
@@ -60,32 +58,31 @@ public class BoundingBoxWithContacts {
 
     private boolean isProperlyEnriched(float[][] region, int i, int j) {
         float loopVal = region[i][j];
+
+        DescriptiveStatistics immediateNeighbors = getStatsInWindow(region, i, j, 1);
+        DescriptiveStatistics localNeighbors = getStatsInWindow(region, i, j, width);
+
+        // too much "sparsity" near this region
+        if (immediateNeighbors.getPercentile(50) < 1) return false;
+
+        // loop should be the max
+        if (loopVal < 0.99 * immediateNeighbors.getMax()) return false;
+
+        // neighborhood stats
+        double mean = localNeighbors.getMean();
+        double median = localNeighbors.getPercentile(50);
+
+        return loopVal > mean && loopVal > median;
+    }
+
+    private DescriptiveStatistics getStatsInWindow(float[][] region, int i, int j, int width) {
         DescriptiveStatistics stats = new DescriptiveStatistics();
         for (int r = i - width; r <= i + width; r++) {
             for (int c = j - width; c <= j + width; c++) {
                 if (r == i && c == j) continue;
-
-                //if (region[r][c] < 1e-10) return false;
-                // something else nearby is bigger
-                if (region[r][c] > loopVal) return false;
-
                 stats.addValue(region[r][c]);
             }
         }
-
-        // too much "sparsity" near this region
-        if (stats.getPercentile(20) < 1) return false;
-
-        // neighborhood stats
-        double mean = stats.getMean();
-        double median = stats.getPercentile(50);
-
-        return reasonablyEnrichedRelativeTo(mean, loopVal) &&
-                reasonablyEnrichedRelativeTo(median, loopVal);
-    }
-
-    private boolean reasonablyEnrichedRelativeTo(double denom, float num) {
-        double val = num / denom;
-        return val > minEnrichment && val < maxEnrichment;
+        return stats;
     }
 }

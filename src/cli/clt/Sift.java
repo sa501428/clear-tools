@@ -2,7 +2,6 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.ExpectedUtils;
-import cli.utils.WelfordStats;
 import cli.utils.expected.LogExpectedModel;
 import cli.utils.sift.*;
 import javastraw.feature2D.Feature2D;
@@ -39,35 +38,29 @@ public class Sift {
         if (args.length != 3) {
             Main.printGeneralUsageAndExit(5);
         }
-        Dataset ds = HiCFileTools.extractDatasetForCLT(args[1],
-                false, false, false);
-        //File outFolder = UNIXTools.makeDir(new File(args[2]));
-        int hires = parser.getResolutionOption(200);
-        int lowres = parser.getLowResolutionOption(5000);
-        BoundingBoxWithContacts.width = parser.getWindowSizeOption(5);
+
+        BoundingBoxWithContacts.width = parser.getWindowSizeOption(10);
         BoundingBoxWithContacts.buffer = 2 * BoundingBoxWithContacts.width;
 
-        BoundingBoxWithContacts.minEnrichment = parser.getMinOption(1.2);
-        BoundingBoxWithContacts.maxEnrichment = parser.getMaxOption(50);
+        Dataset ds = HiCFileTools.extractDatasetForCLT(args[1], false, false, false);
 
-        Feature2DList refinedLoops = siftThroughCalls(ds, hires, lowres);
+        Feature2DList refinedLoops = siftThroughCalls(ds);
         refinedLoops.exportFeatureList(new File(args[2] + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("sift complete");
     }
 
     private static Set<ContactRecord> getHiResExtremePixels(MatrixZoomData zd, int maxBin, int minBin) {
 
-        int maxCompressedBin = LogExpectedModel.logp1i(maxBin) + 1;
-        int minCompressedBin = LogExpectedModel.logp1i(minBin);
-
-        ZScores zScores = getZscores(zd, maxCompressedBin, true);
+        LogExpectedModel model = new LogExpectedModel(zd, SCALE, maxBin, true);
+        ZScores zScores = model.getZscores();
 
         Set<ContactRecord> records = new HashSet<>();
         for (Iterator<ContactRecord> it = zd.getDirectIterator(); it.hasNext(); ) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > 1) {
-                int dist = LogExpectedModel.logp1i(ExpectedUtils.getDist(cr));
-                if (dist > minCompressedBin && dist < maxCompressedBin) {
+                int dist = ExpectedUtils.getDist(cr);
+                if (dist > minBin && dist < maxBin) {
+                    dist = LogExpectedModel.logp1i(dist);
                     float zscore = zScores.getZscore(dist, LogExpectedModel.logp1(cr.getCounts()));
                     if (zscore > HIRES_ZSCORE_CUTOFF) {
                         records.add(cr);
@@ -82,16 +75,10 @@ public class Sift {
     private static Set<SimpleLocation> getExtremeLocations(Dataset ds, int chrIdx, int resolution,
                                                            MatrixZoomData zd, int maxBin, int minBin) {
 
-        int maxCompressedBin = LogExpectedModel.logp1i(maxBin) + 1;
-        int minCompressedBin = LogExpectedModel.logp1i(minBin);
-
-        //double[] nvVC = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), VC).getData().getValues().get(0);
-        //double[] nvVCSqrt = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), VC_SQRT).getData().getValues().get(0);
         double[] nvSCALE = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), SCALE).getData().getValues().get(0);
 
-        //Z4Scores zScores = getZ4scores(zd, maxCompressedBin, nvVC, nvVCSqrt, nvSCALE);
-
-        ZScores zScores = getZscores(zd, maxCompressedBin, false);
+        LogExpectedModel model = new LogExpectedModel(zd, SCALE, maxBin, false);
+        ZScores zScores = model.getZscores();
 
         Set<SimpleLocation> records = new HashSet<>();
         Iterator<ContactRecord> it = zd.getDirectIterator();
@@ -99,26 +86,19 @@ public class Sift {
         while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > 1) {
-                int dist = LogExpectedModel.logp1i(ExpectedUtils.getDist(cr));
-                if (dist > minCompressedBin && dist < maxCompressedBin) {
-                    //double denomVC = nvVC[cr.getBinX()] * nvVC[cr.getBinY()];
-                    //double denomVCSqrt = nvVCSqrt[cr.getBinX()] * nvVCSqrt[cr.getBinY()];
-                    double denomScale = nvSCALE[cr.getBinX()] * nvSCALE[cr.getBinY()];
-
-                    if (denomScale > 0.75) { // denomVC > 1 && denomVCSqrt > 1 &&
-                        //double valVC = (cr.getCounts() / denomVC);
-                        //double valVCSqrt = (cr.getCounts() / denomVCSqrt);
-                        double valScale = (cr.getCounts() / denomScale);
-                        if (valScale > 1) { // valVC > 1 && valVCSqrt > 1 &&
-                            //double raw = logp1(cr.getCounts());
-                            //valVC = logp1(valVC);
-                            //valVCSqrt = logp1(valVCSqrt);
-                            valScale = LogExpectedModel.logp1(valScale);
-
-                            // .passesAllZscores(dist, LOWRES_ZSCORE_CUTOFF,
-                            //                                    raw, valVC, valVCSqrt, valScale)
-                            if (zScores.getZscore(dist, valScale) > LOWRES_ZSCORE_CUTOFF) {
-                                records.add(new SimpleLocation(cr));
+                int dist = ExpectedUtils.getDist(cr);
+                if (dist > minBin && dist < maxBin) {
+                    double percentContact = model.getPercentContact(dist, cr.getCounts());
+                    if (isReasonableEnrichment(percentContact)) {
+                        double denomScale = nvSCALE[cr.getBinX()] * nvSCALE[cr.getBinY()];
+                        if (denomScale > 1) { // denomVC > 1 && denomVCSqrt > 1 &&
+                            double valScale = (cr.getCounts() / denomScale);
+                            if (valScale > 1) {
+                                dist = LogExpectedModel.logp1i(dist);
+                                valScale = LogExpectedModel.logp1(valScale);
+                                if (zScores.getZscore(dist, valScale) > LOWRES_ZSCORE_CUTOFF) {
+                                    records.add(new SimpleLocation(cr));
+                                }
                             }
                         }
                     }
@@ -129,9 +109,8 @@ public class Sift {
         return records;
     }
 
-    public static ZScores getZscores(MatrixZoomData zd, int length, boolean useNone) {
-        WelfordStats stats = LogExpectedModel.getSummaryStats(zd, length, useNone, 1, SCALE);
-        return stats.getZscores();
+    private static boolean isReasonableEnrichment(double val) {
+        return val > 0.01 && val < 0.5;
     }
 
     public static List<Feature2D> convertToFeature2Ds(Set<ContactRecord> records,
@@ -174,42 +153,50 @@ public class Sift {
      * 21 - change low res zscore to 1.5
      * 22 - same as 19 (low res zscore 2)
      * 23 - 2x min local enrichment
+     *
+     * 30 - try with 1k and 5k, with pc filter
+     * 31 - restrict 1k partially
+     * 32 - remove 1k
+     * 33 - simplify local filtering (medium status)
+     * 34 - add back 1kb
      */
-    private Feature2DList siftThroughCalls(Dataset ds, int hiRes, int lowRes) {
+    private Feature2DList siftThroughCalls(Dataset ds) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList output = new Feature2DList();
         for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
             Matrix matrix = ds.getMatrix(chrom, chrom);
 
             if (matrix != null) {
+                int hiRes = 200;
                 MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(hiRes));
                 System.out.println("Start HiRes pass (" + hiRes + ")");
                 Set<ContactRecord> initialPoints = getHiResExtremePixels(zdHigh, MAX_DIST / hiRes, MIN_DIST / hiRes);
                 System.out.println("HiRes pass done (" + hiRes + ")");
                 matrix.clearCacheForZoom(new HiCZoom(hiRes));
-
                 System.out.println("Num initial loops " + initialPoints.size());
 
-                NMSUtils.filterOutByOverlap(initialPoints, lowRes / hiRes);
-                System.out.println("Num loops after pre filter (overlaps) " + initialPoints.size());
+                for (int lowRes : new int[]{1000, 5000}) { // 1000,
+                    NMSUtils.filterOutByOverlap(initialPoints, lowRes / hiRes);
+                    System.out.println("Num loops after pre filter (overlaps) " + initialPoints.size());
 
-                MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowRes));
-                System.out.println("Start LowRes pass (" + lowRes + ")");
-                Set<SimpleLocation> enrichedRegions = getExtremeLocations(ds, chrom.getIndex(), lowRes,
-                        zdLow, MAX_DIST / lowRes, MIN_DIST / lowRes);
+                    MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowRes));
+                    System.out.println("Start LowRes pass (" + lowRes + ")");
+                    Set<SimpleLocation> enrichedRegions = getExtremeLocations(ds, chrom.getIndex(), lowRes,
+                            zdLow, MAX_DIST / lowRes, MIN_DIST / lowRes);
 
-                NMSUtils.filterOutByOverlap(initialPoints, enrichedRegions, lowRes / hiRes);
-                enrichedRegions.clear();
-                System.out.println("LowRes pass done (" + lowRes + ")");
+                    NMSUtils.filterOutByOverlap(initialPoints, enrichedRegions, lowRes / hiRes);
+                    enrichedRegions.clear();
+                    System.out.println("Num loops after low res global filter " + initialPoints.size());
 
-                System.out.println("Num loops after low res global filter " + initialPoints.size());
+                    EnrichmentChecker.filterOutIfNotLocalMax(zdLow, initialPoints, lowRes / hiRes, SCALE);
+                    matrix.clearCacheForZoom(new HiCZoom(lowRes));
 
-                EnrichmentChecker.filterOutIfNotLocalMax(zdLow, initialPoints, lowRes / hiRes, SCALE);
+                    System.out.println("Num loops after low res local filter " + initialPoints.size() +
+                            "\nLowRes pass done (" + lowRes + ")\n");
+                }
                 matrix.clearCache();
 
-                System.out.println("Num loops after low res local filter " + initialPoints.size());
-
-                SiftUtils.coalesceAndRetainCentroids(initialPoints, hiRes, lowRes);
+                SiftUtils.coalesceAndRetainCentroids(initialPoints, hiRes, 5000);
                 System.out.println("Num loops after filter3 " + initialPoints.size());
 
                 output.addByKey(Feature2DList.getKey(chrom, chrom), convertToFeature2Ds(initialPoints,

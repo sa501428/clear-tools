@@ -2,6 +2,7 @@ package cli.utils.expected;
 
 import cli.utils.ExpectedUtils;
 import cli.utils.WelfordStats;
+import cli.utils.sift.ZScores;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationType;
@@ -10,18 +11,22 @@ import java.util.Iterator;
 
 public class LogExpectedModel {
 
-    private final double[] compressedLogExpected;
+    private final WelfordStats stats;
     private final double[] compressedExpected;
 
-    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist) {
-        WelfordStats stats = getSummaryStats(zd, maxBinDist, false, 0, norm);
-        compressedLogExpected = stats.getMean();
+    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, boolean useNone) {
+        stats = getSummaryStats(zd, maxBinDist, useNone, 0, norm);
+        double[] compressedLogExpected = stats.getMean();
         compressedExpected = expm1(compressedLogExpected);
     }
 
-    public static WelfordStats getSummaryStats(MatrixZoomData zd, int length, boolean useNone, int minVal,
-                                               NormalizationType norm) {
-        WelfordStats stats = new WelfordStats(length);
+    private static WelfordStats getSummaryStats(MatrixZoomData zd, int maxBin, boolean useNone, int minVal,
+                                                NormalizationType norm) {
+
+        int maxCompressedBin = LogExpectedModel.logp1i(maxBin) + 1;
+        //int minCompressedBin = LogExpectedModel.logp1i(minBin);
+
+        WelfordStats stats = new WelfordStats(maxCompressedBin);
 
         Iterator<ContactRecord> it;
         if (useNone) {
@@ -33,9 +38,9 @@ public class LogExpectedModel {
         while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > minVal) {
-                int dist = logp1i(ExpectedUtils.getDist(cr));
-                if (dist < length) {
-                    stats.addValue(dist, logp1(cr.getCounts()));
+                int dist = ExpectedUtils.getDist(cr);
+                if (dist < maxBin) {
+                    stats.addValue(logp1i(dist), logp1(cr.getCounts()));
                 }
             }
         }
@@ -50,12 +55,8 @@ public class LogExpectedModel {
         return Math.log(1 + x);
     }
 
-    public double getExpFromBin(int dist) {
+    public double getExpFromUncompressedBin(int dist) {
         return compressedExpected[logp1i(dist)];
-    }
-
-    public double getLogExpFromBin(int dist) {
-        return compressedLogExpected[logp1i(dist)];
     }
 
     private double[] expm1(double[] input) {
@@ -72,8 +73,12 @@ public class LogExpectedModel {
     }
 
     public float getPercentContact(int dist, float counts) {
-        double baseline = getExpFromBin(dist);
-        double maxSignal = getExpFromBin(1);
+        double baseline = getExpFromUncompressedBin(dist);
+        double maxSignal = getExpFromUncompressedBin(1);
         return getP(counts, baseline, maxSignal);
+    }
+
+    public ZScores getZscores() {
+        return stats.getZscores();
     }
 }
