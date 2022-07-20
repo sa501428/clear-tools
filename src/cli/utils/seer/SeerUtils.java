@@ -1,5 +1,6 @@
 package cli.utils.seer;
 
+import cli.utils.sift.SimpleLocation;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
 
@@ -13,13 +14,8 @@ import java.util.Map;
 public class SeerUtils {
 
     public static void exportRowSumsToBedgraph(Map<Chromosome, int[]> chromToRowSumsMap, String arg, int resolution) throws IOException {
-
-        // todo first you need to make a bufferedfilewritere / filewriter
-
-        // why is file giving an error? why do we need path in filename
         File outputFileName = new File(arg, "rowSums.bedgraph");
         outputFileName.createNewFile();
-        // String outputFilePath = new File(arg, "rowSums.bedgraph").getAbsolutePath();
 
         FileWriter fw = new FileWriter(outputFileName);
         BufferedWriter bw = new BufferedWriter(fw);
@@ -36,11 +32,6 @@ public class SeerUtils {
                     bw.newLine();
                 }
             }
-
-            // bin values --> sums[chromosome]
-            // todo for every bin, you will write a line to the files
-            // position = bin * resolution
-            // chromosome " " startPosition + " " + endPosition + " " actual sum
         }
 
         // close the writer
@@ -64,5 +55,28 @@ public class SeerUtils {
             }
         }
         return rowSums;
+    }
+
+    public static SimpleLocation updateToHigherResPosition(SimpleLocation genomePosition, int[] hiResRowSums,
+                                                           int lowResolution, int highResolution) {
+
+        int window = lowResolution / highResolution; // e.g. 100
+        int startBinX = genomePosition.getBinX() / highResolution;
+        int startBinY = genomePosition.getBinY() / highResolution;
+
+        // todo @Allen
+        // int [] rowSumsX, rowSumsY // size window
+
+        // double[] cdf rowsumsX in your window
+        // double[] cdf rowsumsY in your window
+
+        int indexX = 0, indexY = 0; // get new indexX
+        // get new indexY
+
+        int genomeX = (startBinX + indexX) * highResolution;
+        int genomeY = (startBinY + indexY) * highResolution;
+
+
+        return new SimpleLocation(genomeX, genomeY);
     }
 }
