@@ -14,8 +14,8 @@ public class LogExpectedModel {
     private final WelfordStats stats;
     private final double[] compressedExpected;
 
-    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, boolean useNone) {
-        stats = getSummaryStats(zd, maxBinDist, useNone, 0, norm);
+    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, boolean useNone, int minVal) {
+        stats = getSummaryStats(zd, maxBinDist, useNone, minVal, norm);
         double[] compressedLogExpected = stats.getMean();
         compressedExpected = expm1(compressedLogExpected);
     }
