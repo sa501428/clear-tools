@@ -33,7 +33,7 @@ public class ExtremePixels {
                     "\nStart LowRes pass (" + lowRes + ")");
         }
 
-        Set<SimpleLocation> enrichedRegions = ExtremePixels.getExtremeLocations(ds, chrom.getIndex(), lowRes,
+        Set<SimpleLocation> enrichedRegions = ExtremePixels.getExtremeLocations(ds, chrom, lowRes,
                 zdLow, MAX_DIST / lowRes, MIN_DIST / lowRes); // 2000, 8
 
         NMSUtils.filterOutByOverlap(points, enrichedRegions, lowRes / hiRes);
@@ -76,10 +76,17 @@ public class ExtremePixels {
         return records;
     }
 
-    public static Set<SimpleLocation> getExtremeLocations(Dataset ds, int chrIdx, int resolution,
+    public static Set<SimpleLocation> getExtremeLocations(Dataset ds, Chromosome chromosome, int resolution,
                                                           MatrixZoomData zd, int maxBin, int minBin) {
-
-        double[] nvSCALE = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), SCALE).getData().getValues().get(0);
+        int chrIdx = chromosome.getIndex();
+        double[] nvSCALE;
+        try {
+            nvSCALE = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), SCALE).getData().getValues().get(0);
+        } catch (Exception e) {
+            System.err.println("No norm vector found for " + chromosome.getName() + " resolution " + resolution);
+            System.exit(8);
+            return new HashSet<>();
+        }
 
         LogExpectedModel model = new LogExpectedModel(zd, SCALE, maxBin, false, 1);
         ZScores zScores = model.getZscores();

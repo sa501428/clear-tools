@@ -45,8 +45,7 @@ public class Recap {
         String[] filepaths = args[3].split(",");
         String[] names = args[4].split(",");
 
-        Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[0], false, false,
-                true);
+        Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[0], false, false, true);
 
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
@@ -131,10 +130,9 @@ public class Recap {
                     Chromosome chrom1 = config.getChr1();
                     Chromosome chrom2 = config.getChr2();
 
-
                     List<Feature2D> loops = loopList.get(chrom1.getIndex(), chrom2.getIndex());
                     if (loops != null && loops.size() > 0) {
-                        Matrix matrix = ds.getMatrix(chrom1, chrom2);
+                        Matrix matrix = ds.getMatrix(chrom1, chrom2, resolution);
                         if (matrix == null) {
                             System.err.println("Matrix is null " + chrom1.getName() + "_" + chrom2.getName());
                             System.exit(9);
