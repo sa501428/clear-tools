@@ -3,6 +3,7 @@ package cli.utils;
 import cli.utils.expected.LogExpectedModel;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
+import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.expected.ExpectedValueFunction;
 import javastraw.tools.MatrixTools;
@@ -11,7 +12,6 @@ import org.apache.commons.math3.stat.regression.SimpleRegression;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class RecapTools {
 
@@ -184,8 +184,8 @@ public class RecapTools {
         return df.getExpectedValue(chrIndex, dist);
     }
 
-    public static void exportAllMatrices(Feature2DList refinedLoops, String[] names, File outFolder,
-                                         boolean isDeepLoopAnalysis, int window) {
+    public static void exportAllMatrices(Chromosome[] chromosomes, Feature2DList refinedLoops, String[] names,
+                                         File outFolder, boolean isDeepLoopAnalysis, int window) {
         int n = refinedLoops.getNumTotalFeatures();
         int m = names.length;
 
@@ -202,10 +202,12 @@ public class RecapTools {
             }
         }
 
-        AtomicInteger loopIndex = new AtomicInteger(0);
-        refinedLoops.processLists((s, list) -> {
-            for (Feature2D loop : list) {
-                int currIndex = loopIndex.getAndIncrement();
+        int currIndex = 0;
+        for (Chromosome chrom : chromosomes) {
+            List<Feature2D> loops = refinedLoops.get(chrom.getIndex(), chrom.getIndex());
+            Collections.sort(loops);
+            for (Feature2D loop : loops) {
+                //int currIndex = loopIndex.getAndIncrement();
                 for (int k = 0; k < categories.size(); k++) {
                     for (int w = 0; w < names.length; w++) {
                         String key = names[w] + "_" + categories.get(k);
@@ -218,8 +220,9 @@ public class RecapTools {
                         }
                     }
                 }
+                currIndex++;
             }
-        });
+        }
 
         for (int k = 0; k < categories.size(); k++) {
             MatrixTools.saveMatrixTextNumpy((new File(outFolder, categories.get(k) + ".npy")).getAbsolutePath(),

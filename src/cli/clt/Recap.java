@@ -89,7 +89,7 @@ public class Recap {
 
         Feature2DList refinedLoops = recapStats(filepaths, names, loopList, handler, resolution, window, norm, isDeepLoopAnalysis);
         refinedLoops.exportFeatureList(new File(outFolder, "recap.bedpe"), false, Feature2DList.ListFormat.NA);
-        RecapTools.exportAllMatrices(refinedLoops, names, outFolder, isDeepLoopAnalysis, window);
+        RecapTools.exportAllMatrices(handler.getChromosomeArrayWithoutAllByAll(), refinedLoops, names, outFolder, isDeepLoopAnalysis, window);
         System.out.println("recap complete");
     }
 
