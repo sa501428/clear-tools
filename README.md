@@ -1,7 +1,6 @@
 # CLEAR Tools
 
 Chromatin Landscape Exploration, Analysis, and Research Tools
-Chromatin Loop Enhancement, Analysis, and Revision Tools
 
 ## PINPOINT
 
