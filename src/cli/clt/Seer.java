@@ -28,7 +28,6 @@ public class Seer {
 
         // create a hic dataset objects
         Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, true);
-
         NormalizationType norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
 
         HiCZoom lowestResolution = getLowestResolution(ds.getBpZooms());
@@ -44,6 +43,8 @@ public class Seer {
             MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(highResolution));
             if (zdHigh == null) continue;
 
+            // can convert straight to cdf --> this way we don't need to remake cdf every time & can simply search within a
+            // certain range.
             int[] hiResRowSums = SeerUtils.getRowSumsForZD(chromosome, highResolution, zdHigh.getDirectIterator());
 
             MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowResolution));
@@ -115,7 +116,6 @@ public class Seer {
         for (Long value : countMap.values()) {
             total += value;
         }
-
         Map<Chromosome, Long> countsToMake = new HashMap<>();
         for (Chromosome chromosome : countMap.keySet()) {
             Long numToMake = Math.round(totalNumberOfContacts * (countMap.get(chromosome) / total));

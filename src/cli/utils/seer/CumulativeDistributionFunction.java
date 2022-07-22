@@ -26,6 +26,7 @@ public class CumulativeDistributionFunction {
 
     private List<ContactRecord> extractTheRecordsWeWantToSave(Iterator<ContactRecord> normalizedIterator, int maxDist) {
         List<ContactRecord> toSave = new LinkedList<>();
+        // get only counts within a certain range
         while (normalizedIterator.hasNext()) {
             ContactRecord record = normalizedIterator.next();
             if (record.getCounts() > 0 & ExpectedUtils.getDist(record) < maxDist) {
@@ -39,6 +40,7 @@ public class CumulativeDistributionFunction {
         double total = 0;
         int index = 0;
 
+        // fills in the cdf and genome locations
         for (ContactRecord record : toSave) {
             total += record.getCounts();
             cdf[index] = total;
@@ -46,6 +48,7 @@ public class CumulativeDistributionFunction {
             index++;
         }
 
+        // normalizes cdf
         for (int i = 0; i < cdf.length; i++) {
             cdf[i] /= total;
         }

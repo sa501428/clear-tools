@@ -52,7 +52,6 @@ public class BinarySearch {
         for (int i = 1; i < numbers.length; i++) {
             cumSums[i] = cumSums[i - 1] + numbers[i];
         }
-        //
         double sum = cumSums[cumSums.length - 1];
         // normalizes every term by having last value = 1
         for (int i = 0; i < cumSums.length; i++) {
