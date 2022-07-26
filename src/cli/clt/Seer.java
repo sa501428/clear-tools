@@ -1,6 +1,5 @@
 package cli.clt;
 
-import cli.utils.seer.BinarySearch;
 import cli.utils.seer.CumulativeDistributionFunction;
 import cli.utils.seer.SeerUtils;
 import cli.utils.sift.SimpleLocation;
@@ -47,7 +46,7 @@ public class Seer {
 
             // can convert straight to cdf --> this way we don't need to remake cdf every time & can simply search within a
             // certain range.
-            double[] hiResCDF = BinarySearch.convertToCDF(SeerUtils.getRowSumsForZD(chromosome, highResolution, zdHigh.getDirectIterator()));
+            double[] hiResCDF = SeerUtils.convertToCDF(SeerUtils.getRowSumsForZD(chromosome, highResolution, zdHigh.getDirectIterator()));
 
             MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowResolution));
             if (zdLow == null) continue;

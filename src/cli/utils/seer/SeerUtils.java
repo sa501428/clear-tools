@@ -14,7 +14,7 @@ import java.util.Random;
 
 public class SeerUtils {
 
-    // create bedgraph from a rowSums map
+    // create bedgraph file from a rowSums map
     public static void exportRowSumsToBedgraph(Map<Chromosome, int[]> chromToRowSumsMap, String arg, int resolution) throws IOException {
         File outputFileName = new File(arg, "rowSums.bedgraph");
         outputFileName.createNewFile();
@@ -89,5 +89,20 @@ public class SeerUtils {
         double target = r * range + x0;
 
         return BinarySearch.runBinarySearchIteratively(hiResCDF, target, realStartBin, realEndBin);
+    }
+
+    public static double[] convertToCDF(int[] numbers) {
+        double[] cumSums = new double[numbers.length];
+        // matrix of cumulative sums of the first array
+        cumSums[0] = numbers[0];
+        for (int i = 1; i < numbers.length; i++) {
+            cumSums[i] = cumSums[i - 1] + numbers[i];
+        }
+        double sum = cumSums[cumSums.length - 1];
+        // normalizes every term by having last value = 1
+        for (int i = 0; i < cumSums.length; i++) {
+            cumSums[i] /= sum;
+        }
+        return cumSums;
     }
 }

@@ -1,7 +1,5 @@
 package cli.utils.seer;
 
-import java.util.Random;
-
 // Finds closest term in Binary search if the key we're searching for isn't in the sequence.
 public class BinarySearch {
     public static int runBinarySearchIteratively(double[] sortedArray, double key, int low, int high) {
@@ -35,40 +33,47 @@ public class BinarySearch {
     }
 
     public static void main(String[] args) {
-        Random rand = new Random();
+        //Random rand = new Random();
         int[] numbers = new int[10000];
-
         int scalar = 20;
-
         // create random number generator w/ random values
         for (int i = 0; i < numbers.length; i++) {
-            numbers[i] = scalar * rand.nextInt();
+            numbers[i] = (int) (scalar * Math.random());
         }
+        double[] cumSums = SeerUtils.convertToCDF(numbers);
 
-        double[] cumSums = convertToCDF(numbers);
-
-        for (int i = 0; i < 100; i++) {
+        System.out.println("Test 1: ");
+        // test #1, testing w/ 100 random terms and over entire cdf
+        // cases where test1 doesn't return true: target <= cumSums[index]
+        for (int i = 0; i < 1000; i++) {
             // generate random num btwn 0-1, find closest index to that number
             double target = Math.random();
-            // print indexes close to the index we find (one below, one higher and index).
             int index = runBinarySearchIteratively(cumSums, target, 0, cumSums.length - 1);
-            System.out.println("Target: " + target + " Index:" + cumSums[index] + " index + 1:" + cumSums[index + 1] +
-                    " pass? " + (target <= cumSums[index + 1] && target > cumSums[index]));
+            try {
+                if (index >= 0 && index < cumSums.length) {
+                    System.out.println("Target: " + target + " Index:" + cumSums[index] + " index + 1:" + cumSums[index + 1] +
+                            "pass? " + (target <= cumSums[index + 1] && target > cumSums[index]));
+                } else {
+                    System.out.println("Target: " + target);
+                }
+            } catch (Exception e) {
+                System.out.println("Target: " + target);
+            }
         }
-    }
 
-    public static double[] convertToCDF(int[] numbers) {
-        double[] cumSums = new double[numbers.length];
-        // matrix of cumulative sums of the first array
-        cumSums[0] = numbers[0];
-        for (int i = 1; i < numbers.length; i++) {
-            cumSums[i] = cumSums[i - 1] + numbers[i];
+        System.out.println("Test 2: ");
+        // test #2, testing w/ 100 random terms on a portion of cdf
+        int randStartBin = (int) (Math.random() * cumSums.length);
+        int randEndBin = randStartBin + (int) ((Math.random() * (cumSums.length - randStartBin)));
+        double x0 = cumSums[randStartBin];
+        double xF = cumSums[randEndBin];
+        double range = xF - x0;
+        for (int i = 0; i < 100; i++) {
+            double r = Math.random();
+            double target = r * range + x0;
+            int index = runBinarySearchIteratively(cumSums, target, randStartBin, randEndBin);
+            System.out.println("Target: " + target + "startBin: " + cumSums[randStartBin] + "endBin " +
+                    cumSums[randEndBin] + " pass? " + (target <= cumSums[index + 1] && target > cumSums[index]));
         }
-        double sum = cumSums[cumSums.length - 1];
-        // normalizes every term by having last value = 1
-        for (int i = 0; i < cumSums.length; i++) {
-            cumSums[i] /= sum;
-        }
-        return cumSums;
     }
 }
