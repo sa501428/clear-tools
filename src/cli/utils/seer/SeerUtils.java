@@ -8,7 +8,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -57,40 +56,39 @@ public class SeerUtils {
         return rowSums;
     }
 
-    public static SimpleLocation updateToHigherResPosition(SimpleLocation genomePosition, int[] hiResRowSums,
+    public static SimpleLocation updateToHigherResPosition(SimpleLocation genomePosition, double[] hiResCDF,
                                                            int lowResolution, int highResolution) {
         int window = lowResolution / highResolution; // e.g. 100
         int startBinX = genomePosition.getBinX() / highResolution;
         int startBinY = genomePosition.getBinY() / highResolution;
         Random rand = new Random();
 
-        // todo @Allen
-        // int [] rowSumsX, rowSumsY
-        // in your window, generate new cdf
-        // get new indexX and indexY
-        int genomeX = getHigherQualityIndex(startBinX, window, hiResRowSums, rand) * highResolution;
-        int genomeY = getHigherQualityIndex(startBinY, window, hiResRowSums, rand) * highResolution;
+        int genomeX = getHigherQualityIndex(startBinX, window, hiResCDF, rand) * highResolution;
+        int genomeY = getHigherQualityIndex(startBinY, window, hiResCDF, rand) * highResolution;
 
         return new SimpleLocation(genomeX, genomeY);
     }
 
-    private static int getHigherQualityIndex(int startBin, int window, int[] hiResSums, Random rand) {
-        // cdf from window of startBin + window in region of hiResSums
-        // copy into new vector --> use regular method to create cdf
-        // rowsumsX
-        double[] cdf = new double[hiResSums.length];
-        // calculates cdf for the entire rowSum
-        cdf[0] = hiResSums[0];
-        for (int i = 1; i < hiResSums.length; i++) {
-            cdf[i] = cdf[i - 1] + hiResSums[i];
-        }
-        // takes range from startBin --> startbin + window
-        double[] rowSumsXY;
-        rowSumsXY = Arrays.copyOfRange(cdf, startBin, startBin + window);
-        double target = rand.nextDouble();
-        int index = BinarySearch.runBinarySearchIteratively(rowSumsXY, target, 0, cdf.length - 1);
+    private static int getHigherQualityIndex(int startBin, int window, double[] hiResCDF, Random rand) {
+        double r = rand.nextDouble();
 
-        // get new indexX and indexY
-        return (startBin + index);
+        int realStartBin = startBin;
+        int realEndBin = startBin + window;
+
+        if (realEndBin >= hiResCDF.length) {
+            realEndBin = hiResCDF.length - 1;
+        }
+
+        if (startBin > 0) {
+            realStartBin = startBin - 1;
+        }
+
+        double x0 = hiResCDF[realStartBin];
+        double xF = hiResCDF[realEndBin];
+
+        double range = xF - x0;
+        double target = r * range + x0;
+
+        return BinarySearch.runBinarySearchIteratively(hiResCDF, target, realStartBin, realEndBin);
     }
 }
