@@ -57,11 +57,10 @@ public class SeerUtils {
     }
 
     public static SimpleLocation updateToHigherResPosition(SimpleLocation genomePosition, double[] hiResCDF,
-                                                           int lowResolution, int highResolution) {
+                                                           int lowResolution, int highResolution, Random rand) {
         int window = lowResolution / highResolution; // e.g. 100
         int startBinX = genomePosition.getBinX() / highResolution;
         int startBinY = genomePosition.getBinY() / highResolution;
-        Random rand = new Random();
 
         int genomeX = getHigherQualityIndex(startBinX, window, hiResCDF, rand) * highResolution;
         int genomeY = getHigherQualityIndex(startBinY, window, hiResCDF, rand) * highResolution;

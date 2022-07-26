@@ -36,6 +36,7 @@ public class Seer {
         Map<Chromosome, Long> countsToGeneratePerChr = generateCountsToMake(numberOfContacts, contactsPerChromosome);
         contactsPerChromosome.clear();
         Random rand = new Random(seed);
+        Random rand2 = new Random(seed * 3 + 5);
 
         // iterate over a chromosome for now (chromosome 10)
         for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
@@ -67,7 +68,8 @@ public class Seer {
                 long numPointsToGenerate = countsToGeneratePerChr.get(chromosome);
                 for (long i = 0; i < numPointsToGenerate; i++) {
                     SimpleLocation position = cdf.createRandomPoint(rand);
-                    position = SeerUtils.updateToHigherResPosition(position, hiResCDF, lowResolution, highResolution);
+                    position = SeerUtils.updateToHigherResPosition(position, hiResCDF, lowResolution, highResolution,
+                            rand2);
                     bw.write(name + " " + position.getBinX() + " " + name + " " + position.getBinY());
                     bw.newLine();
                 }
