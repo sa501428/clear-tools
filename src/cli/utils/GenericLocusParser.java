@@ -36,6 +36,9 @@ public class GenericLocusParser {
     private static List<Anchor> parseBEDFile(BufferedReader bufferedReader,
                                              ChromosomeHandler handler,
                                              float scoreCutoff) throws IOException {
+
+        boolean useCutoff = scoreCutoff > 0;
+
         Set<Anchor> anchors = new HashSet<>();
         String nextLine;
 
@@ -46,12 +49,11 @@ public class GenericLocusParser {
             String chr1Name;
             int start1, end1;
 
-            if (tokens[0].startsWith("chr") && tokens.length > 4) {
+            if (tokens[0].startsWith("chr") && tokens.length > 2) {
                 // valid line
                 chr1Name = tokens[0];
                 start1 = Integer.parseInt(tokens[1]);
                 end1 = Integer.parseInt(tokens[2]);
-                float score = Float.parseFloat(tokens[4]);
 
                 Chromosome chr = handler.getChromosomeFromName(chr1Name);
                 if (chr == null) {
@@ -64,7 +66,7 @@ public class GenericLocusParser {
                     continue;
                 }
 
-                if (score > scoreCutoff) {
+                if (!useCutoff || Float.parseFloat(tokens[4]) > scoreCutoff) {
                     anchors.add(new Anchor(chr.getName(), chr.getIndex(), start1, end1));
                 }
             }
