@@ -48,7 +48,8 @@ public class LogExpectedModel {
     }
 
     public static int logp1i(int x) {
-        return (int) Math.floor(Math.log(1 + x));
+        // todo: remove this difference
+        return (int) Math.floor(Math.log(1 + x) / Math.log(1.5));
     }
 
     public static double logp1(double x) {
