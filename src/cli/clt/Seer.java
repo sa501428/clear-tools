@@ -27,26 +27,43 @@ public class Seer {
                                         String outFolderPath, String possibleNorm, long seed, long numberOfContacts) {
 
         // create a hic dataset objects
-        Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, true);
+        Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, false);
         NormalizationType norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+
+        // add in print lines to check where the code reaches
+        System.out.println("dataset and norm set/created");
 
         HiCZoom lowestResolution = getLowestResolution(ds.getBpZooms());
         Map<Chromosome, Long> contactsPerChromosome = generateCountsForEachChromosome(ds, lowestResolution);
+        System.out.println("counts generated for each chromosome");
+
         Map<Chromosome, Long> countsToGeneratePerChr = generateCountsToMake(numberOfContacts, contactsPerChromosome);
+        System.out.println("counts to make generated for each chromosome");
+
         contactsPerChromosome.clear();
         Random rand = new Random(seed);
         Random rand2 = new Random(seed * 3 + 5);
+        System.out.println("seeds generated");
 
-        // iterate over a chromosome for now (chromosome 10)
+        /* checking if the loop runs
+        for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
+            System.out.println("Loop runs properly");
+        }
+         */
+
+        // iterate over all chromosomes
         for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
             Matrix matrix = ds.getMatrix(chromosome, chromosome);
+            System.out.println((matrix == null) + " test1 " + chromosome.getName());
             if (matrix == null) continue;
             MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(highResolution));
+            System.out.println((zdHigh == null) + " test2 " + chromosome.getName() + " " + highResolution);
             if (zdHigh == null) continue;
 
             // can convert straight to cdf --> this way we don't need to remake cdf every time & can simply search within a
             // certain range.
             double[] hiResCDF = SeerUtils.convertToCDF(SeerUtils.getRowSumsForZD(chromosome, highResolution, zdHigh.getDirectIterator()));
+            System.out.println("rowsum CDF created");
 
             MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowResolution));
             if (zdLow == null) continue;
@@ -54,7 +71,7 @@ public class Seer {
             // create your pdf, cdf (delete the pdf)
             CumulativeDistributionFunction cdf = new CumulativeDistributionFunction(zdLow.getNormalizedIterator(norm),
                     10000000, lowResolution);
-
+            System.out.println("new cdf created");
             String name = chromosome.getName();
 
             try {
@@ -62,6 +79,7 @@ public class Seer {
                 outputFileName.createNewFile();
                 FileWriter fw = new FileWriter(outputFileName);
                 BufferedWriter bw = new BufferedWriter(fw);
+                System.out.println("file & writer created");
 
                 // generate points at random
                 long numPointsToGenerate = countsToGeneratePerChr.get(chromosome);
@@ -73,6 +91,7 @@ public class Seer {
                     bw.newLine();
                 }
                 bw.close();
+                System.out.println("writing finished");
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -80,6 +99,7 @@ public class Seer {
             }
             //chromToRowSumsMap.put(chromosome, rowSummation);
         }
+        System.out.println("process completed");
     }
 
     private static Map<Chromosome, Long> generateCountsForEachChromosome(Dataset ds, HiCZoom lowestResolution) {
