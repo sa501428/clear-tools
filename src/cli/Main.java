@@ -82,6 +82,8 @@ public class Main {
             NormHack.run(args, parser);
         } else if (command.startsWith("random")) {
             RandomLoops.run(args, parser);
+        } else if (command.startsWith("generate")) {
+            GenerateBedpe.run(args, parser);
         } else {
             printGeneralUsageAndExit(3);
         }
