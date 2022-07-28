@@ -113,7 +113,7 @@ public class HotSpot {
             double min = results.get(key).getMin();
             double max = results.get(key).getMax();
             //value.addZeroIfBelow(files.length);
-            if (range < .01 || range > 0.35 || counts < 2 || min > .01 || max > 0.35) {
+            if (range < .03 || range > 0.4 || counts < 2 || min > .02 || max > 0.4) {
                 removeList.add(key);
             }
             //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
@@ -136,43 +136,43 @@ public class HotSpot {
         List<Feature2D> hotspots = new ArrayList<>();
         if (results.values().size() > 1) {
 
-//            // comment out below in order to use Z-Score Cutoff
-//            for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
-//                Welford welford = entry.getValue();
-//                Map<String, String> attributes = new HashMap<>();
-//                attributes.put("sigma", "" + welford.getStdDev());
-//                attributes.put("range", "" + welford.getRange());
-//                attributes.put("min", "" + welford.getMin());
-//                attributes.put("max", "" + welford.getMax());
-//                long startX = (long) entry.getKey().getBinX() * resolution;
-//                long endX = startX + resolution;
-//                long startY = (long) entry.getKey().getBinY() * resolution;
-//                long endY = startY + resolution;
-//                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
-//                hotspots.add(feature);
-//            }
-//            // comment out ^
-
-            // uncomment below in order to use Z-Score Cutoff
-            Zscore zscore = getOverallZscoreMetric(results.values());
+            // comment out below in order to use Z-Score Cutoff
             for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
                 Welford welford = entry.getValue();
-                if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
-                    //if (zscore.getZscore(welford.getRange()) >= ZSCORE_CUTOFF) {
-                    Map<String, String> attributes = new HashMap<>();
-                    attributes.put("sigma", "" + welford.getStdDev());
-                    attributes.put("range", "" + welford.getRange());
-                    attributes.put("min", "" + welford.getMin());
-                    attributes.put("max", "" + welford.getMax());
-                    long startX = (long) entry.getKey().getBinX() * resolution;
-                    long endX = startX + resolution;
-                    long startY = (long) entry.getKey().getBinY() * resolution;
-                    long endY = startY + resolution;
-                    Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
-                    hotspots.add(feature);
-                }
+                Map<String, String> attributes = new HashMap<>();
+                attributes.put("sigma", "" + welford.getStdDev());
+                attributes.put("range", "" + welford.getRange());
+                attributes.put("min", "" + welford.getMin());
+                attributes.put("max", "" + welford.getMax());
+                long startX = (long) entry.getKey().getBinX() * resolution;
+                long endX = startX + resolution;
+                long startY = (long) entry.getKey().getBinY() * resolution;
+                long endY = startY + resolution;
+                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
+                hotspots.add(feature);
             }
-            // uncomment ^
+            // comment out ^
+
+//            // uncomment below in order to use Z-Score Cutoff
+//            Zscore zscore = getOverallZscoreMetric(results.values());
+//            for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
+//                Welford welford = entry.getValue();
+//                if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
+//                    //if (zscore.getZscore(welford.getRange()) >= ZSCORE_CUTOFF) {
+//                    Map<String, String> attributes = new HashMap<>();
+//                    attributes.put("sigma", "" + welford.getStdDev());
+//                    attributes.put("range", "" + welford.getRange());
+//                    attributes.put("min", "" + welford.getMin());
+//                    attributes.put("max", "" + welford.getMax());
+//                    long startX = (long) entry.getKey().getBinX() * resolution;
+//                    long endX = startX + resolution;
+//                    long startY = (long) entry.getKey().getBinY() * resolution;
+//                    long endY = startY + resolution;
+//                    Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
+//                    hotspots.add(feature);
+//                }
+//            }
+//            // uncomment ^
 
         }
 
