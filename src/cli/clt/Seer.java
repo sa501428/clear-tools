@@ -51,7 +51,61 @@ public class Seer {
         }
          */
 
+        // create mappings for rowsums and zdlow
+        Map<Chromosome, double[]> rowSumsMap = new HashMap<>();
+        Map<Chromosome, MatrixZoomData> zdLowMap = new HashMap<>();
+
+        // calculate rowsums in first for loop --> save in map
+        for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
+            Matrix matrix = ds.getMatrix(chromosome, chromosome);
+            System.out.println((matrix == null) + " test1 " + chromosome.getName());
+            if (matrix == null) continue;
+            MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(highResolution));
+            System.out.println((zdHigh == null) + " test2 " + chromosome.getName() + " " + highResolution);
+            if (zdHigh == null) continue;
+
+            rowSumsMap.put(chromosome, SeerUtils.convertToCDF(SeerUtils.getRowSumsForZD(chromosome, highResolution,
+                    zdHigh.getDirectIterator())));
+            System.out.println("rowsum CDF created");
+
+            zdLowMap.put(chromosome, matrix.getZoomData(new HiCZoom(lowResolution)));
+        }
+
+        for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
+            if (zdLowMap.get(chromosome) == null) continue;
+            // create your pdf, cdf (delete the pdf)
+            CumulativeDistributionFunction cdf = new CumulativeDistributionFunction(zdLowMap.get(chromosome).
+                    getNormalizedIterator(norm), 10000000, lowResolution);
+            System.out.println("new cdf created");
+            String name = chromosome.getName();
+
+            try {
+                File outputFileName = new File(outFolderPath, name + ".generated.contacts.mnd.txt");
+                outputFileName.createNewFile();
+                FileWriter fw = new FileWriter(outputFileName);
+                BufferedWriter bw = new BufferedWriter(fw);
+                System.out.println("file & writer created");
+
+                // generate points at random
+                long numPointsToGenerate = countsToGeneratePerChr.get(chromosome);
+                for (long i = 0; i < numPointsToGenerate; i++) {
+                    SimpleLocation position = cdf.createRandomPoint(rand);
+                    position = SeerUtils.updateToHigherResPosition(position, rowSumsMap.get(chromosome), lowResolution,
+                            highResolution, rand2);
+                    bw.write(name + " " + position.getBinX() + " " + name + " " + position.getBinY());
+                    bw.newLine();
+                }
+                bw.close();
+                System.out.println("writing finished");
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(9);
+            }
+        }
+
         // iterate over all chromosomes
+        /*
         for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
             Matrix matrix = ds.getMatrix(chromosome, chromosome);
             System.out.println((matrix == null) + " test1 " + chromosome.getName());
@@ -98,7 +152,7 @@ public class Seer {
                 System.exit(9);
             }
             //chromToRowSumsMap.put(chromosome, rowSummation);
-        }
+            */
         System.out.println("process completed");
     }
 
