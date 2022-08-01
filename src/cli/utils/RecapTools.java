@@ -115,7 +115,7 @@ public class RecapTools {
         double ampRow = getAmplitudeStdDev(rowSum);
         double ampCol = getAmplitudeStdDev(colSum);
         double spreadRow = getSpreadStdDev(normalizedRowSum);
-        double spreadCol = getSpreadStdDev(normalizedRowSum);
+        double spreadCol = getSpreadStdDev(normalizedColSum);
 
         // adds these metrics to the attributes object
         attributes.put(stem + ROW_SUM, convertVectorToString(rowSum));
@@ -174,7 +174,6 @@ public class RecapTools {
 
 
     private static void populateRowColSums(float[][] matrix, float[] rowSum, float[] colSum) {
-
         for (int row = 0; row < rowSum.length; row++) {
             for (int col = 0; col < colSum.length; col++) {
                 rowSum[row] += matrix[row][col];
