@@ -84,6 +84,8 @@ public class Main {
             RandomLoops.run(args, parser);
         } else if (command.startsWith("generate")) {
             GenerateBedpe.run(args, parser);
+        } else if (command.startsWith("simple")) {
+            SimpleMax.run(args, parser);
         } else {
             printGeneralUsageAndExit(3);
         }

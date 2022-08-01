@@ -137,7 +137,6 @@ public class Recap {
             final AtomicInteger currChromPair = new AtomicInteger(0);
             final AtomicInteger currNumLoops = new AtomicInteger(0);
 
-            // okay, i have no clue what this is about
             ParallelizationTools.launchParallelizedCode(() -> {
 
                 int threadPair = currChromPair.getAndIncrement();
