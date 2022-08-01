@@ -29,7 +29,7 @@ public class Main {
                 "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <outfile>\n" +
                 "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
                 "sift [--widow int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +
-                "seer [--res int] [--low-res int] <file> <out_folder>");
+                "seer [--res int] [--low-res int] [-k norm] [--seed seed] <file> <out_folder> <num_contacts>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }

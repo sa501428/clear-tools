@@ -11,12 +11,14 @@ import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
+import javastraw.tools.ParallelizationTools;
 import javastraw.tools.UNIXTools;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Seer {
     /* takes in one file currently (for ease of testing: can change later to a list of files and easily iterate over).
@@ -25,61 +27,67 @@ public class Seer {
 
     public static void generateNewReads(String filename, int lowResolution, int highResolution,
                                         String outFolderPath, String possibleNorm, long seed, long numberOfContacts) {
-
-        // create a hic dataset objects
-        Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, true);
-
+        Dataset ds = HiCFileTools.extractDatasetForCLT(filename, false, false, false);
         NormalizationType norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
 
         HiCZoom lowestResolution = getLowestResolution(ds.getBpZooms());
         Map<Chromosome, Long> contactsPerChromosome = generateCountsForEachChromosome(ds, lowestResolution);
         Map<Chromosome, Long> countsToGeneratePerChr = generateCountsToMake(numberOfContacts, contactsPerChromosome);
+
         contactsPerChromosome.clear();
-
         Random rand = new Random(seed);
+        Random rand2 = new Random(seed * 3 + 5);
 
-        // iterate over a chromosome for now (chromosome 10)
-        for (Chromosome chromosome : ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll()) {
-            Matrix matrix = ds.getMatrix(chromosome, chromosome);
-            if (matrix == null) continue;
-            MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(highResolution));
-            if (zdHigh == null) continue;
+        AtomicInteger index0 = new AtomicInteger(0);
+        Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
+        ParallelizationTools.launchParallelizedCode(() -> {
+            int indexForJob = index0.getAndIncrement();
+            while (indexForJob < chromosomes.length) {
+                Chromosome chromosome = chromosomes[indexForJob];
+                Matrix matrix = ds.getMatrix(chromosome, chromosome);
+                if (matrix != null) {
+                    MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(highResolution));
+                    if (zdHigh != null) {
+                        double[] rowSums = SeerUtils.convertToCDF(SeerUtils.getRowSumsForZD(chromosome, highResolution,
+                                zdHigh.getDirectIterator()));
+                        matrix.clearCacheForZoom(new HiCZoom(highResolution));
 
-            int[] hiResRowSums = SeerUtils.getRowSumsForZD(chromosome, highResolution, zdHigh.getDirectIterator());
+                        MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowResolution));
+                        if (zdLow != null) {
 
-            MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowResolution));
-            if (zdLow == null) continue;
+                            CumulativeDistributionFunction cdf = new CumulativeDistributionFunction(zdLow.
+                                    getNormalizedIterator(norm), 10000000, lowResolution);
+                            String name = chromosome.getName();
+                            matrix.clearCacheForZoom(new HiCZoom(lowResolution));
 
-            // create your pdf, cdf (delete the pdf)
-            CumulativeDistributionFunction cdf = new CumulativeDistributionFunction(zdLow.getNormalizedIterator(norm),
-                    10000000, lowResolution);
+                            try {
+                                File outputFileName = new File(outFolderPath, name + ".generated.contacts.mnd.txt");
+                                outputFileName.createNewFile();
+                                FileWriter fw = new FileWriter(outputFileName);
+                                BufferedWriter bw = new BufferedWriter(fw);
 
-            String name = chromosome.getName();
-
-            try {
-                File outputFileName = new File(outFolderPath, name + ".generated.contacts.mnd.txt");
-                outputFileName.createNewFile();
-                FileWriter fw = new FileWriter(outputFileName);
-                BufferedWriter bw = new BufferedWriter(fw);
-
-                // generate points at random
-                long numPointsToGenerate = countsToGeneratePerChr.get(chromosome);
-                for (long i = 0; i < numPointsToGenerate; i++) {
-                    SimpleLocation position = cdf.createRandomPoint(rand);
-                    position = SeerUtils.updateToHigherResPosition(position, hiResRowSums, lowResolution, highResolution);
-                    bw.write(name + " " + position.getBinX() + " " + name + " " + position.getBinY());
-                    bw.newLine();
+                                // generate points at random
+                                long numPointsToGenerate = countsToGeneratePerChr.get(chromosome);
+                                for (long i = 0; i < numPointsToGenerate; i++) {
+                                    SimpleLocation position = cdf.createRandomPoint(rand);
+                                    position = SeerUtils.updateToHigherResPosition(position, rowSums, lowResolution,
+                                            highResolution, rand2);
+                                    bw.write(name + " " + position.getBinX() + " " + name + " " + position.getBinY());
+                                    bw.newLine();
+                                }
+                                bw.close();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                System.exit(9);
+                            }
+                        }
+                    }
                 }
-                bw.close();
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                System.exit(9);
+                indexForJob = index0.getAndIncrement();
             }
+        });
 
-
-            //chromToRowSumsMap.put(chromosome, rowSummation);
-        }
+        System.out.println("Seer completed");
     }
 
     private static Map<Chromosome, Long> generateCountsForEachChromosome(Dataset ds, HiCZoom lowestResolution) {
@@ -97,8 +105,7 @@ public class Seer {
                     total += record.getCounts();
                 }
             }
-
-            matrix.clearCache();
+            matrix.clearCacheForZoom(lowestResolution);
             results.put(chromosome, total);
         }
         return results;
@@ -119,7 +126,6 @@ public class Seer {
         for (Long value : countMap.values()) {
             total += value;
         }
-
         Map<Chromosome, Long> countsToMake = new HashMap<>();
         for (Chromosome chromosome : countMap.keySet()) {
             Long numToMake = Math.round(totalNumberOfContacts * (countMap.get(chromosome) / total));
@@ -133,7 +139,6 @@ public class Seer {
         if (args.length != 4) {
             printUsageAndExit();
         }
-
         int highResolution = parser.getResolutionOption(50);
         int lowResolution = parser.getLowResolutionOption(5000);
         String possibleNorm = parser.getNormalizationStringOption();
