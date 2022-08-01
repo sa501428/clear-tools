@@ -25,7 +25,7 @@ public class Main {
                 "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
                 "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
                 "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
-                "recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
+                "recap [--loop] <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
                 "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <outfile>\n" +
                 "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
                 "sift [--widow int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +

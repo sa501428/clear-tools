@@ -167,48 +167,51 @@ public class APA {
                 Chromosome chr2 = config.getChr2();
 
                 Matrix matrix = ds.getMatrix(chr1, chr2);
+                if (matrix != null) {
 
-                List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
-                if (loops != null && loops.size() > 0) {
 
-                    double[] vector1 = null;
-                    double[] vector2 = null;
-                    if (useAgNorm) {
-                        vector1 = ds.getNormalizationVector(chr1.getIndex(), zoom, vcNorm).getData().getValues().get(0);
+                    List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
+                    if (loops != null && loops.size() > 0) {
 
-                        if (chr1.getIndex() == chr2.getIndex()) {
-                            vector2 = vector1;
-                        } else {
-                            vector2 = ds.getNormalizationVector(chr2.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-                        }
-                    }
+                        double[] vector1 = null;
+                        double[] vector2 = null;
+                        if (useAgNorm) {
+                            vector1 = ds.getNormalizationVector(chr1.getIndex(), zoom, vcNorm).getData().getValues().get(0);
 
-                    MatrixZoomData zd = matrix.getZoomData(zoom);
-                    if (zd != null) {
-                        try {
-                            for (Feature2D loop : loops) {
-
-                                Utils.addLocalizedData(output, zd, loop, matrixWidthL, resolution, window, norm, key);
-                                if (useAgNorm) {
-                                    int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
-                                    int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
-                                    APAUtils.addLocalRowSums(rowSum, vector1, binXStart);
-                                    APAUtils.addLocalRowSums(colSum, vector2, binYStart);
-                                }
-
-                                if (currNumLoops.incrementAndGet() % 100 == 0) {
-                                    System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
-                                }
+                            if (chr1.getIndex() == chr2.getIndex()) {
+                                vector2 = vector1;
+                            } else {
+                                vector2 = ds.getNormalizationVector(chr2.getIndex(), zoom, vcNorm).getData().getValues().get(0);
                             }
-                            System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
-                        } catch (Exception e) {
-                            System.err.println(e.getMessage());
                         }
+
+                        MatrixZoomData zd = matrix.getZoomData(zoom);
+                        if (zd != null) {
+                            try {
+                                for (Feature2D loop : loops) {
+
+                                    Utils.addLocalizedData(output, zd, loop, matrixWidthL, resolution, window, norm, key);
+                                    if (useAgNorm) {
+                                        int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
+                                        int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
+                                        APAUtils.addLocalRowSums(rowSum, vector1, binXStart);
+                                        APAUtils.addLocalRowSums(colSum, vector2, binYStart);
+                                    }
+
+                                    if (currNumLoops.incrementAndGet() % 100 == 0) {
+                                        System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+                                    }
+                                }
+                                System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+                            } catch (Exception e) {
+                                System.err.println(e.getMessage());
+                            }
+                        }
+                        vector1 = null;
+                        vector2 = null;
                     }
-                    vector1 = null;
-                    vector2 = null;
+                    matrix.clearCache();
                 }
-                matrix.clearCache();
                 threadPair = currChromPair.getAndIncrement();
             }
 
