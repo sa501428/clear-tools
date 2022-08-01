@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.21.2";
+    public static final String VERSION_NUM = "0.22.0";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static final String DEFAULT_NORMALIZATION = "SCALE";
@@ -29,7 +29,8 @@ public class Main {
                 "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <outfile>\n" +
                 "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
                 "sift [--widow int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +
-                "seer [--res int] [--low-res int] [-k norm] [--seed seed] <file> <out_folder> <num_contacts>");
+                "seer [--res int] [--low-res int] [-k norm] [--seed seed] <file> <out_folder> <num_contacts>\n" +
+                "hack [--res int] <out_folder> <file1.hic,file2.hic,...> <name1,name2,...>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
@@ -77,8 +78,12 @@ public class Main {
             new Fusion(args, parser);
         } else if (command.startsWith("seer")) {
             Seer.run(args, parser);
+        } else if (command.startsWith("hack")) {
+            NormHack.run(args, parser);
         } else if (command.startsWith("random")) {
             RandomLoops.run(args, parser);
+        } else if (command.startsWith("generate")) {
+            GenerateBedpe.run(args, parser);
         } else {
             printGeneralUsageAndExit(3);
         }

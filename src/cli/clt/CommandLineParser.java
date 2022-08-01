@@ -26,6 +26,9 @@ package cli.clt;
 
 import cli.Main;
 import jargs.gnu.CmdLineParser;
+import javastraw.reader.Dataset;
+import javastraw.reader.type.NormalizationHandler;
+import javastraw.reader.type.NormalizationType;
 
 /**
  * Command Line Parser for EMT commands
@@ -47,6 +50,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option minOption = addDoubleOption("min");
     private final Option maxOption = addDoubleOption("max");
     private final Option threadsOption = addIntegerOption("threads");
+    private final Option percentileOption = addIntegerOption("percentile");
     private final Option windowOption = addIntegerOption("window");
     private final Option minDisValOption = addIntegerOption("min-dist");
     private final Option maxDistValOption = addIntegerOption("max-dist");
@@ -165,5 +169,18 @@ public class CommandLineParser extends CmdLineParser {
 
     public int getNumThreads(int val) {
         return optionToInteger(threadsOption, val);
+    }
+
+    public int getPercentileOption(int val) {
+        return optionToInteger(percentileOption, val);
+    }
+
+    public NormalizationType getNormOrDefaultScale(Dataset ds) {
+        String normType = getNormalizationStringOption();
+        if (normType != null && normType.length() > 1) {
+            return ds.getNormalizationHandler().getNormTypeFromString(normType);
+        } else {
+            return NormalizationHandler.SCALE;
+        }
     }
 }

@@ -7,6 +7,7 @@ import javastraw.reader.basics.Chromosome;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 
 public class LoopGenerator {
@@ -36,8 +37,8 @@ public class LoopGenerator {
         return results;
     }
 
-    private static Feature2D createIntraFeature(Chromosome chrom1, Anchor a1, Anchor a2,
-                                                long minGenomeDist, long maxGenomeDist) {
+    public static Feature2D createIntraFeature(Chromosome chrom1, Anchor a1, Anchor a2,
+                                               long minGenomeDist, long maxGenomeDist) {
         int dist = a2.getMid() - a1.getMid();
         if (dist < 0) {
             System.err.println("Weird error!!");
@@ -45,13 +46,13 @@ public class LoopGenerator {
         }
         if (dist > minGenomeDist && dist <= maxGenomeDist) {
             return new Feature2D(Feature2D.FeatureType.PEAK, chrom1.getName(), a1.getStart(), a1.getEnd(),
-                    chrom1.getName(), a2.getStart(), a2.getEnd(), Color.BLACK, null);
+                    chrom1.getName(), a2.getStart(), a2.getEnd(), Color.BLACK, new HashMap<>(0));
         }
         return null;
     }
 
     private static Feature2D createFeature(Chromosome chrom1, Anchor a1, Chromosome chrom2, Anchor a2) {
         return new Feature2D(Feature2D.FeatureType.PEAK, chrom1.getName(), a1.getStart(), a1.getEnd(),
-                chrom2.getName(), a2.getStart(), a2.getEnd(), Color.BLACK, null);
+                chrom2.getName(), a2.getStart(), a2.getEnd(), Color.BLACK, new HashMap<>(0));
     }
 }
