@@ -88,8 +88,8 @@ public class Cleaner {
 
                     try {
                         for (Feature2D loop : loops) {
-                            if (normsAreGood(loop.getStart1(), loop.getWidth1(), resolution, vector1, vector1b)
-                                    && normsAreGood(loop.getStart2(), loop.getWidth2(), resolution, vector2, vector2b)) {
+                            if (normsAreGood(loop.getStart1(), loop.getEnd1(), resolution, vector1, vector1b)
+                                    && normsAreGood(loop.getStart2(), loop.getEnd2(), resolution, vector2, vector2b)) {
                                 goodLoops.add(loop);
                             }
                         }
@@ -109,14 +109,13 @@ public class Cleaner {
         return goodLoopsList;
     }
 
-    private static boolean normsAreGood(long start, long width, int resolution, double[] vector1, double[] vector2) {
+    private static boolean normsAreGood(long start, long end, int resolution, double[] vector1, double[] vector2) {
 
-        int x0 = (int) (start / resolution) - 1;
-        int window = (int) (width / resolution) + 3;
-
+        int x0 = (int) (start / resolution);
+        int xF = (int) (end / resolution) + 1;
         boolean normValuesAreGood = true;
 
-        for (int k = x0; k < x0 + window + 1; k++) {
+        for (int k = x0; k < xF + 1; k++) {
             if (valueIsBad(vector1[k]) || valueIsBad(vector2[k])) {
                 normValuesAreGood = false;
                 break;
