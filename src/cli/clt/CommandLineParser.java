@@ -26,6 +26,9 @@ package cli.clt;
 
 import cli.Main;
 import jargs.gnu.CmdLineParser;
+import javastraw.reader.Dataset;
+import javastraw.reader.type.NormalizationHandler;
+import javastraw.reader.type.NormalizationType;
 
 /**
  * Command Line Parser for EMT commands
@@ -41,11 +44,13 @@ public class CommandLineParser extends CmdLineParser {
     private final Option logOption = addBooleanOption("log");
     private final Option resolutionsOption = addIntegerOption('r', "res");
     private final Option lowResolutionsOption = addIntegerOption("low-res");
+    private final Option seedOption = addIntegerOption("seed");
     private final Option normalizationTypeOption = addStringOption('k', "norm");
     private final Option cutoffOption = addIntegerOption("cutoff");
     private final Option minOption = addDoubleOption("min");
     private final Option maxOption = addDoubleOption("max");
     private final Option threadsOption = addIntegerOption("threads");
+    private final Option percentileOption = addIntegerOption("percentile");
     private final Option windowOption = addIntegerOption("window");
     private final Option minDisValOption = addIntegerOption("min-dist");
     private final Option maxDistValOption = addIntegerOption("max-dist");
@@ -125,6 +130,10 @@ public class CommandLineParser extends CmdLineParser {
         return optionToInteger(lowResolutionsOption, defaultVal);
     }
 
+    public long getSeedOption(int defaultVal) {
+        return optionToInteger(seedOption, defaultVal);
+    }
+
     public String getNormalizationStringOption() {
         return optionToString(normalizationTypeOption);
     }
@@ -160,5 +169,18 @@ public class CommandLineParser extends CmdLineParser {
 
     public int getNumThreads(int val) {
         return optionToInteger(threadsOption, val);
+    }
+
+    public int getPercentileOption(int val) {
+        return optionToInteger(percentileOption, val);
+    }
+
+    public NormalizationType getNormOrDefaultScale(Dataset ds) {
+        String normType = getNormalizationStringOption();
+        if (normType != null && normType.length() > 1) {
+            return ds.getNormalizationHandler().getNormTypeFromString(normType);
+        } else {
+            return NormalizationHandler.SCALE;
+        }
     }
 }

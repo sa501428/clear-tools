@@ -16,7 +16,7 @@ public class EnrichmentChecker {
                                               NormalizationType norm) {
 
         List<BoundingBoxWithContacts> boxes = getBoundingBoxes(scalar,
-                NMSUtils.getLocationMap(initialPoints, scalar * 200));
+                NMSUtils.getLocationMap(initialPoints, scalar * 250));
 
         for (BoundingBoxWithContacts box : boxes) {
             Set<ContactRecord> toRemove = box.findPointsNotEnriched(zdLow, norm);

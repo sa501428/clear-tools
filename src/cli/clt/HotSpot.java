@@ -31,9 +31,6 @@ public class HotSpot {
     private static final float ZSCORE_CUTOFF = 2f;
 
     private static void printUsageAndExit() {
-        /* example print: ("apa [--min-dist minval] [--max-dist max_val] [--window window] [-r resolution]" +
-                " [-k NONE/VC/VC_SQRT/KR] [--corner-width corner_width] [--include-inter include_inter_chr] [--ag-norm]" +
-                " <input.hic> <loops.bedpe> <outfile>"); */
         System.out.println("hotspot [--res resolution] [--norm normalization] <file1.hic,file2.hic,...> <out_file>");
         System.exit(19);
     }
@@ -59,7 +56,7 @@ public class HotSpot {
         }
 
         NormalizationType norm = datasets[0].getNormalizationHandler().getNormTypeFromString(normString);
-        Chromosome[] chromosomes = datasets[0].getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
+        Chromosome[] chromosomes = datasets[0].getChromosomeHandler().getAutosomalChromosomesArray();
         AtomicInteger cIndex = new AtomicInteger(0);
         // this code can be commented out when running small-scale tests on local machine
 
@@ -174,7 +171,7 @@ public class HotSpot {
                                                 NormalizationType norm,
                                                 Map<SimpleLocation, Welford> results) {
 
-        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin);
+        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin, false, 0);
 
         Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
         while (iterator.hasNext()) {

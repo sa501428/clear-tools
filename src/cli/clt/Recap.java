@@ -49,10 +49,8 @@ public class Recap {
         // names = [name1, name2, ...]
         String[] filepaths = args[3].split(",");
         String[] names = args[4].split(",");
-
-        // create a hic dataset object from file1
-        Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[0], false, false,
-                true);
+        
+        Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[0], false, false, true);
 
 
         // grabs chromosomes...
@@ -90,23 +88,21 @@ public class Recap {
             resolution = 1000;
         }
         System.out.println("Using resolution: " + resolution);
-
-
-        // same thing as above, but for window size...
-        // todo: what is window size again? to clarify
+        boolean isDeepLoopAnalysis = parser.getIsLoopAnalysis();
+        
         int window = parser.getWindowSizeOption(0);
         if (window < 1) {
-            window = 5;
+            if (isDeepLoopAnalysis) {
+                window = 10;
+            } else {
+                window = 1;
+            }
         }
-
-
-        boolean isDeepLoopAnalysis = parser.getIsLoopAnalysis();
-
-        //
+        
         Feature2DList refinedLoops = recapStats(filepaths, names, loopList, handler, resolution, window, norm, isDeepLoopAnalysis);
         refinedLoops.exportFeatureList(new File(outFolder, "recap.bedpe"), false, Feature2DList.ListFormat.NA);
-        RecapTools.exportAllMatrices(refinedLoops, names, outFolder, isDeepLoopAnalysis, window);
-        System.out.println("pinpoint complete");
+        RecapTools.exportAllMatrices(handler.getChromosomeArrayWithoutAllByAll(), refinedLoops, names, outFolder, isDeepLoopAnalysis, window);
+        System.out.println("recap complete");
     }
 
     private static Feature2DList recapStats(String[] filepaths, String[] names, Feature2DList loopList,
@@ -132,7 +128,7 @@ public class Recap {
 
         for (int di = 0; di < filepaths.length; di++) {
 
-            System.out.println("File: " + filepaths[di]);
+            System.out.println("File (" + (di + 1) + "/" + filepaths.length + "): " + filepaths[di]);
 
             final Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[di], false, false,
                     true);
@@ -149,12 +145,10 @@ public class Recap {
                     RegionConfiguration config = chromosomePairs.get(threadPair);
                     Chromosome chrom1 = config.getChr1();
                     Chromosome chrom2 = config.getChr2();
-
-         
-
+                    
                     List<Feature2D> loops = loopList.get(chrom1.getIndex(), chrom2.getIndex());
                     if (loops != null && loops.size() > 0) {
-                        Matrix matrix = ds.getMatrix(chrom1, chrom2);
+                        Matrix matrix = ds.getMatrix(chrom1, chrom2, resolution);
                         if (matrix == null) {
                             System.err.println("Matrix is null " + chrom1.getName() + "_" + chrom2.getName());
                             System.exit(9);
@@ -168,10 +162,10 @@ public class Recap {
                         }
 
                         int maxBinDist = Math.max(getMaxDistance(loops, resolution, window), 9000000 / resolution);
-                        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBinDist);
+                        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBinDist, false, 0);
 
                         float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, expected);
-                        double superDiagonal = expected.getExpFromBin(1);
+                        double superDiagonal = expected.getExpFromUncompressedBin(1);
 
                         try {
                             for (Feature2D loop : loops) {
@@ -187,7 +181,7 @@ public class Recap {
                                     loop.addStringAttribute(prefix + akey, attributes.get(akey));
                                 }
 
-                                if (currNumLoops.incrementAndGet() % 100 == 0) {
+                                if (currNumLoops.incrementAndGet() % 1000 == 0) {
                                     System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                                 }
                             }
@@ -221,6 +215,6 @@ public class Recap {
     }
 
     private static float getMedianExpectedAt(int d0, LogExpectedModel expectedVector) {
-        return (float) expectedVector.getExpFromBin(d0);
+        return (float) expectedVector.getExpFromUncompressedBin(d0);
     }
 }

@@ -142,7 +142,7 @@ public class Utils {
                 long X = relativeX + binXStart;
                 long Y = relativeY + binYStart;
                 int dist = (int) Math.abs(X - Y);
-                double expected = expectedVector.getExpFromBin(dist);
+                double expected = expectedVector.getExpFromUncompressedBin(dist);
                 matrix[relativeX][relativeY] = (float) expected;
             }
         }
