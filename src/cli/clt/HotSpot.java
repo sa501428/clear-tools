@@ -25,9 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class HotSpot {
     private static final int MAX_DIST = 10000000;
-    private static final int MIN_DIST = 25000;
+    private static final int MIN_DIST = 100000;
 
-    // The Z-Score Cutoff is currently hardcoded at 1.65, which has a confidence interval of __%
+    // The Z-Score Cutoff is currently hardcoded at 2, which has a confidence interval of 97.72%
     private static final float ZSCORE_CUTOFF = 2f;
 
     private static void printUsageAndExit() {
@@ -49,6 +49,13 @@ public class HotSpot {
 
         final Feature2DList result = new Feature2DList();
 
+        final int countThreshold;
+        if (files.length > 3) {
+            countThreshold = 3;
+        } else {
+            countThreshold = 2;
+        }
+
         Dataset[] datasets = new Dataset[files.length];
         for (int k = 0; k < files.length; k++) {
             datasets[k] = HiCFileTools.extractDatasetForCLT(files[k],
@@ -58,18 +65,20 @@ public class HotSpot {
         NormalizationType norm = datasets[0].getNormalizationHandler().getNormTypeFromString(normString);
         Chromosome[] chromosomes = datasets[0].getChromosomeHandler().getAutosomalChromosomesArray();
         AtomicInteger cIndex = new AtomicInteger(0);
-        // this code can be commented out when running small-scale tests on local machine
 
         ParallelizationTools.launchParallelizedCode(() -> {
             int currIndex = cIndex.getAndIncrement();
             while (currIndex < chromosomes.length) {
                 Chromosome chrom = chromosomes[currIndex];
-                List<Feature2D> hotspots = findTheHotspots(chrom, datasets, resolution, norm);
+                // for iterating on chr17 alone
+                // if (chrom.getIndex() == 17) {...
+                List<Feature2D> hotspots = findTheHotspots(chrom, datasets, resolution, norm, countThreshold);
                 if (hotspots.size() > 0) {
                     synchronized (result) {
                         result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
                     }
                 }
+                // ... }
                 currIndex = cIndex.getAndIncrement();
             }
         });
@@ -79,7 +88,7 @@ public class HotSpot {
     }
 
     private static List<Feature2D> findTheHotspots(Chromosome chrom, Dataset[] datasets, int resolution,
-                                                   NormalizationType norm) {
+                                                   NormalizationType norm, int countThreshold) {
         Map<SimpleLocation, Welford> results = new HashMap<>();
         int minBin = MIN_DIST / resolution;
         int maxBin = MAX_DIST / resolution;
@@ -100,7 +109,13 @@ public class HotSpot {
             }
 
             // iterating through chrom using type 1 iteration
-            iterateThruAllTheValues(zd, maxBin, minBin, norm, results);
+            NormalizationType scaleNorm = ds.getNormalizationHandler().getNormTypeFromString("SCALE");
+            NormalizationType vcNorm = ds.getNormalizationHandler().getNormTypeFromString("VC");
+
+            double[] vector1 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(resolution), scaleNorm).getData().getValues().get(0);
+            double[] vector2 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(resolution), vcNorm).getData().getValues().get(0);
+
+            iterateThruAndGrabPercentContact(zd, maxBin, minBin, norm, results, vector1, vector2);
             matrix.clearCache();
         }
 
@@ -109,8 +124,10 @@ public class HotSpot {
             double range = results.get(key).getRange();
             int counts = (int) results.get(key).getCounts();
             double min = results.get(key).getMin();
+            double max = results.get(key).getMax();
             //value.addZeroIfBelow(files.length);
-            if (range < .005 || range > 0.5 || counts < 2 || min > .001) {
+
+            if (range < .05 || range > 0.35 || counts < countThreshold || min > .05 || max > 0.35) {
                 removeList.add(key);
             }
             //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
@@ -130,46 +147,72 @@ public class HotSpot {
 
         removeList.clear();
 
+
         List<Feature2D> hotspots = new ArrayList<>();
         if (results.values().size() > 1) {
-            Zscore zscore = getOverallZscoreMetric(results.values());
+
+            // comment out below in order to use Z-Score Cutoff
             for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
+
                 Welford welford = entry.getValue();
-                if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
-                    Map<String, String> attributes = new HashMap<>();
-                    attributes.put("sigma", "" + welford.getStdDev());
-                    attributes.put("range", "" + welford.getRange());
-                    attributes.put("min", "" + welford.getMin());
-                    attributes.put("max", "" + welford.getMax());
-                    long startX = (long) entry.getKey().getBinX() * resolution;
-                    long endX = startX + resolution;
-                    long startY = (long) entry.getKey().getBinY() * resolution;
-                    long endY = startY + resolution;
-                    Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
-                    hotspots.add(feature);
-                }
+                Map<String, String> attributes = new HashMap<>();
+                attributes.put("sigma", "" + welford.getStdDev());
+                attributes.put("range", "" + welford.getRange());
+                attributes.put("min", "" + welford.getMin());
+                attributes.put("max", "" + welford.getMax());
+                long startX = (long) entry.getKey().getBinX() * resolution;
+                long endX = startX + resolution;
+                long startY = (long) entry.getKey().getBinY() * resolution;
+                long endY = startY + resolution;
+                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
+                hotspots.add(feature);
+
             }
+            // comment out ^
+
+//            // uncomment below in order to use Z-Score Cutoff
+//            Zscore zscore = getOverallZscoreMetric(results.values());
+//            for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
+//                Welford welford = entry.getValue();
+//                if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
+//                    //if (zscore.getZscore(welford.getRange()) >= ZSCORE_CUTOFF) {
+//                    Map<String, String> attributes = new HashMap<>();
+//                    attributes.put("sigma", "" + welford.getStdDev());
+//                    attributes.put("range", "" + welford.getRange());
+//                    attributes.put("min", "" + welford.getMin());
+//                    attributes.put("max", "" + welford.getMax());
+//                    long startX = (long) entry.getKey().getBinX() * resolution;
+//                    long endX = startX + resolution;
+//                    long startY = (long) entry.getKey().getBinY() * resolution;
+//                    long endY = startY + resolution;
+//                    Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
+//                    hotspots.add(feature);
+//                }
+//            }
+//            // uncomment ^
+
         }
 
         int n4 = hotspots.size();
         System.out.println("Hotspots " + chrom.getName() + " pre-filter: " + n1 +
                 " removed: " + n2 + " post-filter: " + n3 + " final: " + n4);
-        return hotspots;
+        //return hotspots;
+        return coalesceAndRetainCentroids(new HashSet<>(hotspots), 3 * resolution);
     }
 
     private static Zscore getOverallZscoreMetric(Collection<Welford> values) {
         Welford overallWelford = new Welford();
         for (Welford welford : values) {
-            //overallWelford.addValue(welford.getStdDev());
-            overallWelford.addValue(welford.getRange());
+            overallWelford.addValue(welford.getStdDev());
+            //overallWelford.addValue(welford.getRange());
         }
         System.out.println("Overall welford: " + overallWelford.getSummary());
         return overallWelford.getZscore();
     }
 
-    private static void iterateThruAllTheValues(MatrixZoomData zd, int maxBin, int minBin,
-                                                NormalizationType norm,
-                                                Map<SimpleLocation, Welford> results) {
+    private static void iterateThruAndGrabPercentContact(MatrixZoomData zd, int maxBin, int minBin,
+                                                         NormalizationType norm,
+                                                         Map<SimpleLocation, Welford> results, double[] vector1, double[] vector2) {
 
         LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin, false, 0);
 
@@ -178,18 +221,57 @@ public class HotSpot {
             ContactRecord cr = iterator.next();
             if (cr.getCounts() > 0) {
                 int dist = ExpectedUtils.getDist(cr);
-                if (dist > minBin && dist < maxBin) {
-                    float percentContact = expected.getPercentContact(dist, cr.getCounts());
-                    percentContact = Math.min(1, Math.max(0, percentContact));
-                    //percentContact2 = Math.exp(percentContact0 - 1);
+                if (vector1[cr.getBinX()] > 1 && vector1[cr.getBinY()] > 1 && vector2[cr.getBinX()] > 1 && vector2[cr.getBinY()] > 1) {
+                    if (dist > minBin && dist < maxBin) {
+                        float percentContact = expected.getPercentContact(dist, cr.getCounts());
+                        percentContact = Math.min(1, Math.max(0, percentContact));
+                        //percentContact2 = Math.exp(percentContact0 - 1);
 
-                    SimpleLocation location = new SimpleLocation(cr);
-                    results.putIfAbsent(location, new Welford());
-                    results.get(location).addValue(percentContact);
+                        SimpleLocation location = new SimpleLocation(cr);
+                        results.putIfAbsent(location, new Welford());
+                        results.get(location).addValue(percentContact);
+                    }
                 }
             }
         }
         System.out.print(".");
         //System.out.println("Finished recording locations for this file");
+    }
+
+    public static List<Feature2D> coalesceAndRetainCentroids(Set<Feature2D> features, int gRadius) {
+        // HashSet intermediate for removing duplicates
+        // LinkedList used so that we can pop out highest obs values
+        LinkedList<Feature2D> featureLL = new LinkedList<>(features);
+        List<Feature2D> coalesced = new ArrayList<>();
+
+        //possible alternative: compare by max
+        featureLL.sort((o1, o2) -> Double.compare(Double.parseDouble(o1.getAttribute("max")), Double.parseDouble(o2.getAttribute("max"))));
+        Collections.reverse(featureLL);
+
+
+        while (!featureLL.isEmpty()) {
+            Feature2D pixel = featureLL.pollFirst();
+            if (pixel != null) {
+                coalesced.add(pixel);
+                featureLL.remove(pixel);
+                long x = pixel.getMidPt1();
+                long y = pixel.getMidPt2();
+
+                Set<Feature2D> toRemove = new HashSet<>();
+                for (Feature2D px : featureLL) {
+                    if (distance(x - px.getMidPt1(),
+                            y - px.getMidPt2()) <= gRadius) {
+                        toRemove.add(px);
+                    }
+                }
+                featureLL.removeAll(toRemove);
+            }
+        }
+        features.clear();
+        return coalesced;
+    }
+
+    public static long distance(long x, long y) {
+        return Math.max(Math.abs(x), Math.abs(y));
     }
 }
