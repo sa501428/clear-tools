@@ -7,7 +7,7 @@ import java.util.*;
 
 public class SiftUtils {
     public static void coalesceAndRetainCentroids(Set<ContactRecord> features,
-                                                  int resolution, int gRadius) {
+                                                  int binRadius) {
         // HashSet intermediate for removing duplicates
         // LinkedList used so that we can pop out highest obs values
         LinkedList<ContactRecord> featureLL = new LinkedList<>(features);
@@ -15,8 +15,6 @@ public class SiftUtils {
 
         featureLL.sort((o1, o2) -> Float.compare(o1.getCounts(), o2.getCounts()));
         Collections.reverse(featureLL);
-
-        int clusterRadius = gRadius / resolution;
 
         while (!featureLL.isEmpty()) {
             ContactRecord pixel = featureLL.pollFirst();
@@ -29,7 +27,7 @@ public class SiftUtils {
                 Set<ContactRecord> toRemove = new HashSet<>();
                 for (ContactRecord px : featureLL) {
                     if (FusionUtils.distance(x - px.getBinX(),
-                            y - px.getBinY()) <= clusterRadius) {
+                            y - px.getBinY()) <= binRadius) {
                         toRemove.add(px);
                     }
                 }
