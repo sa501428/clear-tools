@@ -64,7 +64,7 @@ public class ExtremePixels {
             if (cr.getCounts() > 1) {
                 int dist = ExpectedUtils.getDist(cr);
                 if (dist > minBin && dist < maxBin) {
-                    dist = LogExpectedModel.logp1i(dist);
+                    dist = model.logp1i(dist);
                     float zscore = zScores.getZscore(dist, LogExpectedModel.logp1(cr.getCounts()));
                     if (zscore > HIRES_ZSCORE_CUTOFF) {
                         records.add(cr);
@@ -107,7 +107,7 @@ public class ExtremePixels {
                         if (denomScale > 1 && nv1 > 1 && nv2 > 1) {
                             double valScale = (cr.getCounts() / denomScale);
                             if (valScale > 1) {
-                                dist = LogExpectedModel.logp1i(dist);
+                                dist = model.logp1i(dist);
                                 valScale = LogExpectedModel.logp1(valScale);
                                 if (zScores.getZscore(dist, valScale) > LOWRES_ZSCORE_CUTOFF) {
                                     records.add(new SimpleLocation(cr));

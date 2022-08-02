@@ -13,6 +13,7 @@ public class LogExpectedModel {
 
     private final WelfordStats stats;
     private final double[] compressedExpected;
+    private double logBase = 1;
 
     public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, boolean useNone, int minVal) {
         stats = getSummaryStats(zd, maxBinDist, useNone, minVal, norm);
@@ -20,10 +21,17 @@ public class LogExpectedModel {
         compressedExpected = expm1(compressedLogExpected);
     }
 
-    private static WelfordStats getSummaryStats(MatrixZoomData zd, int maxBin, boolean useNone, int minVal,
-                                                NormalizationType norm) {
+    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, boolean useNone, int minVal, float base) {
+        this.logBase = Math.log(base);
+        stats = getSummaryStats(zd, maxBinDist, useNone, minVal, norm);
+        double[] compressedLogExpected = stats.getMean();
+        compressedExpected = expm1(compressedLogExpected);
+    }
 
-        int maxCompressedBin = LogExpectedModel.logp1i(maxBin) + 1;
+    private WelfordStats getSummaryStats(MatrixZoomData zd, int maxBin, boolean useNone, int minVal,
+                                         NormalizationType norm) {
+
+        int maxCompressedBin = logp1i(maxBin) + 1;
         //int minCompressedBin = LogExpectedModel.logp1i(minBin);
 
         WelfordStats stats = new WelfordStats(maxCompressedBin);
@@ -47,9 +55,9 @@ public class LogExpectedModel {
         return stats;
     }
 
-    public static int logp1i(int x) {
+    public int logp1i(int x) {
         // todo: remove this difference
-        return (int) Math.floor(Math.log(1 + x) / Math.log(1.5));
+        return (int) Math.floor(Math.log(1 + x) / logBase);
     }
 
     public static double logp1(double x) {

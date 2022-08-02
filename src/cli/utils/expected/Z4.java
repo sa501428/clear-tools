@@ -1,14 +1,10 @@
 package cli.utils.expected;
 
-import cli.utils.ExpectedUtils;
 import cli.utils.WelfordStats;
-import cli.utils.sift.Z4Scores;
 import javastraw.reader.block.ContactRecord;
-import javastraw.reader.mzd.MatrixZoomData;
-
-import java.util.Iterator;
 
 public class Z4 {
+    /*
     private static Z4Scores getZ4scores(MatrixZoomData zd, int length,
                                         double[] nvVC, double[] nvVCSqrt, double[] nvSCALE) {
         WelfordStats rawStats = new WelfordStats(length);
@@ -31,6 +27,7 @@ public class Z4 {
         }
         return new Z4Scores(rawStats, vcStats, vcSqrtStats, scaleStats);
     }
+    */
 
     private static void populateNormedStats(ContactRecord cr, double[] norm, WelfordStats stats, int dist) {
         double denom = norm[cr.getBinX()] * norm[cr.getBinY()];
