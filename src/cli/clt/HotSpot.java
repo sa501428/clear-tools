@@ -118,9 +118,16 @@ public class HotSpot {
         }
 
         initialHighIntensityFilter(results, countThreshold);
-        Set<ContactRecord> records = convert(results.keySet(), results);
+
+        Set<ContactRecord> candidateHotSpotsSet = secondPassLowRangeFilter(results);
+        Set<ContactRecord> ubiquitousPeaksSet = findUbiquitousLoops(results);
+
+        Set<ContactRecord> records = new HashSet<>(candidateHotSpotsSet);
+        records.addAll(ubiquitousPeaksSet);
+        // records is currently the union of the candidateHotSpotsSet and ubiquitousPeaksSet
         SiftUtils.coalesceAndRetainCentroids(records, 30000 / resolution);
-        secondPassLowRangeFilter(results, records);
+        records.removeAll(ubiquitousPeaksSet);
+        // now records is the final set of hotspots (as ContactRecords)
 
         List<Feature2D> hotspots = new ArrayList<>();
         if (records.size() > 1) {
@@ -139,18 +146,37 @@ public class HotSpot {
         return hotspots;
     }
 
-    private static void secondPassLowRangeFilter(Map<SimpleLocation, Welford> results, Set<ContactRecord> records) {
-        List<ContactRecord> toRemove = new ArrayList<>();
-        for (ContactRecord record : records) {
-            SimpleLocation key = new SimpleLocation(record.getBinX(), record.getBinY());
+    private static Set<ContactRecord> findUbiquitousLoops(Map<SimpleLocation, Welford> results) {
+        Set<ContactRecord> ubiquitousLoopsSet = new HashSet<>();
+        for (SimpleLocation key : results.keySet()) {
             double range = results.get(key).getRange();
             double min = results.get(key).getMin();
-            if (range < .05 || min > .05) {
-                results.remove(key);
-                toRemove.add(record);
+            if (range < .05 && min > .05) {
+                ubiquitousLoopsSet.add(new ContactRecord(key.getBinX(), key.getBinY(),
+                        (float) results.get(key).getMax()));
             }
         }
-        toRemove.forEach(records::remove);
+        return ubiquitousLoopsSet;
+    }
+
+    private static Set<ContactRecord> secondPassLowRangeFilter(Map<SimpleLocation, Welford> results) {
+        Set<ContactRecord> candidateRecordsSet = new HashSet<>();
+        for (SimpleLocation key : results.keySet()) {
+            double range = results.get(key).getRange();
+            double min = results.get(key).getMin();
+            if (range > .05 && min < .05) {
+                candidateRecordsSet.add(new ContactRecord(key.getBinX(), key.getBinY(),
+                        (float) results.get(key).getMax()));
+            }
+
+            /*
+            if (range < .05 || min > .05) {
+                results.remove(key);
+                removeList.add(key);
+            }
+            */
+        }
+        return candidateRecordsSet;
     }
 
     private static void initialHighIntensityFilter(Map<SimpleLocation, Welford> results, int countThreshold) {
@@ -191,6 +217,7 @@ public class HotSpot {
         return attributes;
     }
 
+    /*
     private static Zscore getOverallZscoreMetric(Collection<Welford> values) {
         Welford overallWelford = new Welford();
         for (Welford welford : values) {
@@ -200,6 +227,7 @@ public class HotSpot {
         System.out.println("Overall welford: " + overallWelford.getSummary());
         return overallWelford.getZscore();
     }
+     */
 
     private static void iterateThruAndGrabPercentContact(MatrixZoomData zd, int maxBin, int minBin,
                                                          NormalizationType norm,
@@ -229,7 +257,10 @@ public class HotSpot {
         //System.out.println("Finished recording locations for this file");
     }
 
+    /*
     public static long distance(long x, long y) {
         return Math.max(Math.abs(x), Math.abs(y));
     }
+    */
+
 }
