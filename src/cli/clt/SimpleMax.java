@@ -80,8 +80,7 @@ public class SimpleMax {
                                 List<Feature2D> newLoops = new ArrayList<>();
                                 for (Feature2D loop : loops) {
                                     // loop through the looplist
-                                    Feature2D newLoop = getTheMaxPixel(loop, zd, resolution);
-                                    newLoops.add(newLoop);
+                                    getTheMaxPixel(loop, zd, resolution, newLoops);
                                 }
                                 synchronized (finalLoopList) {
                                     finalLoopList.addByKey(Feature2DList.getKey(chrom1, chrom1), newLoops);
@@ -102,72 +101,22 @@ public class SimpleMax {
         return finalLoopList;
     }
 
-    private static Feature2D getTheMaxPixel(Feature2D loop, MatrixZoomData zd, int resolution) {
-        // todo Justin
-        // type 2 access of the hic data
-        // loop has genome coordinates
-        // grab the matrix corresponding the loop
-        // find the max pixel when there is no NONE normalization
-        // find the max pixel when there is VC normalization
-        // ideally these should be the same
-        // if they are not, print them out and let's debug
-        // if they are, make a new loop based on this new location
-
+    private static void getTheMaxPixel(Feature2D loop, MatrixZoomData zd, int resolution, List<Feature2D> newLoops) {
         // Initialize variables
-        long binXStart = loop.getStart2() / resolution;
-        long binYStart = loop.getStart1() / resolution;
-        long binXEnd = loop.getEnd2() / resolution;
-        long binYEnd = loop.getEnd1() / resolution;
-
-        /*
-        PREVIOUSLY:
         long binXStart = loop.getStart1() / resolution;
-        long binYStart = loop.getEnd1() / resolution;
-        long binXEnd = loop.getStart2() / resolution;
-        long binYEnd = loop.getEnd2() / resolution;
-         */
+        long binYStart = loop.getStart2() / resolution;
+        long binXEnd = (loop.getEnd1() / resolution) + 1;
+        long binYEnd = (loop.getEnd2() / resolution) + 1;
+
         boolean getDataUnderDiagonal = true;
 
-        // VC normalization
         List<Block> blocksVC = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, VC, getDataUnderDiagonal);
-        float counts = 0;
-        int[] binCoordsVC = new int[2];
-        for (Block b : blocksVC) {
-            if (b != null) {
-                for (ContactRecord rec : b.getContactRecords()) {
-                    if (rec.getCounts() > 0) { // will skip NaNs
-                        // can choose to use the BIN coordinates
-                        // int binX = rec.getBinX();
-                        // int binY = rec.getBinY();
-                        if (rec.getCounts() > counts) {
-                            counts = rec.getCounts();
-                            binCoordsVC[0] = rec.getBinX();
-                            binCoordsVC[1] = rec.getBinY();
-                        }
-                    }
-                }
-            }
-        }
+        int[] binCoordsVC = getMaxPixelInBox(blocksVC, binXStart, binYStart, binXEnd, binYEnd);
+        blocksVC.clear();
 
-        // NONE normalization
         List<Block> blocksNONE = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, NONE, getDataUnderDiagonal);
-        // reset counts back to 0
-        // we can reuse variable since we only care about bin #
-        counts = 0;
-        int[] binCoordsNONE = new int[2];
-        for (Block b : blocksNONE) {
-            if (b != null) {
-                for (ContactRecord rec : b.getContactRecords()) {
-                    if (rec.getCounts() > 0) { // will skip NaNs
-                        if (rec.getCounts() > counts) {
-                            counts = rec.getCounts();
-                            binCoordsNONE[0] = rec.getBinX();
-                            binCoordsNONE[1] = rec.getBinY();
-                        }
-                    }
-                }
-            }
-        }
+        int[] binCoordsNONE = getMaxPixelInBox(blocksNONE, binXStart, binYStart, binXEnd, binYEnd);
+        blocksNONE.clear();
 
         if (binCoordsNONE[0] != binCoordsVC[0] || binCoordsNONE[1] != binCoordsVC[1]) {
             System.out.println("ERROR, NONE AND VC REPORT DIFFERENT MAX PIXELS");
@@ -181,60 +130,47 @@ public class SimpleMax {
             long endX_NONE = startX_NONE + resolution;
             long startY_NONE = (long) binCoordsNONE[1] * resolution;
             long endY_NONE = startY_NONE + resolution;
-            Feature2D feature = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX_VC, endX_VC, loop.getChr2(), startY_VC, endY_VC, Color.BLACK, loop.getAttributes());
+            Feature2D feature_VC = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX_VC, endX_VC,
+                    loop.getChr2(), startY_VC, endY_VC, Color.RED, loop.getAttributes());
+            Feature2D feature_NONE = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX_NONE, endX_NONE,
+                    loop.getChr2(), startY_NONE, endY_NONE, Color.BLUE, loop.getAttributes());
 
-            /*
-            System.out.println("VC Normalization: " +
-                    String.valueOf(startX_VC) + " " +
-                    String.valueOf(endX_VC)) + " " +
-                    String.valueOf(startY_VC) + " " +
-                    String.valueOf(endY_VC));
-
-
-             */
-            return feature;
+            newLoops.add(feature_VC);
+            newLoops.add(feature_NONE);
         } else {
             // arbitrarily chose binCoordsNONE, since NONE and VC have same coordinates
             long startX = (long) binCoordsNONE[0] * resolution;
             long endX = startX + resolution;
             long startY = (long) binCoordsNONE[1] * resolution;
             long endY = startY + resolution;
-            Feature2D feature = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX, endX, loop.getChr2(), startY, endY, Color.BLACK, loop.getAttributes());
-            return feature;
+            Feature2D feature = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX, endX,
+                    loop.getChr2(), startY, endY, Color.BLACK, loop.getAttributes());
+            newLoops.add(feature);
         }
     }
 
-        /*
-    private List<Feature2D> locationsOfMaxVals(int resolution, Chromosome chromosome,
-                                               Dataset ds, List<Feature2D> feature2DList,
-                                               NormalizationType norm) {
-        List<Feature2D> newList = new ArrayList<>();
-        Matrix matrix = ds.getMatrix(chromosome, chromosome);
-        MatrixZoomData zd = matrix.getZoomData(new HiCZoom(HiCZoom.HiCUnit.BP, resolution));
-
-        for (Feature2D loop : feature2DList) {
-            long start1 = loop.getStart1() / resolution - 1;
-            long start2 = loop.getStart2() / resolution - 1;
-            long end1 = loop.getEnd1() / resolution + 1;
-            long end2 = loop.getEnd2() / resolution + 1;
-
-            try {
-                double[][] data = HiCFileTools.extractLocalBoundedRegion(zd, start1, end1,
-                        start2, end2, (int) (end1 - start1), (int) (end2 - start2),
-                        norm, false).getData();
-                System.out.println(chromosome.getName());
-                System.out.println(start1 * resolution + " " + end1 * resolution);
-                System.out.println(start2 * resolution + " " + end2 * resolution);
-                System.out.println();
-
-                System.exit(6);
-            } catch (Exception e) {
-                e.printStackTrace();
+    private static int[] getMaxPixelInBox(List<Block> blocks, long binXStart, long binYStart, long binXEnd, long binYEnd) {
+        float maxCounts = 0;
+        int[] coordinates = new int[2];
+        for (Block b : blocks) {
+            if (b != null) {
+                for (ContactRecord rec : b.getContactRecords()) {
+                    if (inBounds(rec, binXStart, binYStart, binXEnd, binYEnd)) {
+                        if (rec.getCounts() > maxCounts) { // will skip NaNs
+                            maxCounts = rec.getCounts();
+                            coordinates[0] = rec.getBinX();
+                            coordinates[1] = rec.getBinY();
+                        }
+                    }
+                }
             }
         }
-        return newList;
+        return coordinates;
     }
 
-
-         */
+    private static boolean inBounds(ContactRecord rec, long binXStart, long binYStart, long binXEnd, long binYEnd) {
+        int x = rec.getBinX();
+        int y = rec.getBinY();
+        return x >= binXStart && x < binXEnd && y >= binYStart && y < binYEnd;
+    }
 }
