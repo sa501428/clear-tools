@@ -28,9 +28,10 @@ public class Main {
                 "recap [--loop] <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
                 "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <outfile>\n" +
                 "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
-                "sift [--widow int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +
+                "sift [--window int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +
                 "seer [--res int] [--low-res int] [-k norm] [--seed seed] <file> <out_folder> <num_contacts>\n" +
-                "hack [--res int] <out_folder> <file1.hic,file2.hic,...> <name1,name2,...>");
+                "hack [--res int] <out_folder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
+                "simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
