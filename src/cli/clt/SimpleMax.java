@@ -103,6 +103,7 @@ public class SimpleMax {
 
     private static void getTheMaxPixel(Feature2D loop, MatrixZoomData zd, int resolution, List<Feature2D> newLoops) {
         // Initialize variables
+        // can assume loop from top right corner of diagoanl
         long binXStart = loop.getStart1() / resolution;
         long binYStart = loop.getStart2() / resolution;
         long binXEnd = (loop.getEnd1() / resolution) + 1;
@@ -110,14 +111,16 @@ public class SimpleMax {
 
         boolean getDataUnderDiagonal = true;
 
+        /*
         List<Block> blocksVC = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, VC, getDataUnderDiagonal);
         int[] binCoordsVC = getMaxPixelInBox(blocksVC, binXStart, binYStart, binXEnd, binYEnd);
         blocksVC.clear();
-
+         */
         List<Block> blocksNONE = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, NONE, getDataUnderDiagonal);
         int[] binCoordsNONE = getMaxPixelInBox(blocksNONE, binXStart, binYStart, binXEnd, binYEnd);
         blocksNONE.clear();
 
+        /*
         if (binCoordsNONE[0] != binCoordsVC[0] || binCoordsNONE[1] != binCoordsVC[1]) {
             System.out.println("ERROR, NONE AND VC REPORT DIFFERENT MAX PIXELS");
             // debugging below time
@@ -130,23 +133,27 @@ public class SimpleMax {
             long endX_NONE = startX_NONE + resolution;
             long startY_NONE = (long) binCoordsNONE[1] * resolution;
             long endY_NONE = startY_NONE + resolution;
+            // check to make sure loop is created in top right corner
+            // auto correct only happens earlier
             Feature2D feature_VC = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX_VC, endX_VC,
-                    loop.getChr2(), startY_VC, endY_VC, Color.RED, loop.getAttributes());
+                    loop.getChr2(), startY_VC, endY_VC, Color.YELLOW, loop.getAttributes());
             Feature2D feature_NONE = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX_NONE, endX_NONE,
                     loop.getChr2(), startY_NONE, endY_NONE, Color.BLUE, loop.getAttributes());
 
             newLoops.add(feature_VC);
             newLoops.add(feature_NONE);
-        } else {
-            // arbitrarily chose binCoordsNONE, since NONE and VC have same coordinates
-            long startX = (long) binCoordsNONE[0] * resolution;
-            long endX = startX + resolution;
-            long startY = (long) binCoordsNONE[1] * resolution;
-            long endY = startY + resolution;
-            Feature2D feature = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX, endX,
-                    loop.getChr2(), startY, endY, Color.BLACK, loop.getAttributes());
-            newLoops.add(feature);
         }
+        else {
+         */
+        // arbitrarily chose binCoordsNONE, since NONE and VC have same coordinates
+        long startX = (long) binCoordsNONE[0] * resolution;
+        long endX = startX + resolution;
+        long startY = (long) binCoordsNONE[1] * resolution;
+        long endY = startY + resolution;
+        Feature2D feature = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX, endX,
+                loop.getChr2(), startY, endY, Color.BLACK, loop.getAttributes());
+        newLoops.add(feature);
+
     }
 
     private static int[] getMaxPixelInBox(List<Block> blocks, long binXStart, long binYStart, long binXEnd, long binYEnd) {
@@ -155,6 +162,7 @@ public class SimpleMax {
         for (Block b : blocks) {
             if (b != null) {
                 for (ContactRecord rec : b.getContactRecords()) {
+                    // try checking if bounds fixed bug
                     if (inBounds(rec, binXStart, binYStart, binXEnd, binYEnd)) {
                         if (rec.getCounts() > maxCounts) { // will skip NaNs
                             maxCounts = rec.getCounts();
