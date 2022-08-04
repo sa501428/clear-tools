@@ -120,7 +120,7 @@ public class Sift {
         Set<ContactRecord> finalPoints = getPointsWithMoreThan(countsForRecord, 2);
         countsForRecord.clear();
 
-        SiftUtils.coalesceAndRetainCentroids(finalPoints, hiRes, 5000);
+        SiftUtils.coalesceAndRetainCentroids(finalPoints, 5000 / hiRes);
         if (Main.printVerboseComments) System.out.println("Num loops after final filter " + finalPoints.size());
         return convertToFeature2Ds(finalPoints, chromosome, chromosome, hiRes);
     }

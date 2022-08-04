@@ -3,6 +3,7 @@ package cli.clt;
 import cli.utils.ExpectedUtils;
 import cli.utils.Welford;
 import cli.utils.expected.LogExpectedModel;
+import cli.utils.sift.SiftUtils;
 import cli.utils.sift.SimpleLocation;
 import cli.utils.sift.Zscore;
 import javastraw.feature2D.Feature2D;
@@ -70,15 +71,12 @@ public class HotSpot {
             int currIndex = cIndex.getAndIncrement();
             while (currIndex < chromosomes.length) {
                 Chromosome chrom = chromosomes[currIndex];
-                // for iterating on chr17 alone
-                // if (chrom.getIndex() == 17) {...
                 List<Feature2D> hotspots = findTheHotspots(chrom, datasets, resolution, norm, countThreshold);
                 if (hotspots.size() > 0) {
                     synchronized (result) {
                         result.addByKey(Feature2DList.getKey(chrom, chrom), hotspots);
                     }
                 }
-                // ... }
                 currIndex = cIndex.getAndIncrement();
             }
         });
@@ -119,87 +117,107 @@ public class HotSpot {
             matrix.clearCache();
         }
 
+        initialHighIntensityFilter(results, countThreshold);
+
+        Set<ContactRecord> candidateHotSpotsSet = secondPassLowRangeFilter(results);
+        Set<ContactRecord> ubiquitousPeaksSet = findUbiquitousLoops(results);
+
+        Set<ContactRecord> records = new HashSet<>(candidateHotSpotsSet);
+        records.addAll(ubiquitousPeaksSet);
+        // records is currently the union of the candidateHotSpotsSet and ubiquitousPeaksSet
+        SiftUtils.coalesceAndRetainCentroids(records, 30000 / resolution);
+        records.removeAll(ubiquitousPeaksSet);
+        // now records is the final set of hotspots (as ContactRecords)
+
+        List<Feature2D> hotspots = new ArrayList<>();
+        if (records.size() > 1) {
+            for (ContactRecord record : records) {
+                SimpleLocation location = new SimpleLocation(record.getBinX(), record.getBinY());
+                Welford welford = results.get(location);
+                Map<String, String> attributes = getStats(welford);
+                long startX = (long) location.getBinX() * resolution;
+                long endX = startX + resolution;
+                long startY = (long) location.getBinY() * resolution;
+                long endY = startY + resolution;
+                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
+                hotspots.add(feature);
+            }
+        }
+        return hotspots;
+    }
+
+    private static Set<ContactRecord> findUbiquitousLoops(Map<SimpleLocation, Welford> results) {
+        Set<ContactRecord> ubiquitousLoopsSet = new HashSet<>();
+        for (SimpleLocation key : results.keySet()) {
+            double range = results.get(key).getRange();
+            double min = results.get(key).getMin();
+            if (range < .05 && min > .05) {
+                ubiquitousLoopsSet.add(new ContactRecord(key.getBinX(), key.getBinY(),
+                        (float) results.get(key).getMax()));
+            }
+        }
+        return ubiquitousLoopsSet;
+    }
+
+    private static Set<ContactRecord> secondPassLowRangeFilter(Map<SimpleLocation, Welford> results) {
+        Set<ContactRecord> candidateRecordsSet = new HashSet<>();
+        for (SimpleLocation key : results.keySet()) {
+            double range = results.get(key).getRange();
+            double min = results.get(key).getMin();
+            if (range > .05 && min < .05) {
+                candidateRecordsSet.add(new ContactRecord(key.getBinX(), key.getBinY(),
+                        (float) results.get(key).getMax()));
+            }
+
+            /*
+            if (range < .05 || min > .05) {
+                results.remove(key);
+                removeList.add(key);
+            }
+            */
+        }
+        return candidateRecordsSet;
+    }
+
+    private static void initialHighIntensityFilter(Map<SimpleLocation, Welford> results, int countThreshold) {
         List<SimpleLocation> removeList = new ArrayList<>();
         for (SimpleLocation key : results.keySet()) {
             double range = results.get(key).getRange();
             int counts = (int) results.get(key).getCounts();
-            double min = results.get(key).getMin();
             double max = results.get(key).getMax();
-            //value.addZeroIfBelow(files.length);
-
-            if (range < .05 || range > 0.35 || counts < countThreshold || min > .05 || max > 0.35) {
+            if (range > 0.35 || counts < countThreshold || max > 0.35) {
                 removeList.add(key);
             }
-            //if (entry.getValue().getCounts() < NUM_NONZERO_VALUES_THRESHOLD)
-            //    removeList.add(entry.getKey());
         }
-        int n1 = results.size();
-        int n2 = removeList.size();
-        // test print
+        removeAllAndClear(results, removeList);
+    }
 
+    private static Set<ContactRecord> convert(Set<SimpleLocation> locations, Map<SimpleLocation, Welford> results) {
+        Set<ContactRecord> records = new HashSet<>();
+        for (SimpleLocation location : locations) {
+            records.add(new ContactRecord(location.getBinX(), location.getBinY(),
+                    (float) results.get(location).getMax()));
+        }
+        return records;
+    }
 
+    private static void removeAllAndClear(Map<SimpleLocation, Welford> results, List<SimpleLocation> removeList) {
         for (SimpleLocation key : removeList) {
             results.remove(key);
         }
-        // test print
-
-        int n3 = results.size();
-
         removeList.clear();
-
-
-        List<Feature2D> hotspots = new ArrayList<>();
-        if (results.values().size() > 1) {
-
-            // comment out below in order to use Z-Score Cutoff
-            for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
-
-                Welford welford = entry.getValue();
-                Map<String, String> attributes = new HashMap<>();
-                attributes.put("sigma", "" + welford.getStdDev());
-                attributes.put("range", "" + welford.getRange());
-                attributes.put("min", "" + welford.getMin());
-                attributes.put("max", "" + welford.getMax());
-                long startX = (long) entry.getKey().getBinX() * resolution;
-                long endX = startX + resolution;
-                long startY = (long) entry.getKey().getBinY() * resolution;
-                long endY = startY + resolution;
-                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
-                hotspots.add(feature);
-
-            }
-            // comment out ^
-
-//            // uncomment below in order to use Z-Score Cutoff
-//            Zscore zscore = getOverallZscoreMetric(results.values());
-//            for (Map.Entry<SimpleLocation, Welford> entry : results.entrySet()) {
-//                Welford welford = entry.getValue();
-//                if (zscore.getZscore(welford.getStdDev()) >= ZSCORE_CUTOFF) {
-//                    //if (zscore.getZscore(welford.getRange()) >= ZSCORE_CUTOFF) {
-//                    Map<String, String> attributes = new HashMap<>();
-//                    attributes.put("sigma", "" + welford.getStdDev());
-//                    attributes.put("range", "" + welford.getRange());
-//                    attributes.put("min", "" + welford.getMin());
-//                    attributes.put("max", "" + welford.getMax());
-//                    long startX = (long) entry.getKey().getBinX() * resolution;
-//                    long endX = startX + resolution;
-//                    long startY = (long) entry.getKey().getBinY() * resolution;
-//                    long endY = startY + resolution;
-//                    Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, chrom.getName(), startX, endX, chrom.getName(), startY, endY, Color.BLACK, attributes);
-//                    hotspots.add(feature);
-//                }
-//            }
-//            // uncomment ^
-
-        }
-
-        int n4 = hotspots.size();
-        System.out.println("Hotspots " + chrom.getName() + " pre-filter: " + n1 +
-                " removed: " + n2 + " post-filter: " + n3 + " final: " + n4);
-        //return hotspots;
-        return coalesceAndRetainCentroids(new HashSet<>(hotspots), 3 * resolution);
     }
 
+    private static Map<String, String> getStats(Welford welford) {
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("sigma", "" + welford.getStdDev());
+        attributes.put("range", "" + welford.getRange());
+        attributes.put("min", "" + welford.getMin());
+        attributes.put("max", "" + welford.getMax());
+        return attributes;
+    }
+
+    /*
     private static Zscore getOverallZscoreMetric(Collection<Welford> values) {
         Welford overallWelford = new Welford();
         for (Welford welford : values) {
@@ -209,6 +227,7 @@ public class HotSpot {
         System.out.println("Overall welford: " + overallWelford.getSummary());
         return overallWelford.getZscore();
     }
+     */
 
     private static void iterateThruAndGrabPercentContact(MatrixZoomData zd, int maxBin, int minBin,
                                                          NormalizationType norm,
@@ -238,40 +257,10 @@ public class HotSpot {
         //System.out.println("Finished recording locations for this file");
     }
 
-    public static List<Feature2D> coalesceAndRetainCentroids(Set<Feature2D> features, int gRadius) {
-        // HashSet intermediate for removing duplicates
-        // LinkedList used so that we can pop out highest obs values
-        LinkedList<Feature2D> featureLL = new LinkedList<>(features);
-        List<Feature2D> coalesced = new ArrayList<>();
-
-        //possible alternative: compare by max
-        featureLL.sort((o1, o2) -> Double.compare(Double.parseDouble(o1.getAttribute("max")), Double.parseDouble(o2.getAttribute("max"))));
-        Collections.reverse(featureLL);
-
-
-        while (!featureLL.isEmpty()) {
-            Feature2D pixel = featureLL.pollFirst();
-            if (pixel != null) {
-                coalesced.add(pixel);
-                featureLL.remove(pixel);
-                long x = pixel.getMidPt1();
-                long y = pixel.getMidPt2();
-
-                Set<Feature2D> toRemove = new HashSet<>();
-                for (Feature2D px : featureLL) {
-                    if (distance(x - px.getMidPt1(),
-                            y - px.getMidPt2()) <= gRadius) {
-                        toRemove.add(px);
-                    }
-                }
-                featureLL.removeAll(toRemove);
-            }
-        }
-        features.clear();
-        return coalesced;
-    }
-
+    /*
     public static long distance(long x, long y) {
         return Math.max(Math.abs(x), Math.abs(y));
     }
+    */
+
 }
