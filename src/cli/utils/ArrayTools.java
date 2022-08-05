@@ -3,14 +3,13 @@ package cli.utils;
 public class ArrayTools {
 
     public static float getSum(float[][] matrix) {
-        double total = 0;
+        float total = 0;
         for (float[] row : matrix) {
             for (float val : row) {
                 total += val;
             }
         }
-        total /= (matrix.length * matrix[0].length);
-        return (float) total;
+        return total;
     }
 
     public static float getMax(float[][] matrix) {
