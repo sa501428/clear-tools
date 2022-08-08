@@ -10,6 +10,7 @@ import javastraw.reader.block.Block;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
+import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
@@ -24,8 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SimpleMax {
 
-    private static final NormalizationType VC = NormalizationHandler.VC;
-    private static final NormalizationType NONE = NormalizationHandler.NONE;
     public static void printUsageAndExit() {
         System.out.println("simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>");
         System.exit(7);
@@ -45,17 +44,28 @@ public class SimpleMax {
             resolution = 1000;
         }
 
+        NormalizationType norm = NormalizationHandler.NONE;
+        String possibleNorm = parser.getNormalizationStringOption();
+        if (possibleNorm != null && possibleNorm.length() > 0) {
+            try {
+                norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+            } catch (Exception e) {
+                norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
+            }
+        }
+        System.out.println("Normalization being used: " + norm.getLabel());
+
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList loopList = Feature2DParser.loadFeatures(inputBedpeFile, handler,
                 false, null, false);
 
-
-        Feature2DList localized = findSimpleMax(ds, resolution, loopList);
+        Feature2DList localized = findSimpleMax(ds, resolution, loopList, norm);
         localized.exportFeatureList(new File(outputPath), false, Feature2DList.ListFormat.NA);
         System.out.println("simple-max complete");
     }
 
-    private static Feature2DList findSimpleMax(Dataset ds, int resolution, Feature2DList loopList) {
+    private static Feature2DList findSimpleMax(Dataset ds, int resolution, Feature2DList loopList,
+                                               NormalizationType norm) {
 
         Feature2DList finalLoopList = new Feature2DList();
 
@@ -80,7 +90,7 @@ public class SimpleMax {
                                 List<Feature2D> newLoops = new ArrayList<>();
                                 for (Feature2D loop : loops) {
                                     // loop through the looplist
-                                    getTheMaxPixel(loop, zd, resolution, newLoops);
+                                    getTheMaxPixel(loop, zd, resolution, newLoops, norm);
                                 }
                                 synchronized (finalLoopList) {
                                     finalLoopList.addByKey(Feature2DList.getKey(chrom1, chrom1), newLoops);
@@ -101,9 +111,10 @@ public class SimpleMax {
         return finalLoopList;
     }
 
-    private static void getTheMaxPixel(Feature2D loop, MatrixZoomData zd, int resolution, List<Feature2D> newLoops) {
+    private static void getTheMaxPixel(Feature2D loop, MatrixZoomData zd, int resolution, List<Feature2D> newLoops,
+                                       NormalizationType norm) {
         // Initialize variables
-        // can assume loop from top right corner of diagoanl
+        // can assume loop from top right corner of diagonal
         long binXStart = loop.getStart1() / resolution;
         long binYStart = loop.getStart2() / resolution;
         long binXEnd = (loop.getEnd1() / resolution) + 1;
@@ -111,44 +122,14 @@ public class SimpleMax {
 
         boolean getDataUnderDiagonal = true;
 
-        /*
-        List<Block> blocksVC = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, VC, getDataUnderDiagonal);
-        int[] binCoordsVC = getMaxPixelInBox(blocksVC, binXStart, binYStart, binXEnd, binYEnd);
-        blocksVC.clear();
-         */
-        List<Block> blocksNONE = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, NONE, getDataUnderDiagonal);
-        int[] binCoordsNONE = getMaxPixelInBox(blocksNONE, binXStart, binYStart, binXEnd, binYEnd);
-        blocksNONE.clear();
+        List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, norm, getDataUnderDiagonal);
+        int[] binCoords = getMaxPixelInBox(blocks, binXStart, binYStart, binXEnd, binYEnd);
+        blocks.clear();
 
-        /*
-        if (binCoordsNONE[0] != binCoordsVC[0] || binCoordsNONE[1] != binCoordsVC[1]) {
-            System.out.println("ERROR, NONE AND VC REPORT DIFFERENT MAX PIXELS");
-            // debugging below time
-            long startX_VC = (long) binCoordsVC[0] * resolution;
-            long endX_VC = startX_VC + resolution;
-            long startY_VC = (long) binCoordsVC[1] * resolution;
-            long endY_VC = startY_VC + resolution;
-            // this is just for debugging:
-            long startX_NONE = (long) binCoordsNONE[0] * resolution;
-            long endX_NONE = startX_NONE + resolution;
-            long startY_NONE = (long) binCoordsNONE[1] * resolution;
-            long endY_NONE = startY_NONE + resolution;
-            // check to make sure loop is created in top right corner
-            // auto correct only happens earlier
-            Feature2D feature_VC = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX_VC, endX_VC,
-                    loop.getChr2(), startY_VC, endY_VC, Color.YELLOW, loop.getAttributes());
-            Feature2D feature_NONE = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX_NONE, endX_NONE,
-                    loop.getChr2(), startY_NONE, endY_NONE, Color.BLUE, loop.getAttributes());
-
-            newLoops.add(feature_VC);
-            newLoops.add(feature_NONE);
-        }
-        else {
-         */
         // arbitrarily chose binCoordsNONE, since NONE and VC have same coordinates
-        long startX = (long) binCoordsNONE[0] * resolution;
+        long startX = (long) binCoords[0] * resolution;
         long endX = startX + resolution;
-        long startY = (long) binCoordsNONE[1] * resolution;
+        long startY = (long) binCoords[1] * resolution;
         long endY = startY + resolution;
         Feature2D feature = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX, endX,
                 loop.getChr2(), startY, endY, Color.BLACK, loop.getAttributes());
