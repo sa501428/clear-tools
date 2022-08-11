@@ -55,7 +55,7 @@ public class ExtremePixels {
         int maxBin = MAX_DIST / hiRes;
         int minBin = MIN_DIST / hiRes;
 
-        LogExpectedModel model = new LogExpectedModel(zd, SCALE, maxBin, true, 1);
+        LogExpectedModel model = new LogExpectedModel(zd, NormalizationHandler.NONE, maxBin, 1);
         ZScores zScores = model.getZscores();
 
         Set<ContactRecord> records = new HashSet<>();
@@ -88,7 +88,7 @@ public class ExtremePixels {
             return new HashSet<>();
         }
 
-        LogExpectedModel model = new LogExpectedModel(zd, SCALE, maxBin, false, 1);
+        LogExpectedModel model = new LogExpectedModel(zd, SCALE, maxBin, 1);
         ZScores zScores = model.getZscores();
 
         Set<SimpleLocation> records = new HashSet<>();

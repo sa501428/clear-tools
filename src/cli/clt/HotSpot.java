@@ -5,7 +5,6 @@ import cli.utils.Welford;
 import cli.utils.expected.LogExpectedModel;
 import cli.utils.sift.SiftUtils;
 import cli.utils.sift.SimpleLocation;
-import cli.utils.sift.Zscore;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
@@ -233,7 +232,7 @@ public class HotSpot {
                                                          NormalizationType norm,
                                                          Map<SimpleLocation, Welford> results, double[] vector1, double[] vector2) {
 
-        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin, false, 0);
+        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin, 0);
 
         Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
         while (iterator.hasNext()) {

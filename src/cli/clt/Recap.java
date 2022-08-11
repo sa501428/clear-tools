@@ -161,7 +161,7 @@ public class Recap {
                         }
 
                         int maxBinDist = Math.max(getMaxDistance(loops, resolution, window), 9000000 / resolution);
-                        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBinDist, false, 0);
+                        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBinDist, 0);
 
                         float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, expected);
                         double superDiagonal = expected.getExpFromUncompressedBin(1);

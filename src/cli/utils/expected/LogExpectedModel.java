@@ -15,20 +15,20 @@ public class LogExpectedModel {
     private final double[] compressedExpected;
     private double logBase = 1;
 
-    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, boolean useNone, int minVal) {
-        stats = getSummaryStats(zd, maxBinDist, useNone, minVal, norm);
+    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, int minVal) {
+        stats = getSummaryStats(zd, maxBinDist, minVal, norm);
         double[] compressedLogExpected = stats.getMean();
         compressedExpected = expm1(compressedLogExpected);
     }
 
-    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, boolean useNone, int minVal, float base) {
+    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, int minVal, float base) {
         this.logBase = Math.log(base);
-        stats = getSummaryStats(zd, maxBinDist, useNone, minVal, norm);
+        stats = getSummaryStats(zd, maxBinDist, minVal, norm);
         double[] compressedLogExpected = stats.getMean();
         compressedExpected = expm1(compressedLogExpected);
     }
 
-    private WelfordStats getSummaryStats(MatrixZoomData zd, int maxBin, boolean useNone, int minVal,
+    private WelfordStats getSummaryStats(MatrixZoomData zd, int maxBin, int minVal,
                                          NormalizationType norm) {
 
         int maxCompressedBin = logp1i(maxBin) + 1;
@@ -37,7 +37,7 @@ public class LogExpectedModel {
         WelfordStats stats = new WelfordStats(maxCompressedBin);
 
         Iterator<ContactRecord> it;
-        if (useNone) {
+        if (norm.getLabel().equalsIgnoreCase("none")) {
             it = zd.getDirectIterator();
         } else {
             it = zd.getNormalizedIterator(norm);
