@@ -9,6 +9,7 @@ import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationType;
 
 import java.util.Iterator;
+import java.util.List;
 
 public class LogExpectedModel {
 
@@ -29,6 +30,12 @@ public class LogExpectedModel {
         compressedExpected = expm1(compressedLogExpected);
     }
 
+    public LogExpectedModel(List<ContactRecord> records, int maxBinDist) {
+        stats = getSummaryStats(records, maxBinDist);
+        double[] compressedLogExpected = stats.getMean();
+        compressedExpected = expm1(compressedLogExpected);
+    }
+
     private WelfordStats getSummaryStats(MatrixZoomData zd, int maxBin, int minVal,
                                          NormalizationType norm) {
 
@@ -44,6 +51,18 @@ public class LogExpectedModel {
                 if (dist < maxBin) {
                     stats.addValue(logp1i(dist), logp1(cr.getCounts()));
                 }
+            }
+        }
+        return stats;
+    }
+
+    private WelfordStats getSummaryStats(List<ContactRecord> records, int maxBin) {
+        int maxCompressedBin = logp1i(maxBin) + 1;
+        WelfordStats stats = new WelfordStats(maxCompressedBin);
+        for (ContactRecord cr : records) {
+            int dist = ExpectedUtils.getDist(cr);
+            if (dist < maxBin) {
+                stats.addValue(logp1i(dist), logp1(cr.getCounts()));
             }
         }
         return stats;

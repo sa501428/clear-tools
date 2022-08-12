@@ -9,14 +9,11 @@ import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Set;
+import java.util.*;
 
 public class ExtremePixels {
 
-    private static final int CONTACT_ZSCORE_CUTOFF = 2;
+    private static final float CONTACT_ZSCORE_CUTOFF = 1.5f;
     private static final int MAX_DIST = 10000000;
     private static final int MIN_DIST = 10000;
 
@@ -42,30 +39,46 @@ public class ExtremePixels {
             return new HashSet<>();
         }
 
-        LogExpectedModel model = new LogExpectedModel(zd, norm, maxBin, 1);
+        List<ContactRecord> records = populateRecordsInRange(zd, norm, minBin, maxBin, nv);
+        System.out.println(resolution + " - num records: " + records.size());
+
+        LogExpectedModel model = new LogExpectedModel(records, maxBin);
         ZScores zScores = model.getZscores();
 
-        Set<ContactRecord> records = new HashSet<>();
-        Iterator<ContactRecord> it = getIterator(zd, norm);
-        while (it.hasNext()) {
-            ContactRecord cr = it.next();
-            if (cr.getCounts() > 1) {
+        Set<ContactRecord> extremes = new HashSet<>();
+        for (ContactRecord cr : records) {
+            if (nv[cr.getBinX()] >= 1 && nv[cr.getBinY()] >= 1 && cr.getCounts() > 1) {
                 int dist = ExpectedUtils.getDist(cr);
-                if (dist > minBin && dist < maxBin && cr.getCounts() > 1) {
-                    if (nv[cr.getBinX()] > 1 && nv[cr.getBinY()] > 1) {
-                        double percentContact = model.getPercentContact(dist, cr.getCounts());
-                        if (isReasonableEnrichment(percentContact)) {
-                            dist = model.logp1i(dist);
-                            double val = LogExpectedModel.logp1(cr.getCounts());
-                            if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
-                                records.add(cr);
-                            }
-                        }
+                double percentContact = model.getPercentContact(dist, cr.getCounts());
+                if (isReasonableEnrichment(percentContact)) {
+                    dist = model.logp1i(dist);
+                    double val = LogExpectedModel.logp1(cr.getCounts());
+                    if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
+                        extremes.add(cr);
                     }
                 }
             }
         }
+        System.out.println(resolution + " - num extremes: " + extremes.size());
 
+        records.clear();
+
+        return extremes;
+    }
+
+    private static List<ContactRecord> populateRecordsInRange(MatrixZoomData zd, NormalizationType norm,
+                                                              int minBin, int maxBin, double[] nv) { // int minVal,
+        List<ContactRecord> records = new LinkedList<>();
+        Iterator<ContactRecord> it = getIterator(zd, norm);
+        while (it.hasNext()) {
+            ContactRecord cr = it.next();
+            int dist = ExpectedUtils.getDist(cr);
+            if (dist > minBin && dist < maxBin) {
+                //if (nv[cr.getBinX()] >= 1 && nv[cr.getBinY()] >= 1) {
+                records.add(cr);
+                //}
+            }
+        }
         return records;
     }
 

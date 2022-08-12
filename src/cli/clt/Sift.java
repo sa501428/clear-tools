@@ -85,7 +85,7 @@ public class Sift {
         if (normString != null && normString.length() > 1) {
             norm = ds.getNormalizationHandler().getNormTypeFromString(normString);
         }
-        System.out.println("Initial norm: " + norm.getLabel());
+        System.out.println("Using norm: " + norm.getLabel());
 
         Feature2DList refinedLoops = siftThroughCalls(ds);
         refinedLoops.exportFeatureList(new File(args[2] + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
@@ -136,6 +136,7 @@ public class Sift {
 
                     synchronized (pixelsForResolutions) {
                         pixelsForResolutions.put(lowRes, points);
+                        System.out.println(lowRes + " completed (" + points.size() + ")");
                     }
                 }
                 currResIndex = rIndex.getAndIncrement();
