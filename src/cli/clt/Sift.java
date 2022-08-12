@@ -2,27 +2,31 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.sift.ExtremePixels;
-import cli.utils.sift.SiftUtils;
+import cli.utils.sift.Region;
+import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
-import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
+import javastraw.reader.type.NormalizationHandler;
+import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
-import java.awt.*;
 import java.io.File;
-import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class Sift {
+
+    private static final int[] resolutions = new int[]{100, 200, 500, 1000, 2000, 5000, 10000};
+    private NormalizationType norm = NormalizationHandler.NONE;
+
 
     /*
      * Iteration notes
@@ -74,70 +78,55 @@ public class Sift {
             Main.printGeneralUsageAndExit(5);
         }
 
-        int hires = parser.getResolutionOption(200);
-
         Dataset ds = HiCFileTools.extractDatasetForCLT(args[1], false, false, false);
 
-        Feature2DList refinedLoops = siftThroughCalls(ds, hires);
+        String normString = parser.getNormalizationStringOption();
+        if (normString != null && normString.length() > 1) {
+            norm = ds.getNormalizationHandler().getNormTypeFromString(normString);
+        }
+        System.out.println("Initial norm: " + norm.getLabel());
+
+        Feature2DList refinedLoops = siftThroughCalls(ds);
         refinedLoops.exportFeatureList(new File(args[2] + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("sift complete");
     }
 
-    private static List<Feature2D> findSiftedFeatures(Chromosome chromosome, Dataset ds, int hiRes) {
-        Matrix matrix = ds.getMatrix(chromosome, chromosome);
-        if (matrix == null) return new ArrayList<>();
+    private static Map<Region, Integer> addPointsToCountMap(Map<Integer, Set<SimpleLocation>> resToLocations) {
 
-        MatrixZoomData zdHigh = matrix.getZoomData(new HiCZoom(hiRes));
-        Set<ContactRecord> initialPoints = ExtremePixels.getHiResExtremePixels(zdHigh, hiRes);
-        matrix.clearCacheForZoom(new HiCZoom(hiRes));
-
-        final Map<ContactRecord, Short> countsForRecord = new HashMap<>();
-        int[] resolutions = new int[]{1000, 2000, 5000, 10000};
-
-        AtomicInteger rIndex = new AtomicInteger(0);
-        ParallelizationTools.launchParallelizedCode(() -> {
-            int currResIndex = rIndex.getAndIncrement();
-            while (currResIndex < resolutions.length) {
-                int lowRes = resolutions[currResIndex];
-
-                MatrixZoomData zdLow = matrix.getZoomData(new HiCZoom(lowRes));
-                if (zdLow != null) {
-                    Set<ContactRecord> points = ExtremePixels.getExtremePixelsForResolution(initialPoints, ds, zdLow, chromosome, hiRes, lowRes);
-                    matrix.clearCacheForZoom(new HiCZoom(lowRes));
-
-                    synchronized (countsForRecord) {
-                        addPointsToCountMap(countsForRecord, points);
-                    }
-                    points.clear();
+        Map<Region, Integer> countMap = new HashMap<>();
+        int base = 100;
+        for (int res : resolutions) {
+            if (res == base) {
+                for (SimpleLocation location : resToLocations.get(res)) {
+                    countMap.put(location.toRegion(res), 1);
                 }
-                currResIndex = rIndex.getAndIncrement();
-            }
-        });
-
-        matrix.clearCache();
-        initialPoints.clear();
-
-        Set<ContactRecord> finalPoints = getPointsWithMoreThan(countsForRecord, 2);
-        countsForRecord.clear();
-
-        SiftUtils.coalesceAndRetainCentroids(finalPoints, 5000 / hiRes);
-        if (Main.printVerboseComments) System.out.println("Num loops after final filter " + finalPoints.size());
-        return convertToFeature2Ds(finalPoints, chromosome, chromosome, hiRes);
-    }
-
-    private static void addPointsToCountMap(Map<ContactRecord, Short> countsForRecord, Set<ContactRecord> points) {
-        for (ContactRecord record : points) {
-            if (countsForRecord.containsKey(record)) {
-                countsForRecord.put(record, (short) (countsForRecord.get(record) + 1));
             } else {
-                countsForRecord.put(record, (short) 1);
+                for (SimpleLocation location : resToLocations.get(res)) {
+                    boolean updatesWereMade = updateMapForOverlap(location, countMap, res);
+                    if (!updatesWereMade) {
+                        countMap.put(location.toRegion(res), 1);
+                    }
+                }
             }
         }
+
+        return countMap;
     }
 
-    private static Set<ContactRecord> getPointsWithMoreThan(Map<ContactRecord, Short> countsForRecord, int cutoff) {
-        Set<ContactRecord> finalSet = new HashSet<>();
-        for (ContactRecord record : countsForRecord.keySet()) {
+    private static boolean updateMapForOverlap(SimpleLocation location, Map<Region, Integer> countMap, int res) {
+        boolean updatesWereMade = false;
+        for (Region region : countMap.keySet()) {
+            if (region.containedBy(location, res)) {
+                countMap.put(region, countMap.get(region) + 1);
+                updatesWereMade = true;
+            }
+        }
+        return updatesWereMade;
+    }
+
+    private static Set<Region> getPointsWithMoreThan(Map<Region, Integer> countsForRecord, int cutoff) {
+        Set<Region> finalSet = new HashSet<>();
+        for (Region record : countsForRecord.keySet()) {
             if (countsForRecord.get(record) > cutoff) {
                 finalSet.add(record);
             }
@@ -145,21 +134,15 @@ public class Sift {
         return finalSet;
     }
 
-    public static List<Feature2D> convertToFeature2Ds(Set<ContactRecord> records,
-                                                      Chromosome c1, Chromosome c2, int resolution) {
+    public static List<Feature2D> convertToFeature2Ds(Set<Region> records, Chromosome c1) {
         List<Feature2D> features = new ArrayList<>();
-        for (ContactRecord record : records) {
-            long start1 = (long) record.getBinX() * resolution;
-            long end1 = start1 + resolution;
-            long start2 = (long) record.getBinY() * resolution;
-            long end2 = start2 + resolution;
-            features.add(new Feature2D(Feature2D.FeatureType.PEAK, c1.getName(), start1, end1,
-                    c2.getName(), start2, end2, Color.BLACK, new HashMap<>()));
+        for (Region record : records) {
+            features.add(record.toFeature2D(c1));
         }
         return features;
     }
 
-    private Feature2DList siftThroughCalls(Dataset ds, int hires) {
+    private Feature2DList siftThroughCalls(Dataset ds) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList output = new Feature2DList();
 
@@ -170,7 +153,7 @@ public class Sift {
             int currIndex = cIndex.getAndIncrement();
             while (currIndex < chromosomes.length) {
                 Chromosome chromosome = chromosomes[currIndex];
-                List<Feature2D> sharpLoops = findSiftedFeatures(chromosome, ds, hires);
+                List<Feature2D> sharpLoops = findSiftedFeatures(chromosome, ds);
                 if (sharpLoops.size() > 0) {
                     synchronized (output) {
                         output.addByKey(Feature2DList.getKey(chromosome, chromosome), sharpLoops);
@@ -182,4 +165,42 @@ public class Sift {
 
         return output;
     }
+
+    private List<Feature2D> findSiftedFeatures(Chromosome chromosome, Dataset ds) {
+        Matrix matrix = ds.getMatrix(chromosome, chromosome);
+        if (matrix == null) return new ArrayList<>();
+
+        final Map<Integer, Set<SimpleLocation>> pixelsForResolutions = new HashMap<>();
+
+        AtomicInteger rIndex = new AtomicInteger(0);
+        ParallelizationTools.launchParallelizedCode(() -> {
+            int currResIndex = rIndex.getAndIncrement();
+            while (currResIndex < resolutions.length) {
+                int lowRes = resolutions[currResIndex];
+
+                MatrixZoomData zd = matrix.getZoomData(new HiCZoom(lowRes));
+                if (zd != null) {
+                    Set<SimpleLocation> points = ExtremePixels.getExtremePixelsForResolution(ds, zd,
+                            chromosome, lowRes, norm);
+                    matrix.clearCacheForZoom(new HiCZoom(lowRes));
+
+                    synchronized (pixelsForResolutions) {
+                        pixelsForResolutions.put(lowRes, points);
+                    }
+                }
+                currResIndex = rIndex.getAndIncrement();
+            }
+        });
+
+        matrix.clearCache();
+
+        Map<Region, Integer> countsForRecord = addPointsToCountMap(pixelsForResolutions);
+        pixelsForResolutions.clear();
+        Set<Region> finalPoints = getPointsWithMoreThan(countsForRecord, 2);
+        countsForRecord.clear();
+
+        return convertToFeature2Ds(finalPoints, chromosome);
+    }
+
+
 }

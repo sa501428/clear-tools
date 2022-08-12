@@ -16,14 +16,12 @@ public class BoundingBoxWithContacts {
     public static int width = 2;
 
     private final List<ContactRecord> contacts;
-    private final int scalar;
     private int minR, maxR, minC, maxC;
 
-    public BoundingBoxWithContacts(List<ContactRecord> contacts, int scalar) {
+    public BoundingBoxWithContacts(List<ContactRecord> contacts) {
         this.contacts = contacts;
-        this.scalar = scalar;
-        minR = contacts.get(0).getBinX() / scalar;
-        minC = contacts.get(0).getBinY() / scalar;
+        minR = contacts.get(0).getBinX();
+        minC = contacts.get(0).getBinY();
         maxR = minR;
         maxC = minC;
         setBounds();
@@ -31,11 +29,11 @@ public class BoundingBoxWithContacts {
 
     private void setBounds() {
         for (ContactRecord contact : contacts) {
-            minR = Math.min(minR, contact.getBinX() / scalar - buffer);
-            minC = Math.min(minC, contact.getBinY() / scalar - buffer);
+            minR = Math.min(minR, contact.getBinX() - buffer);
+            minC = Math.min(minC, contact.getBinY() - buffer);
 
-            maxR = Math.max(maxR, contact.getBinX() / scalar + buffer);
-            maxC = Math.max(maxC, contact.getBinY() / scalar + buffer);
+            maxR = Math.max(maxR, contact.getBinX() + buffer);
+            maxC = Math.max(maxC, contact.getBinY() + buffer);
         }
         if (minR < 0) minR = 0;
         if (minC < 0) minC = 0;
@@ -48,8 +46,9 @@ public class BoundingBoxWithContacts {
     public Set<ContactRecord> findPointsNotEnriched(MatrixZoomData zdLow, NormalizationType norm) {
         Set<ContactRecord> toRemove = new HashSet<>();
         float[][] region = getRegionSpanned(zdLow, norm);
+
         for (ContactRecord contact : contacts) {
-            if (!isProperlyEnriched(region, contact.getBinX() / scalar - minR, contact.getBinY() / scalar - minC)) {
+            if (!isProperlyEnriched(region, contact.getBinX() - minR, contact.getBinY() - minC)) {
                 toRemove.add(contact);
             }
         }

@@ -2,6 +2,7 @@ package cli.utils.expected;
 
 import cli.utils.ExpectedUtils;
 import cli.utils.WelfordStats;
+import cli.utils.sift.ExtremePixels;
 import cli.utils.sift.ZScores;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
@@ -32,17 +33,10 @@ public class LogExpectedModel {
                                          NormalizationType norm) {
 
         int maxCompressedBin = logp1i(maxBin) + 1;
-        //int minCompressedBin = LogExpectedModel.logp1i(minBin);
 
         WelfordStats stats = new WelfordStats(maxCompressedBin);
 
-        Iterator<ContactRecord> it;
-        if (norm.getLabel().equalsIgnoreCase("none")) {
-            it = zd.getDirectIterator();
-        } else {
-            it = zd.getNormalizedIterator(norm);
-        }
-
+        Iterator<ContactRecord> it = ExtremePixels.getIterator(zd, norm);
         while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > minVal) {
@@ -56,7 +50,6 @@ public class LogExpectedModel {
     }
 
     public int logp1i(int x) {
-        // todo: remove this difference
         return (int) Math.floor(Math.log(1 + x) / logBase);
     }
 
