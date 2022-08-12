@@ -11,6 +11,7 @@ import javastraw.reader.type.NormalizationType;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Set;
 
 public class ExtremePixels {
@@ -25,24 +26,16 @@ public class ExtremePixels {
         Set<ContactRecord> enrichedRegions = ExtremePixels.getExtremeLocations(ds, chrom, res,
                 zd, MAX_DIST / res, MIN_DIST / res, norm);
 
-        EnrichmentChecker.filterOutIfNotLocalMax(zd, enrichedRegions, norm);
-
-        Set<SimpleLocation> locations = new HashSet<>();
-        for (ContactRecord record : enrichedRegions) {
-            locations.add(new SimpleLocation(record));
-        }
-        enrichedRegions.clear();
-
-        return locations;
+        return FeatureUtils.toLocationsAndClear(coalescePixelsToCentroid(enrichedRegions));
     }
 
     public static Set<ContactRecord> getExtremeLocations(Dataset ds, Chromosome chromosome, int resolution,
                                                          MatrixZoomData zd, int maxBin, int minBin,
                                                          NormalizationType norm) {
         int chrIdx = chromosome.getIndex();
-        double[] nvSCALE;
+        double[] nv;
         try {
-            nvSCALE = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), norm).getData().getValues().get(0);
+            nv = ds.getNormalizationVector(chrIdx, new HiCZoom(resolution), norm).getData().getValues().get(0);
         } catch (Exception e) {
             System.err.println("No norm vector found for " + chromosome.getName() + " resolution " + resolution);
             System.exit(8);
@@ -58,19 +51,14 @@ public class ExtremePixels {
             ContactRecord cr = it.next();
             if (cr.getCounts() > 1) {
                 int dist = ExpectedUtils.getDist(cr);
-                if (dist > minBin && dist < maxBin) {
-                    double percentContact = model.getPercentContact(dist, cr.getCounts());
-                    if (isReasonableEnrichment(percentContact)) {
-                        double nv1 = nvSCALE[cr.getBinX()];
-                        double nv2 = nvSCALE[cr.getBinY()];
-                        if (nv1 > 1 && nv2 > 1) {
-                            double valScale = (cr.getCounts() / (nv1 * nv2));
-                            if (valScale > 1) {
-                                dist = model.logp1i(dist);
-                                valScale = LogExpectedModel.logp1(valScale);
-                                if (zScores.getZscore(dist, valScale) > CONTACT_ZSCORE_CUTOFF) {
-                                    records.add(cr);
-                                }
+                if (dist > minBin && dist < maxBin && cr.getCounts() > 1) {
+                    if (nv[cr.getBinX()] > 1 && nv[cr.getBinY()] > 1) {
+                        double percentContact = model.getPercentContact(dist, cr.getCounts());
+                        if (isReasonableEnrichment(percentContact)) {
+                            dist = model.logp1i(dist);
+                            double val = LogExpectedModel.logp1(cr.getCounts());
+                            if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
+                                records.add(cr);
                             }
                         }
                     }
@@ -90,16 +78,52 @@ public class ExtremePixels {
     }
 
     public static boolean isReasonableEnrichment(double val) {
-        return val > 0.01 && val < 0.5;
+        return val > 0.005 && val < 0.5;
     }
 
-    private static Set<ContactRecord> filterInStagesFrom(Set<ContactRecord> initialPoints, int hiRes, int lowRes) {
-        Set<ContactRecord> points = new HashSet<>(initialPoints);
-        int factor = lowRes / 500;
-        for (int k = 1; k <= factor; k++) {
-            int res = 500 * k;
-            NMSUtils.filterOutByOverlap(points, res / hiRes);
+    public static Set<ContactRecord> coalescePixelsToCentroid(Set<ContactRecord> regions) {
+        // HashSet intermediate for removing duplicates
+        // LinkedList used so that we can pop out highest obs values
+        LinkedList<ContactRecord> featureLL = new LinkedList<>(regions);
+        featureLL.sort((o1, o2) -> Float.compare(-o1.getCounts(), -o2.getCounts()));
+
+        Set<ContactRecord> coalesced = new HashSet<>();
+        while (!featureLL.isEmpty()) {
+            ContactRecord pixel = featureLL.pollFirst();
+            if (pixel != null) {
+                coalesced.add(pixel);
+                featureLL.remove(pixel);
+
+                int buffer = 1;
+
+                int binX0 = pixel.getBinX() - buffer;
+                int binY0 = pixel.getBinY() - buffer;
+                int binX1 = pixel.getBinX() + buffer + 1;
+                int binY1 = pixel.getBinY() + buffer + 1;
+
+                int prevSize = 0;
+                Set<ContactRecord> pixelList = new HashSet<>();
+                pixelList.add(pixel);
+
+                while (prevSize != pixelList.size()) {
+                    prevSize = pixelList.size();
+                    for (ContactRecord px : featureLL) {
+                        if (contains(px, binX0, binY0, binX1, binY1)) {
+                            pixelList.add(px);
+                            binX0 = Math.min(binX0, px.getBinX() - buffer);
+                            binY0 = Math.min(binY0, px.getBinY() - buffer);
+                            binX1 = Math.max(binX1, px.getBinX() + buffer + 1);
+                            binY1 = Math.max(binY1, px.getBinY() + buffer + 1);
+                        }
+                    }
+                    featureLL.removeAll(pixelList);
+                }
+            }
         }
-        return points;
+        return coalesced;
+    }
+
+    private static boolean contains(ContactRecord px, int binX0, int binY0, int binX1, int binY1) {
+        return binX0 <= px.getBinX() && binX1 > px.getBinX() && binY0 <= px.getBinY() && binY1 > px.getBinY();
     }
 }

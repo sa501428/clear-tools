@@ -2,6 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.sift.ExtremePixels;
+import cli.utils.sift.FeatureUtils;
 import cli.utils.sift.Region;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
@@ -91,57 +92,6 @@ public class Sift {
         System.out.println("sift complete");
     }
 
-    private static Map<Region, Integer> addPointsToCountMap(Map<Integer, Set<SimpleLocation>> resToLocations) {
-
-        Map<Region, Integer> countMap = new HashMap<>();
-        int base = 100;
-        for (int res : resolutions) {
-            if (res == base) {
-                for (SimpleLocation location : resToLocations.get(res)) {
-                    countMap.put(location.toRegion(res), 1);
-                }
-            } else {
-                for (SimpleLocation location : resToLocations.get(res)) {
-                    boolean updatesWereMade = updateMapForOverlap(location, countMap, res);
-                    if (!updatesWereMade) {
-                        countMap.put(location.toRegion(res), 1);
-                    }
-                }
-            }
-        }
-
-        return countMap;
-    }
-
-    private static boolean updateMapForOverlap(SimpleLocation location, Map<Region, Integer> countMap, int res) {
-        boolean updatesWereMade = false;
-        for (Region region : countMap.keySet()) {
-            if (region.containedBy(location, res)) {
-                countMap.put(region, countMap.get(region) + 1);
-                updatesWereMade = true;
-            }
-        }
-        return updatesWereMade;
-    }
-
-    private static Set<Region> getPointsWithMoreThan(Map<Region, Integer> countsForRecord, int cutoff) {
-        Set<Region> finalSet = new HashSet<>();
-        for (Region record : countsForRecord.keySet()) {
-            if (countsForRecord.get(record) > cutoff) {
-                finalSet.add(record);
-            }
-        }
-        return finalSet;
-    }
-
-    public static List<Feature2D> convertToFeature2Ds(Set<Region> records, Chromosome c1) {
-        List<Feature2D> features = new ArrayList<>();
-        for (Region record : records) {
-            features.add(record.toFeature2D(c1));
-        }
-        return features;
-    }
-
     private Feature2DList siftThroughCalls(Dataset ds) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList output = new Feature2DList();
@@ -194,13 +144,11 @@ public class Sift {
 
         matrix.clearCache();
 
-        Map<Region, Integer> countsForRecord = addPointsToCountMap(pixelsForResolutions);
+        Map<Region, Integer> countsForRecord = FeatureUtils.addPointsToCountMap(pixelsForResolutions,
+                resolutions);
         pixelsForResolutions.clear();
-        Set<Region> finalPoints = getPointsWithMoreThan(countsForRecord, 2);
+        Set<Region> finalPoints = FeatureUtils.getPointsWithMoreThan(countsForRecord, 2);
         countsForRecord.clear();
-
-        return convertToFeature2Ds(finalPoints, chromosome);
+        return FeatureUtils.convertToFeature2Ds(finalPoints, chromosome);
     }
-
-
 }
