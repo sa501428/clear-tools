@@ -47,7 +47,7 @@ public class ExtremePixels {
 
         Set<ContactRecord> extremes = new HashSet<>();
         for (ContactRecord cr : records) {
-            if (nv[cr.getBinX()] >= 1 && nv[cr.getBinY()] >= 1 && cr.getCounts() > 1) {
+            if (nv[cr.getBinX()] > 1 && nv[cr.getBinY()] > 1 && cr.getCounts() > 1) {
                 int dist = ExpectedUtils.getDist(cr);
                 double percentContact = model.getPercentContact(dist, cr.getCounts());
                 if (isReasonableEnrichment(percentContact)) {
