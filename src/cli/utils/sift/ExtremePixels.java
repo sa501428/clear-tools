@@ -1,7 +1,8 @@
 package cli.utils.sift;
 
-import cli.utils.ExpectedUtils;
+import cli.utils.expected.ExpectedUtils;
 import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.ZScoreArray;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
@@ -43,7 +44,7 @@ public class ExtremePixels {
         System.out.println(resolution + " - num records: " + records.size());
 
         LogExpectedModel model = new LogExpectedModel(records, maxBin);
-        ZScores zScores = model.getZscores();
+        ZScoreArray zScores = model.getZscores();
 
         Set<ContactRecord> extremes = new HashSet<>();
         for (ContactRecord cr : records) {
@@ -51,9 +52,9 @@ public class ExtremePixels {
             if (isReasonableEnrichment(percentContact)) {
                 int dist = model.logp1i(ExpectedUtils.getDist(cr));
                 double val = LogExpectedModel.logp1(cr.getCounts());
-                if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
+                //if (zScores.getZscore(dist, val) > 0) { //CONTACT_ZSCORE_CUTOFF
                     extremes.add(cr);
-                }
+                //}
             }
         }
         System.out.println(resolution + " - num extremes: " + extremes.size());

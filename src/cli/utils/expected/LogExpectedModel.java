@@ -1,9 +1,6 @@
 package cli.utils.expected;
 
-import cli.utils.ExpectedUtils;
-import cli.utils.WelfordStats;
 import cli.utils.sift.ExtremePixels;
-import cli.utils.sift.ZScores;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationType;
@@ -13,7 +10,7 @@ import java.util.List;
 
 public class LogExpectedModel {
 
-    private final WelfordStats stats;
+    private final WelfordArray stats;
     private final double[] compressedExpected;
 
     public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, int minVal) {
@@ -26,7 +23,7 @@ public class LogExpectedModel {
         compressedExpected = expm1(stats.getMean());
     }
 
-    private WelfordStats getSummaryStats(MatrixZoomData zd, int maxBin, int minVal,
+    private WelfordArray getSummaryStats(MatrixZoomData zd, int maxBin, int minVal,
                                          NormalizationType norm) {
         Iterator<ContactRecord> it = ExtremePixels.getIterator(zd, norm);
         while (it.hasNext()) {
@@ -38,15 +35,15 @@ public class LogExpectedModel {
         return stats;
     }
 
-    private WelfordStats getSummaryStats(List<ContactRecord> records, int maxBin) {
-        WelfordStats stats = new WelfordStats(logp1i(maxBin) + 1);
+    private WelfordArray getSummaryStats(List<ContactRecord> records, int maxBin) {
+        WelfordArray stats = new WelfordArray(logp1i(maxBin) + 1);
         for (ContactRecord cr : records) {
             updateStats(cr, maxBin, stats);
         }
         return stats;
     }
 
-    private void updateStats(ContactRecord cr, int maxBin, WelfordStats stats) {
+    private void updateStats(ContactRecord cr, int maxBin, WelfordArray stats) {
         int dist = ExpectedUtils.getDist(cr);
         if (dist < maxBin) {
             stats.addValue(logp1i(dist), logp1(cr.getCounts()));
@@ -85,7 +82,7 @@ public class LogExpectedModel {
         return getP(cr.getCounts(), baseline, maxSignal);
     }
 
-    public ZScores getZscores() {
+    public ZScoreArray getZscores() {
         return stats.getZscores();
     }
 }

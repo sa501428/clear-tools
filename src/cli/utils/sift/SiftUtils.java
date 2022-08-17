@@ -1,6 +1,6 @@
 package cli.utils.sift;
 
-import cli.utils.FusionUtils;
+import cli.utils.general.FusionTools;
 import javastraw.reader.block.ContactRecord;
 
 import java.util.*;
@@ -26,7 +26,7 @@ public class SiftUtils {
 
                 Set<ContactRecord> toRemove = new HashSet<>();
                 for (ContactRecord px : featureLL) {
-                    if (FusionUtils.distance(x - px.getBinX(), y - px.getBinY()) <= binRadius) {
+                    if (FusionTools.distance(x - px.getBinX(), y - px.getBinY()) <= binRadius) {
                         toRemove.add(px);
                     }
                 }

@@ -1,11 +1,11 @@
-package cli.utils.sift;
+package cli.utils.expected;
 
-public class ZScores {
+public class ZScoreArray {
 
     private final double[] mean;
     private final double[] stdDev;
 
-    public ZScores(double[] mean, double[] stdDev) {
+    public ZScoreArray(double[] mean, double[] stdDev) {
         this.mean = mean;
         this.stdDev = stdDev;
     }

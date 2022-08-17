@@ -1,11 +1,11 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.HiCUtils;
-import cli.utils.RecapTools;
 import cli.utils.expected.LogExpectedModel;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
+import cli.utils.general.HiCUtils;
+import cli.utils.recap.RecapTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;

@@ -1,6 +1,6 @@
 package cli.utils.seer;
 
-import cli.utils.ExpectedUtils;
+import cli.utils.expected.ExpectedUtils;
 import cli.utils.sift.SimpleLocation;
 import javastraw.reader.block.ContactRecord;
 

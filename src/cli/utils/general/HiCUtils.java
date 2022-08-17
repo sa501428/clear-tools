@@ -1,4 +1,4 @@
-package cli.utils;
+package cli.utils.general;
 
 import cli.utils.flags.RegionConfiguration;
 import javastraw.reader.basics.Chromosome;

@@ -1,8 +1,8 @@
 package cli.clt;
 
-import cli.HiCValue;
 import cli.Main;
-import cli.utils.ExpectedUtils;
+import cli.utils.expected.ExpectedUtils;
+import cli.utils.general.HiCValue;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;

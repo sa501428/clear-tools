@@ -1,7 +1,7 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.FusionUtils;
+import cli.utils.general.FusionTools;
 
 public class Fusion {
     public Fusion(String[] args, CommandLineParser parser) {
@@ -13,7 +13,7 @@ public class Fusion {
         String outFile = args[2];
         String[] bedpeFiles = new String[args.length - 3];
         System.arraycopy(args, 3, bedpeFiles, 0, bedpeFiles.length);
-        FusionUtils.coalesceFeaturesToCentroid(bedpeFiles, genomeID, outFile);
+        FusionTools.coalesceFeaturesToCentroid(bedpeFiles, genomeID, outFile);
         System.out.println("fusion complete");
     }
 }

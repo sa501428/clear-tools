@@ -1,4 +1,4 @@
-package cli.utils;
+package cli.utils.recap;
 
 import cli.utils.expected.LogExpectedModel;
 import javastraw.feature2D.Feature2D;

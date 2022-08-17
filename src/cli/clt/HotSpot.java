@@ -1,8 +1,8 @@
 package cli.clt;
 
-import cli.utils.ExpectedUtils;
-import cli.utils.Welford;
+import cli.utils.expected.ExpectedUtils;
 import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.Welford;
 import cli.utils.sift.SiftUtils;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;

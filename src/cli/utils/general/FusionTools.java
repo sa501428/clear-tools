@@ -1,4 +1,4 @@
-package cli.utils;
+package cli.utils.general;
 
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -12,7 +12,7 @@ import java.io.File;
 import java.util.List;
 import java.util.*;
 
-public class FusionUtils {
+public class FusionTools {
 
     public static void coalesceFeaturesToCentroid(String[] fileNames, String genomeID, String outFile) {
         Feature2DList list = combineAll(fileNames, genomeID);

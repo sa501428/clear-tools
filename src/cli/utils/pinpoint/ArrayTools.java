@@ -1,4 +1,4 @@
-package cli.utils;
+package cli.utils.pinpoint;
 
 public class ArrayTools {
 
