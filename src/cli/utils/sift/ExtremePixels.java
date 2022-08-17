@@ -39,7 +39,7 @@ public class ExtremePixels {
             return new HashSet<>();
         }
 
-        List<ContactRecord> records = populateRecordsInRange(zd, norm, minBin, maxBin, nv);
+        List<ContactRecord> records = populateRecordsInRange(zd, norm, minBin, maxBin, nv, 1);
         System.out.println(resolution + " - num records: " + records.size());
 
         LogExpectedModel model = new LogExpectedModel(records, maxBin);
@@ -47,15 +47,13 @@ public class ExtremePixels {
 
         Set<ContactRecord> extremes = new HashSet<>();
         for (ContactRecord cr : records) {
-            if (nv[cr.getBinX()] > 1 && nv[cr.getBinY()] > 1 && cr.getCounts() > 1) {
-                int dist = ExpectedUtils.getDist(cr);
-                double percentContact = model.getPercentContact(dist, cr.getCounts());
-                if (isReasonableEnrichment(percentContact)) {
-                    dist = model.logp1i(dist);
-                    double val = LogExpectedModel.logp1(cr.getCounts());
-                    if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
-                        extremes.add(cr);
-                    }
+            int dist = ExpectedUtils.getDist(cr);
+            double percentContact = model.getPercentContact(dist, cr.getCounts());
+            if (isReasonableEnrichment(percentContact)) {
+                dist = model.logp1i(dist);
+                double val = LogExpectedModel.logp1(cr.getCounts());
+                if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
+                    extremes.add(cr);
                 }
             }
         }
@@ -67,16 +65,18 @@ public class ExtremePixels {
     }
 
     private static List<ContactRecord> populateRecordsInRange(MatrixZoomData zd, NormalizationType norm,
-                                                              int minBin, int maxBin, double[] nv) { // int minVal,
+                                                              int minBin, int maxBin, double[] nv, int minVal) {
         List<ContactRecord> records = new LinkedList<>();
         Iterator<ContactRecord> it = getIterator(zd, norm);
         while (it.hasNext()) {
             ContactRecord cr = it.next();
-            int dist = ExpectedUtils.getDist(cr);
-            if (dist > minBin && dist < maxBin) {
-                //if (nv[cr.getBinX()] >= 1 && nv[cr.getBinY()] >= 1) {
-                records.add(cr);
-                //}
+            if (cr.getCounts() > minVal) {
+                int dist = ExpectedUtils.getDist(cr);
+                if (dist > minBin && dist < maxBin) {
+                    if (nv[cr.getBinX()] > 1 && nv[cr.getBinY()] > 1) {
+                        records.add(cr);
+                    }
+                }
             }
         }
         return records;

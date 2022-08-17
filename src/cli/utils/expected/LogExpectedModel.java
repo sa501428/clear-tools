@@ -15,61 +15,46 @@ public class LogExpectedModel {
 
     private final WelfordStats stats;
     private final double[] compressedExpected;
-    private double logBase = 1;
 
     public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, int minVal) {
         stats = getSummaryStats(zd, maxBinDist, minVal, norm);
-        double[] compressedLogExpected = stats.getMean();
-        compressedExpected = expm1(compressedLogExpected);
-    }
-
-    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, int minVal, float base) {
-        this.logBase = Math.log(base);
-        stats = getSummaryStats(zd, maxBinDist, minVal, norm);
-        double[] compressedLogExpected = stats.getMean();
-        compressedExpected = expm1(compressedLogExpected);
+        compressedExpected = expm1(stats.getMean());
     }
 
     public LogExpectedModel(List<ContactRecord> records, int maxBinDist) {
         stats = getSummaryStats(records, maxBinDist);
-        double[] compressedLogExpected = stats.getMean();
-        compressedExpected = expm1(compressedLogExpected);
+        compressedExpected = expm1(stats.getMean());
     }
 
     private WelfordStats getSummaryStats(MatrixZoomData zd, int maxBin, int minVal,
                                          NormalizationType norm) {
-
-        int maxCompressedBin = logp1i(maxBin) + 1;
-
-        WelfordStats stats = new WelfordStats(maxCompressedBin);
-
         Iterator<ContactRecord> it = ExtremePixels.getIterator(zd, norm);
         while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > minVal) {
-                int dist = ExpectedUtils.getDist(cr);
-                if (dist < maxBin) {
-                    stats.addValue(logp1i(dist), logp1(cr.getCounts()));
-                }
+                updateStats(cr, maxBin, stats);
             }
         }
         return stats;
     }
 
     private WelfordStats getSummaryStats(List<ContactRecord> records, int maxBin) {
-        int maxCompressedBin = logp1i(maxBin) + 1;
-        WelfordStats stats = new WelfordStats(maxCompressedBin);
+        WelfordStats stats = new WelfordStats(logp1i(maxBin) + 1);
         for (ContactRecord cr : records) {
-            int dist = ExpectedUtils.getDist(cr);
-            if (dist < maxBin) {
-                stats.addValue(logp1i(dist), logp1(cr.getCounts()));
-            }
+            updateStats(cr, maxBin, stats);
         }
         return stats;
     }
 
+    private void updateStats(ContactRecord cr, int maxBin, WelfordStats stats) {
+        int dist = ExpectedUtils.getDist(cr);
+        if (dist < maxBin) {
+            stats.addValue(logp1i(dist), logp1(cr.getCounts()));
+        }
+    }
+
     public int logp1i(int x) {
-        return (int) Math.floor(Math.log(1 + x) / logBase);
+        return (int) Math.floor(Math.log(1 + x));
     }
 
     public static double logp1(double x) {
