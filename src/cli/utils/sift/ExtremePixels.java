@@ -14,7 +14,7 @@ import java.util.*;
 
 public class ExtremePixels {
 
-    private static final float CONTACT_ZSCORE_CUTOFF = 1.5f;
+    private static final float CONTACT_ZSCORE_CUTOFF = 1;
     private static final int MAX_DIST = 10000000;
     private static final int MIN_DIST = 10000;
 
@@ -52,9 +52,9 @@ public class ExtremePixels {
             if (isReasonableEnrichment(percentContact)) {
                 int dist = model.logp1i(ExpectedUtils.getDist(cr));
                 double val = LogExpectedModel.logp1(cr.getCounts());
-                //if (zScores.getZscore(dist, val) > 0) { //CONTACT_ZSCORE_CUTOFF
+                if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
                     extremes.add(cr);
-                //}
+                }
             }
         }
         System.out.println(resolution + " - num extremes: " + extremes.size());
@@ -91,7 +91,7 @@ public class ExtremePixels {
     }
 
     public static boolean isReasonableEnrichment(double val) {
-        return val > 0.005 && val < 0.5;
+        return val > 0.01 && val < 0.5;
     }
 
     public static Set<ContactRecord> coalescePixelsToCentroid(Set<ContactRecord> regions) {
