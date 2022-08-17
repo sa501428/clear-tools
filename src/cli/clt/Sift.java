@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sift {
 
-    private static final int[] resolutions = new int[]{100, 200, 500, 1000, 2000, 5000, 10000};
+    private static final int[] resolutions = new int[]{2000, 5000}; // 100, 200, 500, 1000, 10000
     private NormalizationType norm = NormalizationHandler.NONE;
 
 

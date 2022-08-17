@@ -47,10 +47,9 @@ public class ExtremePixels {
 
         Set<ContactRecord> extremes = new HashSet<>();
         for (ContactRecord cr : records) {
-            int dist = ExpectedUtils.getDist(cr);
-            double percentContact = model.getPercentContact(dist, cr.getCounts());
+            double percentContact = model.getPercentContact(cr);
             if (isReasonableEnrichment(percentContact)) {
-                dist = model.logp1i(dist);
+                int dist = model.logp1i(ExpectedUtils.getDist(cr));
                 double val = LogExpectedModel.logp1(cr.getCounts());
                 if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
                     extremes.add(cr);

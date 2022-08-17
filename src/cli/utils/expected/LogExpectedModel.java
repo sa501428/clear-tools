@@ -78,10 +78,11 @@ public class LogExpectedModel {
         return (float) ((obs - expected) / (superDiagonal - expected));
     }
 
-    public float getPercentContact(int dist, float counts) {
+    public float getPercentContact(ContactRecord cr) {
+        int dist = ExpectedUtils.getDist(cr);
         double baseline = getExpFromUncompressedBin(dist);
         double maxSignal = getExpFromUncompressedBin(1);
-        return getP(counts, baseline, maxSignal);
+        return getP(cr.getCounts(), baseline, maxSignal);
     }
 
     public ZScores getZscores() {

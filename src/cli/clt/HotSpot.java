@@ -241,7 +241,7 @@ public class HotSpot {
                 int dist = ExpectedUtils.getDist(cr);
                 if (vector1[cr.getBinX()] > 1 && vector1[cr.getBinY()] > 1 && vector2[cr.getBinX()] > 1 && vector2[cr.getBinY()] > 1) {
                     if (dist > minBin && dist < maxBin) {
-                        float percentContact = expected.getPercentContact(dist, cr.getCounts());
+                        float percentContact = expected.getPercentContact(cr);
                         percentContact = Math.min(1, Math.max(0, percentContact));
                         //percentContact2 = Math.exp(percentContact0 - 1);
 
