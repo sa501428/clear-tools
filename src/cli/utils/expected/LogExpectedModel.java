@@ -51,7 +51,7 @@ public class LogExpectedModel {
     }
 
     public int logp1i(int x) {
-        return (int) Math.round(Math.log(1 + x));
+        return (int) Math.floor(Math.log(1 + x));
     }
 
     public static double logp1(double x) {

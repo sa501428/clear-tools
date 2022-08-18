@@ -27,11 +27,11 @@ public class LogExpectedSpline {
 
     public boolean isReasonablePercentContact(ContactRecord cr, LogExpectedModel model) {
         double percentContact = getPercentContact(cr);
-        return percentContact > 0.01 && percentContact < 0.4;
+        return percentContact > 0.01;// && percentContact < 0.4;
     }
 
     public float getPercentContact(ContactRecord cr) {
-        double dist = Math.log(1 + ExpectedUtils.getDist(cr));
+        double dist = Math.floor(Math.log(1 + ExpectedUtils.getDist(cr)));
         dist = Math.min(dist, n - 1);
         double baseline = mu.value(dist);
         double maxSignal = mu.value(1);

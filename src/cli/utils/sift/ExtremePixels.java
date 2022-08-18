@@ -15,7 +15,7 @@ import java.util.*;
 
 public class ExtremePixels {
 
-    private static final float CONTACT_ZSCORE_CUTOFF = 1;
+    private static final float CONTACT_ZSCORE_CUTOFF = 2.5f;//2;
     private static final int MAX_DIST = 10000000;
     private static final int MIN_DIST = 10000;
 
@@ -46,10 +46,10 @@ public class ExtremePixels {
 
         LogExpectedModel model = new LogExpectedModel(records, maxBin);
         ZScoreArray zScores = model.getZscores();
-        zScores.print();
+        //zScores.print();
 
         LogExpectedSpline spline = model.getSpline();
-        spline.print();
+        //spline.print();
 
         Set<ContactRecord> extremes = new HashSet<>();
         for (ContactRecord cr : records) {
@@ -71,7 +71,7 @@ public class ExtremePixels {
     }
 
     private static boolean isReasonableNorm(ContactRecord cr, double[] nv) {
-        return nv[cr.getBinX()] > 0.5 && nv[cr.getBinY()] > 0.5;
+        return nv[cr.getBinX()] > 1 && nv[cr.getBinY()] > 1;
     }
 
     private static List<ContactRecord> populateRecordsInRange(MatrixZoomData zd, NormalizationType norm,

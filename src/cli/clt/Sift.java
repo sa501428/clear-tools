@@ -87,12 +87,12 @@ public class Sift {
         }
         System.out.println("Using norm: " + norm.getLabel());
 
-        Feature2DList refinedLoops = siftThroughCalls(ds);
+        Feature2DList refinedLoops = siftThroughCalls(ds, args[2]);
         refinedLoops.exportFeatureList(new File(args[2] + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("sift complete");
     }
 
-    private Feature2DList siftThroughCalls(Dataset ds) {
+    private Feature2DList siftThroughCalls(Dataset ds, String outname) {
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList output = new Feature2DList();
 
@@ -103,7 +103,7 @@ public class Sift {
             int currIndex = cIndex.getAndIncrement();
             while (currIndex < chromosomes.length) {
                 Chromosome chromosome = chromosomes[currIndex];
-                List<Feature2D> sharpLoops = findSiftedFeatures(chromosome, ds);
+                List<Feature2D> sharpLoops = findSiftedFeatures(chromosome, ds, outname);
                 if (sharpLoops.size() > 0) {
                     synchronized (output) {
                         output.addByKey(Feature2DList.getKey(chromosome, chromosome), sharpLoops);
@@ -116,7 +116,7 @@ public class Sift {
         return output;
     }
 
-    private List<Feature2D> findSiftedFeatures(Chromosome chromosome, Dataset ds) {
+    private List<Feature2D> findSiftedFeatures(Chromosome chromosome, Dataset ds, String outname) {
         Matrix matrix = ds.getMatrix(chromosome, chromosome);
         if (matrix == null) return new ArrayList<>();
 
@@ -138,6 +138,9 @@ public class Sift {
                         pixelsForResolutions.put(lowRes, points);
                         System.out.println(lowRes + " completed (" + points.size() + ")");
                     }
+
+                    Feature2DList initLoops = convert(points, chromosome, lowRes);
+                    initLoops.exportFeatureList(new File(outname + "." + lowRes + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
                 }
                 currResIndex = rIndex.getAndIncrement();
             }
@@ -151,5 +154,15 @@ public class Sift {
         Set<Region> finalPoints = FeatureUtils.getPointsWithMoreThan(countsForRecord, 2);
         countsForRecord.clear();
         return FeatureUtils.convertToFeature2Ds(finalPoints, chromosome);
+    }
+
+    private Feature2DList convert(Set<SimpleLocation> locations, Chromosome chromosome, int res) {
+        Feature2DList list = new Feature2DList();
+        List<Feature2D> features = new ArrayList<>();
+        for (SimpleLocation location : locations) {
+            features.add(location.toRegion(res).toFeature2D(chromosome));
+        }
+        list.addByKey(Feature2DList.getKey(chromosome, chromosome), features);
+        return list;
     }
 }
