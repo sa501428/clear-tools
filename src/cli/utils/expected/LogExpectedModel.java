@@ -8,7 +8,7 @@ import javastraw.reader.type.NormalizationType;
 import java.util.Iterator;
 import java.util.List;
 
-public class LogExpectedModel {
+public class LogExpectedModel extends ExpectedModel {
 
     private final WelfordArray stats;
     private final double[] compressedExpected;
@@ -50,24 +50,8 @@ public class LogExpectedModel {
         }
     }
 
-    public int logp1i(int x) {
-        return (int) Math.floor(Math.log(1 + x));
-    }
-
-    public static double logp1(double x) {
-        return Math.log(1 + x);
-    }
-
-    public double getExpFromUncompressedBin(int dist) {
+    public double getExpectedFromUncompressedBin(int dist) {
         return compressedExpected[logp1i(dist)];
-    }
-
-    private double[] expm1(double[] input) {
-        double[] vec = new double[input.length];
-        for (int k = 0; k < vec.length; k++) {
-            vec[k] = Math.expm1(input[k]);
-        }
-        return vec;
     }
 
     public ZScoreArray getZscores() {

@@ -4,10 +4,11 @@ import javastraw.reader.block.ContactRecord;
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
-public class LogExpectedSpline {
+public class LogExpectedSpline extends ExpectedModel {
 
     private final int n;
     private final PolynomialSplineFunction mu;
+    double maxSignal;
 
     public LogExpectedSpline(double[] mean, double[] stddev) {
         n = mean.length;
@@ -18,11 +19,7 @@ public class LogExpectedSpline {
 
         SplineInterpolator interpolator = new SplineInterpolator();
         mu = interpolator.interpolate(indices, mean);
-    }
-
-    public static float getP(double obs, double expected, double superDiagonal) {
-        // P = (O - E)/(SD - E)
-        return (float) ((obs - expected) / (superDiagonal - expected));
+        maxSignal = Math.expm1(mu.value(0.5));
     }
 
     public boolean isReasonablePercentContact(ContactRecord cr, LogExpectedModel model) {
@@ -30,11 +27,15 @@ public class LogExpectedSpline {
         return percentContact > 0.01;// && percentContact < 0.4;
     }
 
+    public static float getP(double obs, double expected, double superDiagonal) {
+        // P = (O - E)/(SD - E)
+        return (float) ((obs - expected) / (superDiagonal - expected));
+    }
+
     public float getPercentContact(ContactRecord cr) {
-        double dist = Math.floor(Math.log(1 + ExpectedUtils.getDist(cr)));
+        double dist = (Math.log(1 + ExpectedUtils.getDist(cr))); // floor
         dist = Math.min(dist, n - 1);
-        double baseline = mu.value(dist);
-        double maxSignal = mu.value(1);
+        double baseline = Math.expm1(mu.value(dist));
         return getP(cr.getCounts(), baseline, maxSignal);
     }
 
@@ -42,5 +43,11 @@ public class LogExpectedSpline {
         for (double k = 0; k <= n - 1; k += 0.5) {
             System.out.println(k + "  " + mu.value(k));
         }
+    }
+
+    @Override
+    public double getExpectedFromUncompressedBin(int dist0) {
+        double dist = Math.min(logp1(dist0), n - 1);
+        return Math.expm1(mu.value(dist));
     }
 }

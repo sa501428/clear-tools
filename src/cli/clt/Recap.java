@@ -1,6 +1,7 @@
 package cli.clt;
 
 import cli.Main;
+import cli.utils.expected.ExpectedModel;
 import cli.utils.expected.LogExpectedModel;
 import cli.utils.expected.LogExpectedSpline;
 import cli.utils.flags.RegionConfiguration;
@@ -166,18 +167,17 @@ public class Recap {
                         LogExpectedSpline spline = expected.getSpline();
 
                         float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, expected);
-                        double superDiagonal = expected.getExpFromUncompressedBin(1);
+                        double superDiagonal = expected.getExpectedFromUncompressedBin(1);
 
                         try {
                             for (Feature2D loop : loops) {
                                 float[][] obsMatrix = new float[matrixWidth][matrixWidth];
                                 Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm, key);
-                                float[][] eMatrix = new float[matrixWidth][matrixWidth];
-                                Utils.fillInExpectedMatrix(eMatrix, loop, matrixWidth, expected, resolution, window);
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
-                                Map<String, String> attributes = RecapTools.getStats(obsMatrix, eMatrix,
-                                        window, superDiagonal, pseudoCount, isDeepLoopAnalysis, spline);
+                                Map<String, String> attributes = RecapTools.getStats(obsMatrix,
+                                        window, superDiagonal, pseudoCount, isDeepLoopAnalysis, spline,
+                                        expected, loop, resolution);
                                 for (String akey : attributes.keySet()) {
                                     loop.addStringAttribute(prefix + akey, attributes.get(akey));
                                 }
@@ -215,7 +215,7 @@ public class Recap {
         return (int) (maxDist + 4 * window);
     }
 
-    private static float getMedianExpectedAt(int d0, LogExpectedModel expectedVector) {
-        return (float) expectedVector.getExpFromUncompressedBin(d0);
+    private static float getMedianExpectedAt(int d0, ExpectedModel expectedVector) {
+        return (float) expectedVector.getExpectedFromUncompressedBin(d0);
     }
 }
