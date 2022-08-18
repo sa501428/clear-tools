@@ -1,6 +1,6 @@
 package cli.utils.recap;
 
-import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.LogExpectedSpline;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.basics.Chromosome;
@@ -50,27 +50,34 @@ public class RecapTools {
     }
 
     public static Map<String, String> getStats(float[][] obsMatrix, float[][] eMatrix,
-                                               int window, double superDiagonal, float pseudoCount, boolean isDeepLoopAnalysis) {
+                                               int window, double superDiagonal, float pseudoCount,
+                                               boolean isDeepLoopAnalysis, LogExpectedSpline spline) {
 
         Map<String, String> loopAttributes = new HashMap<>();
-        float obs = obsMatrix[window][window];
-        addAttributes(loopAttributes, "OBS_", obsMatrix, window, isDeepLoopAnalysis);
+
+        if (isDeepLoopAnalysis) {
+            addMatrixSums(obsMatrix, loopAttributes, "OBS_");
+            float[] manhattanDecay = calculateDecay(obsMatrix, window);
+            addRegressionStats(manhattanDecay, loopAttributes, "OBS_");
+        }
 
         if (eMatrix != null) {
-            float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
-            if (!isDeepLoopAnalysis) {
+            if (isDeepLoopAnalysis) {
+                float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
+                addMatrixSums(oeMatrix, loopAttributes, "OE_");
+                float[] manhattanDecay = calculateDecay(oeMatrix, window);
+                addRegressionStats(manhattanDecay, loopAttributes, "OE_");
+            } else {
+                float obs = obsMatrix[window][window];
                 float expected = eMatrix[window][window];
-                loopAttributes.put("PRESENCE", String.valueOf(LogExpectedModel.getP(obs, expected, superDiagonal)));
-                loopAttributes.put("PRESENCE_INF", String.valueOf(LogExpectedModel.getP(obs, pseudoCount, superDiagonal)));
+                loopAttributes.put("PRESENCE", String.valueOf(LogExpectedSpline.getP(obs, expected, superDiagonal)));
+                loopAttributes.put("PRESENCE_INF", String.valueOf(LogExpectedSpline.getP(obs, pseudoCount, superDiagonal)));
             }
-            addAttributes(loopAttributes, "OE_", oeMatrix, window, isDeepLoopAnalysis);
         }
 
         return loopAttributes;
     }
 
-    private static void addAttributes(Map<String, String> attributes, String stem, float[][] matrix, int window,
-                                      boolean isDeepLoopAnalysis) {
         /*
             DescriptiveStatistics stats = makeStats(matrix);
             float val = matrix[window][window];
@@ -84,17 +91,6 @@ public class RecapTools {
             attributes.put(stem + "MAX_ENRICHMENT", String.valueOf(val / stats.getMax()));
             attributes.put(stem + "MIN_ENRICHMENT", String.valueOf(val / stats.getMin()));
         */
-
-        if (isDeepLoopAnalysis) {
-            addMatrixSums(matrix, attributes, stem);
-
-            // calculates the decay vetor
-            float[] manhattanDecay = calculateDecay(matrix, window);
-            addRegressionStats(manhattanDecay, attributes, stem);
-        }
-    }
-
-
 
     private static void addMatrixSums(float[][] matrix, Map<String, String> attributes, String stem) {
 

@@ -51,7 +51,7 @@ public class LogExpectedModel {
     }
 
     public int logp1i(int x) {
-        return (int) Math.floor(Math.log(1 + x));
+        return (int) Math.round(Math.log(1 + x));
     }
 
     public static double logp1(double x) {
@@ -70,19 +70,11 @@ public class LogExpectedModel {
         return vec;
     }
 
-    public static float getP(double obs, double expected, double superDiagonal) {
-        // P = (O - E)/(SD - E)
-        return (float) ((obs - expected) / (superDiagonal - expected));
-    }
-
-    public float getPercentContact(ContactRecord cr) {
-        int dist = ExpectedUtils.getDist(cr);
-        double baseline = getExpFromUncompressedBin(dist);
-        double maxSignal = getExpFromUncompressedBin(1);
-        return getP(cr.getCounts(), baseline, maxSignal);
-    }
-
     public ZScoreArray getZscores() {
         return stats.getZscores();
+    }
+
+    public LogExpectedSpline getSpline() {
+        return new LogExpectedSpline(stats.getMean(), stats.getStdDev());
     }
 }

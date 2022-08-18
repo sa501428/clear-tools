@@ -2,6 +2,7 @@ package cli.utils.sift;
 
 import cli.utils.expected.ExpectedUtils;
 import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.LogExpectedSpline;
 import cli.utils.expected.ZScoreArray;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
@@ -40,18 +41,20 @@ public class ExtremePixels {
             return new HashSet<>();
         }
 
-        List<ContactRecord> records = populateRecordsInRange(zd, norm, minBin, maxBin, nv, 1);
+        List<ContactRecord> records = populateRecordsInRange(zd, norm, maxBin, 1);
         System.out.println(resolution + " - num records: " + records.size());
 
         LogExpectedModel model = new LogExpectedModel(records, maxBin);
         ZScoreArray zScores = model.getZscores();
-
         zScores.print();
+
+        LogExpectedSpline spline = model.getSpline();
+        spline.print();
 
         Set<ContactRecord> extremes = new HashSet<>();
         for (ContactRecord cr : records) {
             if (isReasonableNorm(cr, nv)) {
-                if (isReasonablePercentContact(cr, model)) {
+                if (spline.isReasonablePercentContact(cr, model)) {
                     int dist = model.logp1i(ExpectedUtils.getDist(cr));
                     double val = LogExpectedModel.logp1(cr.getCounts());
                     if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
@@ -67,24 +70,19 @@ public class ExtremePixels {
         return extremes;
     }
 
-    private static boolean isReasonablePercentContact(ContactRecord cr, LogExpectedModel model) {
-        double percentContact = model.getPercentContact(cr);
-        return percentContact > 0.01 && percentContact < 0.4;
-    }
-
     private static boolean isReasonableNorm(ContactRecord cr, double[] nv) {
         return nv[cr.getBinX()] > 0.5 && nv[cr.getBinY()] > 0.5;
     }
 
     private static List<ContactRecord> populateRecordsInRange(MatrixZoomData zd, NormalizationType norm,
-                                                              int minBin, int maxBin, double[] nv, int minVal) {
+                                                              int maxBin, int minVal) { // int minBin, double[] nv,
         List<ContactRecord> records = new LinkedList<>();
         Iterator<ContactRecord> it = getIterator(zd, norm);
         while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > minVal) {
                 int dist = ExpectedUtils.getDist(cr);
-                if (dist > minBin && dist < maxBin) {
+                if (dist < maxBin) { // (dist > minBin &&
                     records.add(cr);
                 }
             }

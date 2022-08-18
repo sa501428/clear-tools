@@ -2,6 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.LogExpectedSpline;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
@@ -162,6 +163,7 @@ public class Recap {
 
                         int maxBinDist = Math.max(getMaxDistance(loops, resolution, window), 9000000 / resolution);
                         LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBinDist, 0);
+                        LogExpectedSpline spline = expected.getSpline();
 
                         float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, expected);
                         double superDiagonal = expected.getExpFromUncompressedBin(1);
@@ -175,7 +177,7 @@ public class Recap {
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
                                 Map<String, String> attributes = RecapTools.getStats(obsMatrix, eMatrix,
-                                        window, superDiagonal, pseudoCount, isDeepLoopAnalysis);
+                                        window, superDiagonal, pseudoCount, isDeepLoopAnalysis, spline);
                                 for (String akey : attributes.keySet()) {
                                     loop.addStringAttribute(prefix + akey, attributes.get(akey));
                                 }

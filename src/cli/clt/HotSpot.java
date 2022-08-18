@@ -2,6 +2,7 @@ package cli.clt;
 
 import cli.utils.expected.ExpectedUtils;
 import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.LogExpectedSpline;
 import cli.utils.expected.Welford;
 import cli.utils.sift.SiftUtils;
 import cli.utils.sift.SimpleLocation;
@@ -233,6 +234,7 @@ public class HotSpot {
                                                          Map<SimpleLocation, Welford> results, double[] vector1, double[] vector2) {
 
         LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin, 0);
+        LogExpectedSpline spline = expected.getSpline();
 
         Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
         while (iterator.hasNext()) {
@@ -241,7 +243,7 @@ public class HotSpot {
                 int dist = ExpectedUtils.getDist(cr);
                 if (vector1[cr.getBinX()] > 1 && vector1[cr.getBinY()] > 1 && vector2[cr.getBinX()] > 1 && vector2[cr.getBinY()] > 1) {
                     if (dist > minBin && dist < maxBin) {
-                        float percentContact = expected.getPercentContact(cr);
+                        float percentContact = spline.getPercentContact(cr);
                         percentContact = Math.min(1, Math.max(0, percentContact));
                         //percentContact2 = Math.exp(percentContact0 - 1);
 
