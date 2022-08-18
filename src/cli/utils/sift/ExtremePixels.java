@@ -46,14 +46,17 @@ public class ExtremePixels {
         LogExpectedModel model = new LogExpectedModel(records, maxBin);
         ZScoreArray zScores = model.getZscores();
 
+        zScores.print();
+
         Set<ContactRecord> extremes = new HashSet<>();
         for (ContactRecord cr : records) {
-            double percentContact = model.getPercentContact(cr);
-            if (isReasonableEnrichment(percentContact)) {
-                int dist = model.logp1i(ExpectedUtils.getDist(cr));
-                double val = LogExpectedModel.logp1(cr.getCounts());
-                if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
-                    extremes.add(cr);
+            if (isReasonableNorm(cr, nv)) {
+                if (isReasonablePercentContact(cr, model)) {
+                    int dist = model.logp1i(ExpectedUtils.getDist(cr));
+                    double val = LogExpectedModel.logp1(cr.getCounts());
+                    if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
+                        extremes.add(cr);
+                    }
                 }
             }
         }
@@ -62,6 +65,15 @@ public class ExtremePixels {
         records.clear();
 
         return extremes;
+    }
+
+    private static boolean isReasonablePercentContact(ContactRecord cr, LogExpectedModel model) {
+        double percentContact = model.getPercentContact(cr);
+        return percentContact > 0.01 && percentContact < 0.4;
+    }
+
+    private static boolean isReasonableNorm(ContactRecord cr, double[] nv) {
+        return nv[cr.getBinX()] > 0.5 && nv[cr.getBinY()] > 0.5;
     }
 
     private static List<ContactRecord> populateRecordsInRange(MatrixZoomData zd, NormalizationType norm,
@@ -73,9 +85,7 @@ public class ExtremePixels {
             if (cr.getCounts() > minVal) {
                 int dist = ExpectedUtils.getDist(cr);
                 if (dist > minBin && dist < maxBin) {
-                    if (nv[cr.getBinX()] > 1 && nv[cr.getBinY()] > 1) {
-                        records.add(cr);
-                    }
+                    records.add(cr);
                 }
             }
         }
@@ -88,10 +98,6 @@ public class ExtremePixels {
         } else {
             return zd.getNormalizedIterator(norm);
         }
-    }
-
-    public static boolean isReasonableEnrichment(double val) {
-        return val > 0.01 && val < 0.5;
     }
 
     public static Set<ContactRecord> coalescePixelsToCentroid(Set<ContactRecord> regions) {
