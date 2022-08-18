@@ -25,6 +25,7 @@ public class LogExpectedModel extends ExpectedModel {
 
     private WelfordArray getSummaryStats(MatrixZoomData zd, int maxBin, int minVal,
                                          NormalizationType norm) {
+        WelfordArray stats = new WelfordArray(logp1i(maxBin) + 1);
         Iterator<ContactRecord> it = ExtremePixels.getIterator(zd, norm);
         while (it.hasNext()) {
             ContactRecord cr = it.next();
