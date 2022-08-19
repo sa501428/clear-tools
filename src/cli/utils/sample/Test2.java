@@ -29,7 +29,7 @@ public class Test2 {
                 false, false, false);
         Chromosome chrom = ds.getChromosomeHandler().getChromosomeFromName("chr10");
         MatrixZoomData zd = ds.getMatrix(chrom, chrom).getZoomData(new HiCZoom(res));
-        Iterator<ContactRecord> records = zd.getNormalizedIterator(NormalizationHandler.SCALE);
+        Iterator<ContactRecord> records = zd.getNormalizedIterator(NormalizationHandler.VC);
 
 
         List<WeightedObservedPoint> points = new LinkedList<>();
@@ -40,7 +40,7 @@ public class Test2 {
             //if(record.getCounts() > 1) {
             int dist0 = ExpectedUtils.getDist(record);
             //if (dist0 < 10000000/res) {
-            if (generator.nextDouble() < 0.001) {
+            if (generator.nextDouble() < 0.01) {
                 double dist = (Math.log(1 + dist0));
                 double val = Math.log(1 + record.getCounts());
                 points.add(new WeightedObservedPoint(Math.sqrt(1.0 / (1.0 + dist)), dist, val)); //
@@ -75,7 +75,6 @@ public class Test2 {
                                          double[] xF, int degree) {
 
         List<WeightedObservedPoint> points = new LinkedList<>();
-
         for (int i = 0; i < x0.length; i++) {
             points.add(new WeightedObservedPoint(1.0, x0[i], y0[i]));
         }
@@ -87,17 +86,12 @@ public class Test2 {
                                          double[] xF, int degree) {
 
         PolynomialCurveFitter fitter = PolynomialCurveFitter.create(degree);
-
-        double[] coeff = fitter.fit(points);
-
-        PolynomialFunction function = new PolynomialFunction(coeff);
+        PolynomialFunction function = new PolynomialFunction(fitter.fit(points));
 
         double[] fitted = new double[xF.length];
-
         for (int i = 0; i < xF.length; i++) {
             fitted[i] = function.value(xF[i]);
         }
-
         return fitted;
     }
 
