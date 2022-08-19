@@ -306,7 +306,12 @@ public class RecapTools {
                         } else if (categories.get(k).contains(ROW_SUM) || categories.get(k).contains(COL_SUM)) {
                             fillInVector(outputs.get(k), loop.getAttribute(key), currIndex, w, 2 * window + 1);
                         } else {
-                            outputs.get(k)[currIndex][w] = Float.parseFloat(loop.getAttribute(key));
+                            try {
+                                outputs.get(k)[currIndex][w] = Float.parseFloat(loop.getAttribute(key));
+                            } catch (Exception e) {
+                                System.err.println("failed key " + key);
+                                e.printStackTrace();
+                            }
                         }
                     }
                 }
