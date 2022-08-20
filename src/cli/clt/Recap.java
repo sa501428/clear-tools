@@ -2,7 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.expected.ExpectedModel;
-import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.LogBinnedExpectedModel;
 import cli.utils.expected.LogExpectedSpline;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
@@ -163,7 +163,7 @@ public class Recap {
                         }
 
                         int maxBinDist = Math.max(getMaxDistance(loops, resolution, window), 9000000 / resolution);
-                        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBinDist, 0);
+                        LogBinnedExpectedModel expected = new LogBinnedExpectedModel(zd, norm, maxBinDist, 0);
                         LogExpectedSpline spline = expected.getSpline();
 
                         float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, expected);

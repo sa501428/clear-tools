@@ -22,7 +22,7 @@ public class LogExpectedSpline extends ExpectedModel {
         maxSignal = Math.expm1(mu.value(0.5));
     }
 
-    public boolean isReasonablePercentContact(ContactRecord cr, LogExpectedModel model) {
+    public boolean isReasonablePercentContact(ContactRecord cr) {
         double percentContact = getPercentContact(cr);
         return percentContact > 0.01;// && percentContact < 0.4;
     }

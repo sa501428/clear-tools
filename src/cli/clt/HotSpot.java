@@ -1,7 +1,7 @@
 package cli.clt;
 
 import cli.utils.expected.ExpectedUtils;
-import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.LogBinnedExpectedModel;
 import cli.utils.expected.LogExpectedSpline;
 import cli.utils.expected.Welford;
 import cli.utils.sift.SiftUtils;
@@ -233,7 +233,7 @@ public class HotSpot {
                                                          NormalizationType norm,
                                                          Map<SimpleLocation, Welford> results, double[] vector1, double[] vector2) {
 
-        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin, 0);
+        LogBinnedExpectedModel expected = new LogBinnedExpectedModel(zd, norm, maxBin, 0);
         LogExpectedSpline spline = expected.getSpline();
 
         Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);

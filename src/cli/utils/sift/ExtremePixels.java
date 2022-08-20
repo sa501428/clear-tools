@@ -1,7 +1,7 @@
 package cli.utils.sift;
 
 import cli.utils.expected.ExpectedUtils;
-import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.LogBinnedExpectedModel;
 import cli.utils.expected.LogExpectedSpline;
 import cli.utils.expected.ZScoreArray;
 import javastraw.reader.Dataset;
@@ -44,7 +44,7 @@ public class ExtremePixels {
         List<ContactRecord> records = populateRecordsInRange(zd, norm, maxBin, 1);
         System.out.println(resolution + " - num records: " + records.size());
 
-        LogExpectedModel model = new LogExpectedModel(records, maxBin);
+        LogBinnedExpectedModel model = new LogBinnedExpectedModel(records, maxBin);
         ZScoreArray zScores = model.getZscores();
         //zScores.print();
 
@@ -54,9 +54,9 @@ public class ExtremePixels {
         Set<ContactRecord> extremes = new HashSet<>();
         for (ContactRecord cr : records) {
             if (isReasonableNorm(cr, nv)) {
-                if (spline.isReasonablePercentContact(cr, model)) {
+                if (spline.isReasonablePercentContact(cr)) {
                     int dist = model.logp1i(ExpectedUtils.getDist(cr));
-                    double val = LogExpectedModel.logp1(cr.getCounts());
+                    double val = LogBinnedExpectedModel.logp1(cr.getCounts());
                     if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
                         extremes.add(cr);
                     }

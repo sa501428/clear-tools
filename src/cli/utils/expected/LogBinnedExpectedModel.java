@@ -8,17 +8,17 @@ import javastraw.reader.type.NormalizationType;
 import java.util.Iterator;
 import java.util.List;
 
-public class LogExpectedModel extends ExpectedModel {
+public class LogBinnedExpectedModel extends ExpectedModel {
 
     private final WelfordArray stats;
     private final double[] compressedExpected;
 
-    public LogExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, int minVal) {
+    public LogBinnedExpectedModel(MatrixZoomData zd, NormalizationType norm, int maxBinDist, int minVal) {
         stats = getSummaryStats(zd, maxBinDist, minVal, norm);
         compressedExpected = expm1(stats.getMean());
     }
 
-    public LogExpectedModel(List<ContactRecord> records, int maxBinDist) {
+    public LogBinnedExpectedModel(List<ContactRecord> records, int maxBinDist) {
         stats = getSummaryStats(records, maxBinDist);
         compressedExpected = expm1(stats.getMean());
     }

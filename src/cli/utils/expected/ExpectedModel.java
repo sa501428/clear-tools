@@ -1,11 +1,12 @@
 package cli.utils.expected;
 
 public abstract class ExpectedModel {
+
+    public abstract double getExpectedFromUncompressedBin(int dist);
+
     public static double logp1(double x) {
         return Math.log(1 + x);
     }
-
-    public abstract double getExpectedFromUncompressedBin(int dist);
 
     public int logp1i(int x) {
         return (int) Math.floor(Math.log(1 + x));
