@@ -1,7 +1,6 @@
 package cli.utils.recap;
 
 import cli.utils.expected.ExpectedModel;
-import cli.utils.expected.LogExpectedSpline;
 import cli.utils.flags.Utils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -39,7 +38,6 @@ public class RecapTools {
 
         if (!isLoopAnalysis) {
             categories.add("PRESENCE");
-            categories.add("PRESENCE_INF");
             return categories;
         }
 
@@ -52,8 +50,8 @@ public class RecapTools {
     }
 
     public static Map<String, String> getStats(float[][] obsMatrix,
-                                               int window, double superDiagonal, float pseudoCount,
-                                               boolean isDeepLoopAnalysis, ExpectedModel spline, ExpectedModel log,
+                                               int window, float pseudoCount,
+                                               boolean isDeepLoopAnalysis, ExpectedModel spline,
                                                Feature2D loop, int resolution) {
 
         Map<String, String> attributes = new HashMap<>();
@@ -64,7 +62,7 @@ public class RecapTools {
             addRegressionStats(manhattanDecay, attributes, "OBS_");
 
             float[][] eMatrix = new float[obsMatrix.length][obsMatrix.length];
-            Utils.fillInExpectedMatrix(eMatrix, loop, obsMatrix.length, log, resolution, window);
+            Utils.fillInExpectedMatrix(eMatrix, loop, obsMatrix.length, spline, resolution, window);
 
             float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
             addMatrixSums(oeMatrix, attributes, "OE_");
@@ -72,26 +70,18 @@ public class RecapTools {
             addRegressionStats(manhattanDecay, attributes, "OE_");
         } else {
             float obs = obsMatrix[window][window];
-            double expected1 = getExpectedFrom(log, loop, resolution);
-            double expected2 = getExpectedFrom(spline, loop, resolution);
-
-            attributes.put("OBS_VAL", String.valueOf(obs));
-            attributes.put("OE_VAL1", String.valueOf(obs / expected1));
-            attributes.put("OE_VAL2", String.valueOf(obs / expected2));
-            attributes.put("PRESENCE_1", String.valueOf(LogExpectedSpline.getP(obs, expected1, superDiagonal)));
-            attributes.put("PRESENCE_2", String.valueOf(LogExpectedSpline.getP(obs, expected2, superDiagonal)));
-
-            //loopAttributes.put("PRESENCE_INF", String.valueOf(LogExpectedSpline.getP(obs, pseudoCount, superDiagonal)));
+            double p = getPresenceFrom(spline, loop, resolution, obs);
+            attributes.put("PRESENCE", String.valueOf(p));
         }
 
         return attributes;
     }
 
-    private static double getExpectedFrom(ExpectedModel model, Feature2D loop, int resolution) {
+    private static double getPresenceFrom(ExpectedModel model, Feature2D loop, int resolution, float counts) {
         int midX = (int) (loop.getMidPt1() / resolution);
         int midY = (int) (loop.getMidPt2() / resolution);
         int dist = Math.abs(midX - midY);
-        return model.getExpectedFromUncompressedBin(dist);
+        return model.getPercentContact(dist, counts);
     }
 
         /*

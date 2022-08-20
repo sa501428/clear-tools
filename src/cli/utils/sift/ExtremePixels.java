@@ -1,9 +1,8 @@
 package cli.utils.sift;
 
+import cli.utils.expected.ExpectedModel;
 import cli.utils.expected.ExpectedUtils;
-import cli.utils.expected.LogBinnedExpectedModel;
-import cli.utils.expected.LogExpectedSpline;
-import cli.utils.expected.ZScoreArray;
+import cli.utils.expected.LogExpectedPolynomial;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
@@ -41,26 +40,20 @@ public class ExtremePixels {
             return new HashSet<>();
         }
 
-        List<ContactRecord> records = populateRecordsInRange(zd, norm, maxBin, 1);
+        ExpectedModel spline = new LogExpectedPolynomial(zd, norm, maxBin, 5, true);
+
+        List<ContactRecord> records = populateRecordsInRange(zd, norm, maxBin, 1, minBin, nv);
         System.out.println(resolution + " - num records: " + records.size());
 
-        LogBinnedExpectedModel model = new LogBinnedExpectedModel(records, maxBin);
-        ZScoreArray zScores = model.getZscores();
+        //LogBinnedExpectedModel model = new LogBinnedExpectedModel(records, maxBin);
+        //ZScoreArray zScores = model.getZscores();
         //zScores.print();
-
-        LogExpectedSpline spline = model.getSpline();
         //spline.print();
 
         Set<ContactRecord> extremes = new HashSet<>();
         for (ContactRecord cr : records) {
-            if (isReasonableNorm(cr, nv)) {
-                if (spline.isReasonablePercentContact(cr)) {
-                    int dist = model.logp1i(ExpectedUtils.getDist(cr));
-                    double val = LogBinnedExpectedModel.logp1(cr.getCounts());
-                    if (zScores.getZscore(dist, val) > CONTACT_ZSCORE_CUTOFF) {
-                        extremes.add(cr);
-                    }
-                }
+            if (spline.isReasonablePercentContact(cr)) {
+                extremes.add(cr);
             }
         }
         System.out.println(resolution + " - num extremes: " + extremes.size());
@@ -75,15 +68,17 @@ public class ExtremePixels {
     }
 
     private static List<ContactRecord> populateRecordsInRange(MatrixZoomData zd, NormalizationType norm,
-                                                              int maxBin, int minVal) { // int minBin, double[] nv,
+                                                              int maxBin, int minVal, int minBin, double[] nv) {
         List<ContactRecord> records = new LinkedList<>();
         Iterator<ContactRecord> it = getIterator(zd, norm);
         while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > minVal) {
-                int dist = ExpectedUtils.getDist(cr);
-                if (dist < maxBin) { // (dist > minBin &&
-                    records.add(cr);
+                if (isReasonableNorm(cr, nv)) {
+                    int dist = ExpectedUtils.getDist(cr);
+                    if (dist > minBin && dist < maxBin) {
+                        records.add(cr);
+                    }
                 }
             }
         }

@@ -51,8 +51,14 @@ public class LogBinnedExpectedModel extends ExpectedModel {
         }
     }
 
+    @Override
     public double getExpectedFromUncompressedBin(int dist) {
         return compressedExpected[logp1i(dist)];
+    }
+
+    @Override
+    public double getNearDiagonalSignal() {
+        return compressedExpected[1];
     }
 
     public ZScoreArray getZscores() {
@@ -60,6 +66,6 @@ public class LogBinnedExpectedModel extends ExpectedModel {
     }
 
     public LogExpectedSpline getSpline() {
-        return new LogExpectedSpline(stats.getMean(), stats.getStdDev());
+        return new LogExpectedSpline(stats.getMean());
     }
 }
