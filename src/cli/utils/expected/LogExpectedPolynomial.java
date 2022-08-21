@@ -33,7 +33,7 @@ public class LogExpectedPolynomial extends ExpectedModel {
 
         while (records.hasNext()) {
             ContactRecord record = records.next();
-            if (generator.nextDouble() < 0.01) {
+            if (generator.nextDouble() < 0.1) {
                 double dist = logp1(ExpectedUtils.getDist(record));
                 double val = logp1(record.getCounts());
                 points.add(new WeightedObservedPoint(Math.sqrt(1.0 / (1.0 + dist)), dist, val));
@@ -48,8 +48,8 @@ public class LogExpectedPolynomial extends ExpectedModel {
 
         PolynomialCurveFitter fitter = PolynomialCurveFitter.create(degree);
         function = new PolynomialFunction(fitter.fit(points));
+        points.clear();
         nearDiagonalSignal = Math.expm1(function.value(0.5));
-
         maxX = findAsymptotePoint(logp1i(maxBin) - 1, average);
     }
 
