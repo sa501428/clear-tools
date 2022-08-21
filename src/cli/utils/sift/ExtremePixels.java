@@ -89,42 +89,45 @@ public class ExtremePixels {
     public static Set<ContactRecord> coalescePixelsToCentroid(Set<ContactRecord> regions) {
         // HashSet intermediate for removing duplicates
         // LinkedList used so that we can pop out highest obs values
-        LinkedList<ContactRecord> featureLL = new LinkedList<>(regions);
-        featureLL.sort((o1, o2) -> Float.compare(-o1.getCounts(), -o2.getCounts()));
-
+        Map<SimpleLocation, LinkedList<ContactRecord>> map = NMSUtils.groupNearbyRecords(regions, 250);
         Set<ContactRecord> coalesced = new HashSet<>();
-        while (!featureLL.isEmpty()) {
-            ContactRecord pixel = featureLL.pollFirst();
-            if (pixel != null) {
-                featureLL.remove(pixel);
 
-                int buffer = 2;
+        for (LinkedList<ContactRecord> records : map.values()) {
+            records.sort((o1, o2) -> Float.compare(-o1.getCounts(), -o2.getCounts()));
 
-                int binX0 = pixel.getBinX() - buffer;
-                int binY0 = pixel.getBinY() - buffer;
-                int binX1 = pixel.getBinX() + buffer + 1;
-                int binY1 = pixel.getBinY() + buffer + 1;
+            while (!records.isEmpty()) {
+                ContactRecord pixel = records.pollFirst();
+                if (pixel != null) {
+                    records.remove(pixel);
 
-                int prevSize = 0;
-                Set<ContactRecord> pixelList = new HashSet<>();
-                pixelList.add(pixel);
+                    int buffer = 2;
 
-                while (prevSize != pixelList.size()) {
-                    prevSize = pixelList.size();
-                    for (ContactRecord px : featureLL) {
-                        if (contains(px, binX0, binY0, binX1, binY1)) {
-                            pixelList.add(px);
-                            binX0 = Math.min(binX0, px.getBinX() - buffer);
-                            binY0 = Math.min(binY0, px.getBinY() - buffer);
-                            binX1 = Math.max(binX1, px.getBinX() + buffer + 1);
-                            binY1 = Math.max(binY1, px.getBinY() + buffer + 1);
+                    int binX0 = pixel.getBinX() - buffer;
+                    int binY0 = pixel.getBinY() - buffer;
+                    int binX1 = pixel.getBinX() + buffer + 1;
+                    int binY1 = pixel.getBinY() + buffer + 1;
+
+                    int prevSize = 0;
+                    Set<ContactRecord> pixelList = new HashSet<>();
+                    pixelList.add(pixel);
+
+                    while (prevSize != pixelList.size()) {
+                        prevSize = pixelList.size();
+                        for (ContactRecord px : records) {
+                            if (contains(px, binX0, binY0, binX1, binY1)) {
+                                pixelList.add(px);
+                                binX0 = Math.min(binX0, px.getBinX() - buffer);
+                                binY0 = Math.min(binY0, px.getBinY() - buffer);
+                                binX1 = Math.max(binX1, px.getBinX() + buffer + 1);
+                                binY1 = Math.max(binY1, px.getBinY() + buffer + 1);
+                            }
                         }
+                        records.removeAll(pixelList);
                     }
-                    featureLL.removeAll(pixelList);
-                }
 
-                if (pixelList.size() > buffer) {
-                    coalesced.add(pixel);
+                    if (pixelList.size() > buffer) {
+                        coalesced.add(pixel);
+                    }
                 }
             }
         }
