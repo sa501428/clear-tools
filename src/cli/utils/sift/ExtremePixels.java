@@ -21,14 +21,10 @@ public class ExtremePixels {
                 zd, maxBin, minBin, norm, poly);
 
         long time1 = System.nanoTime();
-        System.out.println("S1 " + (time1 - time0) * 1e-9);
-
         Set<SimpleLocation> locations = FeatureUtils.toLocationsAndClear(coalescePixelsToCentroid(enrichedRegions));
         enrichedRegions.clear();
 
         long time2 = System.nanoTime();
-        System.out.println("S2 " + (time2 - time1) * 1e-9);
-
         return locations;
     }
 
