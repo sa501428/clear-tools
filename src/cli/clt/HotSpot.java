@@ -233,7 +233,7 @@ public class HotSpot {
                                                          NormalizationType norm,
                                                          Map<SimpleLocation, Welford> results, double[] vector1, double[] vector2) {
 
-        ExpectedModel spline = new LogExpectedPolynomial(zd, norm, maxBin, 5, true);
+        ExpectedModel poly = new LogExpectedPolynomial(zd, norm, maxBin);
 
         Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
         while (iterator.hasNext()) {
@@ -242,7 +242,7 @@ public class HotSpot {
                 int dist = ExpectedUtils.getDist(cr);
                 if (vector1[cr.getBinX()] > 1 && vector1[cr.getBinY()] > 1 && vector2[cr.getBinX()] > 1 && vector2[cr.getBinY()] > 1) {
                     if (dist > minBin && dist < maxBin) {
-                        float percentContact = spline.getPercentContact(cr);
+                        float percentContact = poly.getPercentContact(cr);
                         percentContact = Math.min(1, Math.max(0, percentContact));
                         //percentContact2 = Math.exp(percentContact0 - 1);
 

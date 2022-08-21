@@ -162,9 +162,9 @@ public class Recap {
                         }
 
                         int maxBinDist = Math.max(getMaxDistance(loops, resolution, window), 9000000 / resolution);
-                        ExpectedModel spline = new LogExpectedPolynomial(zd, norm, maxBinDist, 5, true);
+                        ExpectedModel poly = new LogExpectedPolynomial(zd, norm, maxBinDist);
 
-                        float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, spline);
+                        float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, poly);
 
                         try {
                             for (Feature2D loop : loops) {
@@ -173,7 +173,7 @@ public class Recap {
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
                                 Map<String, String> attributes = RecapTools.getStats(obsMatrix,
-                                        window, pseudoCount, isDeepLoopAnalysis, spline,
+                                        window, pseudoCount, isDeepLoopAnalysis, poly,
                                         loop, resolution);
                                 for (String akey : attributes.keySet()) {
                                     loop.addStringAttribute(prefix + akey, attributes.get(akey));

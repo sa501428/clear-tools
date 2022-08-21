@@ -40,7 +40,7 @@ public class ExtremePixels {
             return new HashSet<>();
         }
 
-        ExpectedModel spline = new LogExpectedPolynomial(zd, norm, maxBin, 5, true);
+        ExpectedModel poly = new LogExpectedPolynomial(zd, norm, maxBin);
 
         List<ContactRecord> records = populateRecordsInRange(zd, norm, maxBin, 1, minBin, nv);
         System.out.println(resolution + " - num records: " + records.size());
@@ -52,7 +52,7 @@ public class ExtremePixels {
 
         Set<ContactRecord> extremes = new HashSet<>();
         for (ContactRecord cr : records) {
-            if (spline.isReasonablePercentContact(cr)) {
+            if (poly.isReasonablePercentContact(cr)) {
                 extremes.add(cr);
             }
         }

@@ -26,39 +26,38 @@ public class Test2 {
                 // NormalizationHandler.VC
         };
 
-        for (int res : new int[]{5000, 2000, 1000, 500, 200}) {
+        for (int res : new int[]{50000, 5000, 1000, 100}) {
             MatrixZoomData zd = ds.getMatrix(chrom, chrom).getZoomData(new HiCZoom(res));
 
             for (NormalizationType norm : norms) {
 
-                int maxBin = 100000000 / res + 1;
+                int maxBin = (int) (chrom.getLength() / res);
 
                 LogBinnedExpectedModel model1 = new LogBinnedExpectedModel(zd, norm, maxBin, 0);
                 LogExpectedSpline spline = model1.getSpline();
-                LogExpectedPolynomial polynomial5 = new LogExpectedPolynomial(zd, norm, maxBin, 5, true);
-                LogExpectedPolynomial polynomial3 = new LogExpectedPolynomial(zd, norm, maxBin, 3, true);
-
+                LogExpectedPolynomial polynomial = new LogExpectedPolynomial(zd, norm, maxBin);
 
                 System.out.println("Got all points");
-            /*
-            int n = points.size();
-            double[][] data = new double[4][n];
-            int counter = 0;
-            for (WeightedObservedPoint point : points) {
-                data[0][counter] = point.getX();
-                data[1][counter] = point.getY();
-                counter++;
-            }
-            */
+                /*
+                int n = points.size();
+                double[][] data = new double[4][n];
+                int counter = 0;
+                for (WeightedObservedPoint point : points) {
+                    data[0][counter] = point.getX();
+                    data[1][counter] = point.getY();
+                    counter++;
+                }
+                */
 
 
                 double[][] data = new double[5][maxBin];
+                double[] evec = ds.getExpectedValues(new HiCZoom(res), norm, false).getExpectedValuesWithNormalization(chrom.getIndex()).getValues().get(0);
                 for (int x = 0; x < maxBin; x++) {
                     data[0][x] = x;
                     data[1][x] = model1.getExpectedFromUncompressedBin(x);
                     data[2][x] = spline.getExpectedFromUncompressedBin(x);
-                    data[3][x] = polynomial3.getExpectedFromUncompressedBin(x);
-                    data[4][x] = polynomial5.getExpectedFromUncompressedBin(x);
+                    data[3][x] = polynomial.getExpectedFromUncompressedBin(x);
+                    data[4][x] = evec[x];
                 }
                 MatrixTools.saveMatrixTextNumpy("multi_interp_" + norm.getLabel() + "_" + res + ".npy", data);
             }
