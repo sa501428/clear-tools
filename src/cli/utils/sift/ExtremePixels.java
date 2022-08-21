@@ -2,7 +2,6 @@ package cli.utils.sift;
 
 import cli.utils.expected.ExpectedModel;
 import cli.utils.expected.ExpectedUtils;
-import cli.utils.expected.LogExpectedPolynomial;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
@@ -14,22 +13,18 @@ import java.util.*;
 
 public class ExtremePixels {
 
-    private static final float CONTACT_ZSCORE_CUTOFF = 2.5f;//2;
-    private static final int MAX_DIST = 10000000;
-    private static final int MIN_DIST = 10000;
-
-
     public static Set<SimpleLocation> getExtremePixelsForResolution(Dataset ds, MatrixZoomData zd, Chromosome chrom,
-                                                                    int res, NormalizationType norm) {
+                                                                    int res, NormalizationType norm,
+                                                                    int maxBin, int minBin, ExpectedModel poly) {
         Set<ContactRecord> enrichedRegions = ExtremePixels.getExtremeLocations(ds, chrom, res,
-                zd, MAX_DIST / res, MIN_DIST / res, norm);
+                zd, maxBin, minBin, norm, poly);
 
         return FeatureUtils.toLocationsAndClear(coalescePixelsToCentroid(enrichedRegions));
     }
 
     public static Set<ContactRecord> getExtremeLocations(Dataset ds, Chromosome chromosome, int resolution,
                                                          MatrixZoomData zd, int maxBin, int minBin,
-                                                         NormalizationType norm) {
+                                                         NormalizationType norm, ExpectedModel poly) {
         int chrIdx = chromosome.getIndex();
         double[] nv;
         try {
@@ -40,26 +35,24 @@ public class ExtremePixels {
             return new HashSet<>();
         }
 
-        ExpectedModel poly = new LogExpectedPolynomial(zd, norm, maxBin);
-
-        List<ContactRecord> records = populateRecordsInRange(zd, norm, maxBin, 1, minBin, nv);
-        System.out.println(resolution + " - num records: " + records.size());
-
-        //LogBinnedExpectedModel model = new LogBinnedExpectedModel(records, maxBin);
-        //ZScoreArray zScores = model.getZscores();
-        //zScores.print();
-        //spline.print();
+        int minVal = 1;
+        //List<ContactRecord> records = populateRecordsInRange(zd, norm, maxBin, 1, minBin, nv);
 
         Set<ContactRecord> extremes = new HashSet<>();
-        for (ContactRecord cr : records) {
-            if (poly.isReasonablePercentContact(cr)) {
-                extremes.add(cr);
+        Iterator<ContactRecord> it = getIterator(zd, norm);
+        while (it.hasNext()) {
+            ContactRecord cr = it.next();
+            if (cr.getCounts() > minVal && isReasonableNorm(cr, nv)) {
+                int dist = ExpectedUtils.getDist(cr);
+                if (dist > minBin && dist < maxBin) {
+                    if (poly.isReasonableEnrichment(cr) && poly.isReasonablePercentContact(cr)) {
+                        extremes.add(cr);
+                    }
+                }
             }
         }
+
         System.out.println(resolution + " - num extremes: " + extremes.size());
-
-        records.clear();
-
         return extremes;
     }
 
@@ -103,10 +96,9 @@ public class ExtremePixels {
         while (!featureLL.isEmpty()) {
             ContactRecord pixel = featureLL.pollFirst();
             if (pixel != null) {
-                coalesced.add(pixel);
                 featureLL.remove(pixel);
 
-                int buffer = 1;
+                int buffer = 2;
 
                 int binX0 = pixel.getBinX() - buffer;
                 int binY0 = pixel.getBinY() - buffer;
@@ -129,6 +121,10 @@ public class ExtremePixels {
                         }
                     }
                     featureLL.removeAll(pixelList);
+                }
+
+                if (pixelList.size() > buffer) {
+                    coalesced.add(pixel);
                 }
             }
         }

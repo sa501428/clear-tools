@@ -40,6 +40,10 @@ public abstract class ExpectedModel {
 
     public boolean isReasonablePercentContact(ContactRecord cr) {
         double percentContact = getPercentContact(cr);
-        return percentContact > 0.01;// && percentContact < 0.4;
+        return percentContact > 0.01 && percentContact < 0.4;
+    }
+
+    public boolean isReasonableEnrichment(ContactRecord cr) {
+        return cr.getCounts() / getExpectedFromUncompressedBin(ExpectedUtils.getDist(cr)) > 2;
     }
 }

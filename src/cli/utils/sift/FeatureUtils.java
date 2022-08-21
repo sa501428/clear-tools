@@ -45,7 +45,7 @@ public class FeatureUtils {
     public static Set<Region> getPointsWithMoreThan(Map<Region, Integer> countsForRecord, int cutoff) {
         Set<Region> finalSet = new HashSet<>();
         for (Region record : countsForRecord.keySet()) {
-            if (countsForRecord.get(record) > cutoff) {
+            if (countsForRecord.get(record) >= cutoff) {
                 finalSet.add(record);
             }
         }

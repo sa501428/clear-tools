@@ -1,6 +1,8 @@
 package cli.clt;
 
 import cli.Main;
+import cli.utils.expected.ExpectedModel;
+import cli.utils.expected.LogExpectedPolynomial;
 import cli.utils.sift.ExtremePixels;
 import cli.utils.sift.FeatureUtils;
 import cli.utils.sift.Region;
@@ -25,54 +27,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sift {
 
-    private static final int[] resolutions = new int[]{2000, 5000}; // 100, 200, 500, 1000, 10000
+    private static final int[] resolutions = new int[]{100, 200, 500, 1000, 2000, 5000, 10000}; //  10000
     private NormalizationType norm = NormalizationHandler.NONE;
-
-
-    /*
-     * Iteration notes
-     * 1 - original pass
-     * 2 - similar, fix stuff
-     * 3 - z-score at 3, diff filtering
-     * 4 - z-score t0 2.5
-     * 5 - change z-score to 2
-     * 6 - change hires from 100 to 200, and add 500 and 2000 to the resolution runs (already have 1000, 5000 )
-     * 7 - remove 500 bp res
-     * 8 - coalesce pixels radius 13kb
-     * 9 - coalesce pixels radius 5kb
-     * 10 - use multiple normalizations *** seems best so far, but pretty conservative
-     * 11 - only validate at 5000, not 1000/2000
-     * 12 - higher z-score cutoff for 5kb
-     * 13 - just the hires calls, collapse at 2k
-     * 14 - scale/vc vector filtering, collapse at 5k
-     * 15 - restore global max filtering
-     * 16 - linear distance for 5k low-res expected
-     * 17 - incorporate local enrichment; only use 1 norm for global enrichment at low-res,
-     *      remove vector filtering but keep denom filtering
-     * 18 - no max neighbor
-     * 19 - change to 20% enrichment, not 25%; also put pre-filtering earlier
-     * 20 - change low res z-score to 1
-     * 21 - change low res z-score to 1.5
-     * 22 - same as 19 (low res z-
-     * score 2)
-     * 23 - 2x min local enrichment
-     *
-     * 30 - try with 1k and 5k, with pc filter
-     * 31 - restrict 1k partially
-     * 32 - remove 1k
-     * 33 - simplify local filtering (medium status)
-     * 34 - add back 1kb
-     * 40 - adjust neighbor windows to 1 and 2 (good)
-     * 50 - restructure (worse??)
-     * 51 - include 2kb, 10kb
-     * 52 - higher cutoff
-     *
-     * 55 - try stepwise filtering, full range
-     * 56 - use 1 as min for z score / extreme values
-     * 57 - norm vector 0.7
-     * 58 - norm vector 0.7 -> 1; low z score 2 -> 1.5
-     * 60 - parallelize
-     */
+    private static final int MAX_DIST = 10000000;
+    private static final int MIN_DIST = 10000;
 
     public Sift(String[] args, CommandLineParser parser) {
         if (args.length != 3) {
@@ -130,8 +88,14 @@ public class Sift {
 
                 MatrixZoomData zd = matrix.getZoomData(new HiCZoom(lowRes));
                 if (zd != null) {
+
+                    ExpectedModel poly;
+                    synchronized (rIndex) {
+                        poly = new LogExpectedPolynomial(zd, norm, MAX_DIST / lowRes);
+                    }
+
                     Set<SimpleLocation> points = ExtremePixels.getExtremePixelsForResolution(ds, zd,
-                            chromosome, lowRes, norm);
+                            chromosome, lowRes, norm, MAX_DIST / lowRes, MIN_DIST / lowRes, poly);
                     matrix.clearCacheForZoom(new HiCZoom(lowRes));
 
                     synchronized (pixelsForResolutions) {
@@ -151,7 +115,7 @@ public class Sift {
         Map<Region, Integer> countsForRecord = FeatureUtils.addPointsToCountMap(pixelsForResolutions,
                 resolutions);
         pixelsForResolutions.clear();
-        Set<Region> finalPoints = FeatureUtils.getPointsWithMoreThan(countsForRecord, 2);
+        Set<Region> finalPoints = FeatureUtils.getPointsWithMoreThan(countsForRecord, 3);
         countsForRecord.clear();
         return FeatureUtils.convertToFeature2Ds(finalPoints, chromosome);
     }
