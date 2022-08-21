@@ -89,22 +89,36 @@ public class Sift {
                 MatrixZoomData zd = matrix.getZoomData(new HiCZoom(lowRes));
                 if (zd != null) {
 
+                    long time0 = System.nanoTime();
+
                     ExpectedModel poly;
                     synchronized (rIndex) {
                         poly = new LogExpectedPolynomial(zd, norm, MAX_DIST / lowRes);
                     }
 
+                    long time1 = System.nanoTime();
+                    System.out.println("T1 " + (time1 - time0) * 1e-9);
+
                     Set<SimpleLocation> points = ExtremePixels.getExtremePixelsForResolution(ds, zd,
                             chromosome, lowRes, norm, MAX_DIST / lowRes, MIN_DIST / lowRes, poly);
                     matrix.clearCacheForZoom(new HiCZoom(lowRes));
+
+                    long time2 = System.nanoTime();
+                    System.out.println("T2 " + (time2 - time1) * 1e-9);
 
                     synchronized (pixelsForResolutions) {
                         pixelsForResolutions.put(lowRes, points);
                         System.out.println(lowRes + " completed (" + points.size() + ")");
                     }
 
+                    long time3 = System.nanoTime();
+                    System.out.println("T3 " + (time3 - time2) * 1e-9);
+
                     Feature2DList initLoops = convert(points, chromosome, lowRes);
                     initLoops.exportFeatureList(new File(outname + "." + lowRes + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
+
+                    long time4 = System.nanoTime();
+                    System.out.println("T4 " + (time4 - time3) * 1e-9);
                 }
                 currResIndex = rIndex.getAndIncrement();
             }
@@ -115,7 +129,7 @@ public class Sift {
         Map<Region, Integer> countsForRecord = FeatureUtils.addPointsToCountMap(pixelsForResolutions,
                 resolutions);
         pixelsForResolutions.clear();
-        Set<Region> finalPoints = FeatureUtils.getPointsWithMoreThan(countsForRecord, 3);
+        Set<Region> finalPoints = FeatureUtils.getPointsWithMoreThan(countsForRecord, 2);
         countsForRecord.clear();
         return FeatureUtils.convertToFeature2Ds(finalPoints, chromosome);
     }

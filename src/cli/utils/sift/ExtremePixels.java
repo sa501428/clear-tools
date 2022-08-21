@@ -16,10 +16,20 @@ public class ExtremePixels {
     public static Set<SimpleLocation> getExtremePixelsForResolution(Dataset ds, MatrixZoomData zd, Chromosome chrom,
                                                                     int res, NormalizationType norm,
                                                                     int maxBin, int minBin, ExpectedModel poly) {
+        long time0 = System.nanoTime();
         Set<ContactRecord> enrichedRegions = ExtremePixels.getExtremeLocations(ds, chrom, res,
                 zd, maxBin, minBin, norm, poly);
 
-        return FeatureUtils.toLocationsAndClear(coalescePixelsToCentroid(enrichedRegions));
+        long time1 = System.nanoTime();
+        System.out.println("S1 " + (time1 - time0) * 1e-9);
+
+        Set<SimpleLocation> locations = FeatureUtils.toLocationsAndClear(coalescePixelsToCentroid(enrichedRegions));
+        enrichedRegions.clear();
+
+        long time2 = System.nanoTime();
+        System.out.println("S2 " + (time2 - time1) * 1e-9);
+
+        return locations;
     }
 
     public static Set<ContactRecord> getExtremeLocations(Dataset ds, Chromosome chromosome, int resolution,
