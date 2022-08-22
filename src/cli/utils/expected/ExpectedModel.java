@@ -1,5 +1,6 @@
 package cli.utils.expected;
 
+import cli.clt.Sift;
 import javastraw.reader.block.ContactRecord;
 
 public abstract class ExpectedModel {
@@ -39,11 +40,11 @@ public abstract class ExpectedModel {
     }
 
     public boolean isReasonablePercentContact(ContactRecord cr) {
-        double percentContact = getPercentContact(cr);
-        return percentContact > 0.01 && percentContact < 0.4;
+        float percentContact = getPercentContact(cr);
+        return percentContact > Sift.MIN_PC && percentContact < Sift.MAX_PC;
     }
 
     public boolean isReasonableEnrichment(ContactRecord cr) {
-        return cr.getCounts() / getExpectedFromUncompressedBin(ExpectedUtils.getDist(cr)) > 2;
+        return cr.getCounts() / getExpectedFromUncompressedBin(ExpectedUtils.getDist(cr)) > Sift.ENRICMENT_VS_EXPECTED;
     }
 }

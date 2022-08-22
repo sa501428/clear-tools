@@ -1,5 +1,6 @@
 package cli.utils.sift;
 
+import cli.clt.Sift;
 import cli.utils.expected.ExpectedModel;
 import cli.utils.expected.ExpectedUtils;
 import javastraw.reader.Dataset;
@@ -16,15 +17,11 @@ public class ExtremePixels {
     public static Set<SimpleLocation> getExtremePixelsForResolution(Dataset ds, MatrixZoomData zd, Chromosome chrom,
                                                                     int res, NormalizationType norm,
                                                                     int maxBin, int minBin, ExpectedModel poly) {
-        long time0 = System.nanoTime();
         Set<ContactRecord> enrichedRegions = ExtremePixels.getExtremeLocations(ds, chrom, res,
                 zd, maxBin, minBin, norm, poly);
-
-        long time1 = System.nanoTime();
-        Set<SimpleLocation> locations = FeatureUtils.toLocationsAndClear(coalescePixelsToCentroid(enrichedRegions));
+        Set<SimpleLocation> locations = FeatureUtils.toLocationsAndClear(coalescePixelsToCentroid(
+                enrichedRegions, Math.max(Sift.MIN_RADIUS_0 / res, 2)));
         enrichedRegions.clear();
-
-        long time2 = System.nanoTime();
         return locations;
     }
 
@@ -63,25 +60,7 @@ public class ExtremePixels {
     }
 
     private static boolean isReasonableNorm(ContactRecord cr, double[] nv) {
-        return nv[cr.getBinX()] > 1 && nv[cr.getBinY()] > 1;
-    }
-
-    private static List<ContactRecord> populateRecordsInRange(MatrixZoomData zd, NormalizationType norm,
-                                                              int maxBin, int minVal, int minBin, double[] nv) {
-        List<ContactRecord> records = new LinkedList<>();
-        Iterator<ContactRecord> it = getIterator(zd, norm);
-        while (it.hasNext()) {
-            ContactRecord cr = it.next();
-            if (cr.getCounts() > minVal) {
-                if (isReasonableNorm(cr, nv)) {
-                    int dist = ExpectedUtils.getDist(cr);
-                    if (dist > minBin && dist < maxBin) {
-                        records.add(cr);
-                    }
-                }
-            }
-        }
-        return records;
+        return nv[cr.getBinX()] >= Sift.MIN_NORM && nv[cr.getBinY()] >= Sift.MIN_NORM;
     }
 
     public static Iterator<ContactRecord> getIterator(MatrixZoomData zd, NormalizationType norm) {
@@ -92,7 +71,7 @@ public class ExtremePixels {
         }
     }
 
-    public static Set<ContactRecord> coalescePixelsToCentroid(Set<ContactRecord> regions) {
+    public static Set<ContactRecord> coalescePixelsToCentroid(Set<ContactRecord> regions, int buffer) {
         // HashSet intermediate for removing duplicates
         // LinkedList used so that we can pop out highest obs values
         Map<SimpleLocation, LinkedList<ContactRecord>> map = NMSUtils.groupNearbyRecords(regions, 250);
@@ -105,8 +84,6 @@ public class ExtremePixels {
                 ContactRecord pixel = records.pollFirst();
                 if (pixel != null) {
                     records.remove(pixel);
-
-                    int buffer = 2;
 
                     int binX0 = pixel.getBinX() - buffer;
                     int binY0 = pixel.getBinY() - buffer;
@@ -132,7 +109,9 @@ public class ExtremePixels {
                     }
 
                     if (pixelList.size() > buffer) {
-                        coalesced.add(pixel);
+                        if (pixelMoreEnrichedThanNeighbors(pixel, pixelList)) {
+                            coalesced.add(pixel);
+                        }
                     }
                 }
             }
@@ -142,5 +121,19 @@ public class ExtremePixels {
 
     private static boolean contains(ContactRecord px, int binX0, int binY0, int binX1, int binY1) {
         return binX0 <= px.getBinX() && binX1 > px.getBinX() && binY0 <= px.getBinY() && binY1 > px.getBinY();
+    }
+
+    private static boolean pixelMoreEnrichedThanNeighbors(ContactRecord pixel, Set<ContactRecord> pixelList) {
+        float sumTotal = getTotalCountsSum(pixelList) - pixel.getCounts();
+        float average = sumTotal / (pixelList.size() - 1);
+        return pixel.getCounts() / average > Sift.ENRICHMENT_VS_NEIGHBORS;
+    }
+
+    private static float getTotalCountsSum(Set<ContactRecord> records) {
+        float total = 0;
+        for (ContactRecord record : records) {
+            total += record.getCounts();
+        }
+        return total;
     }
 }

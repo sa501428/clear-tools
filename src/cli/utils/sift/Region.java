@@ -57,8 +57,8 @@ public class Region {
     }
 
     public boolean containedBy(SimpleLocation location, int res) {
-        for (int gx = location.getBinX() * res; gx < location.getBinX() * res + res; gx += MIN_RESOLUTION) {
-            for (int gy = location.getBinY() * res; gy < location.getBinY() * res + res; gy += MIN_RESOLUTION) {
+        for (int gx = location.getBinX() * res - res; gx < location.getBinX() * res + 2 * res; gx += MIN_RESOLUTION) {
+            for (int gy = location.getBinY() * res - res; gy < location.getBinY() * res + 2 * res; gy += MIN_RESOLUTION) {
                 if (gx == genomeX && gy == genomeY) {
                     return true;
                 }

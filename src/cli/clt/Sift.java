@@ -27,6 +27,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sift {
 
+    /* hardcoded variables for sifting through pixels */
+    public static final float MIN_PC = 0.005f;
+    public static final float MAX_PC = 0.4f;
+    public static final int MIN_RADIUS_0 = 1000;
+    public static final int MIN_NORM = 1;
+    public static final float ENRICMENT_VS_EXPECTED = 1.75f;
+    public static final float ENRICHMENT_VS_NEIGHBORS = 1.2f;
+
     private static final int[] resolutions = new int[]{100, 200, 500, 1000, 2000, 5000, 10000}; //  10000
     private NormalizationType norm = NormalizationHandler.NONE;
     private static final int MAX_DIST = 10000000;
@@ -95,11 +103,13 @@ public class Sift {
 
                     synchronized (pixelsForResolutions) {
                         pixelsForResolutions.put(lowRes, points);
-                        System.out.println(lowRes + " completed (" + points.size() + ")");
+                        System.out.println(lowRes + " found (" + points.size() + ")");
                     }
 
-                    Feature2DList initLoops = convert(points, chromosome, lowRes);
-                    initLoops.exportFeatureList(new File(outname + "." + lowRes + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
+                    if (Main.printVerboseComments) {
+                        Feature2DList initLoops = convert(points, chromosome, lowRes);
+                        initLoops.exportFeatureList(new File(outname + "." + lowRes + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
+                    }
                 }
                 currResIndex = rIndex.getAndIncrement();
             }
