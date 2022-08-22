@@ -43,19 +43,19 @@ public class ContactRecordBox {
     }
 
     public int getGenomeX1() {
-        return record.getBinX() * resolution;
+        return record.getBinX() * resolution - resolution;
     }
 
     public int getGenomeX2() {
-        return record.getBinX() * resolution + resolution;
+        return record.getBinX() * resolution + 2 * resolution;
     }
 
     public int getGenomeY1() {
-        return record.getBinY() * resolution;
+        return record.getBinY() * resolution - resolution;
     }
 
     public int getGenomeY2() {
-        return record.getBinY() * resolution + resolution;
+        return record.getBinY() * resolution + 2 * resolution;
     }
 
     public float getCounts() {

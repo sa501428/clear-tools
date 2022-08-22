@@ -29,13 +29,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sift {
 
+    // 410 defaults
+    // 411 require only 2 resolutions (instead of 3)
+    // 412 norm 1->0.9, EVE 1.75->1.5, EVN 1.2 -> 1.1
+    // 413 expand bounds in second pass
+    // 414 MPC .005 -> .001, MPC 0.4 -> 0.5
+    // 415 MPC restored, norm 1, EVE 1.5, EVN 1.5, require 2 resolutions
+    // 416 EVN 1.25
+    // 417 EVN 1.5,
+
     /* hardcoded variables for sifting through pixels */
     public static final float MIN_PC = 0.005f;
     public static final float MAX_PC = 0.4f;
     public static final int MIN_RADIUS_0 = 1000;
-    public static final int MIN_NORM = 1;
-    public static final float ENRICMENT_VS_EXPECTED = 1.75f;
-    public static final float ENRICHMENT_VS_NEIGHBORS = 1.2f;
+    public static final float MIN_NORM = 1;
+    public static final float ENRICMENT_VS_EXPECTED = 1.5f;
+    public static final float ENRICHMENT_VS_NEIGHBORS = 1.5f;
+    private static final int NUM_RES_TO_PASS = 2;
+
 
     private static final int[] resolutions = new int[]{100, 200, 500, 1000, 2000, 5000, 10000}; //  10000
     private NormalizationType norm = NormalizationHandler.NONE;
@@ -107,11 +118,6 @@ public class Sift {
                         pixelsForResolutions.put(lowRes, points);
                         System.out.println(lowRes + " found (" + points.size() + ")");
                     }
-
-                    //if (Main.printVerboseComments) {
-                    //Feature2DList initLoops = convert(points, chromosome, lowRes);
-                    //initLoops.exportFeatureList(new File(outname + "." + lowRes + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
-                    //}
                 }
                 currResIndex = rIndex.getAndIncrement();
             }
@@ -122,7 +128,7 @@ public class Sift {
         Set<ContactRecordBox> allRecords = collapse(pixelsForResolutions);
         pixelsForResolutions.clear();
 
-        Set<ContactRecordBox> finalBoxes = MultiResCentroidCollapser.coalesce(allRecords, 2);
+        Set<ContactRecordBox> finalBoxes = MultiResCentroidCollapser.coalesce(allRecords, NUM_RES_TO_PASS);
         allRecords.clear();
 
         return FeatureUtils.convertToFeature2Ds(finalBoxes, chromosome);
