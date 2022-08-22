@@ -52,9 +52,9 @@ public class FeatureUtils {
         return finalSet;
     }
 
-    public static List<Feature2D> convertToFeature2Ds(Set<Region> records, Chromosome c1) {
+    public static List<Feature2D> convertToFeature2Ds(Set<ContactRecordBox> records, Chromosome c1) {
         List<Feature2D> features = new ArrayList<>();
-        for (Region record : records) {
+        for (ContactRecordBox record : records) {
             features.add(record.toFeature2D(c1));
         }
         return features;

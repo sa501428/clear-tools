@@ -36,7 +36,7 @@ public class NMSUtils {
     }
     */
 
-    static Map<SimpleLocation, LinkedList<ContactRecord>> groupNearbyRecords(Set<ContactRecord> initialPoints, int scalar) {
+    public static Map<SimpleLocation, LinkedList<ContactRecord>> groupNearbyRecords(Set<ContactRecord> initialPoints, int scalar) {
         Map<SimpleLocation, LinkedList<ContactRecord>> locationMap = new HashMap<>();
         for (ContactRecord cr : initialPoints) {
             SimpleLocation region = new SimpleLocation(cr.getBinX() / scalar, cr.getBinY() / scalar);

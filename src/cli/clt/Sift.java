@@ -3,15 +3,17 @@ package cli.clt;
 import cli.Main;
 import cli.utils.expected.ExpectedModel;
 import cli.utils.expected.LogExpectedPolynomial;
+import cli.utils.sift.ContactRecordBox;
 import cli.utils.sift.ExtremePixels;
 import cli.utils.sift.FeatureUtils;
-import cli.utils.sift.Region;
 import cli.utils.sift.SimpleLocation;
+import cli.utils.sift.collapse.MultiResCentroidCollapser;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
@@ -86,7 +88,7 @@ public class Sift {
         Matrix matrix = ds.getMatrix(chromosome, chromosome);
         if (matrix == null) return new ArrayList<>();
 
-        final Map<Integer, Set<SimpleLocation>> pixelsForResolutions = new HashMap<>();
+        final Map<Integer, Set<ContactRecord>> pixelsForResolutions = new HashMap<>();
 
         AtomicInteger rIndex = new AtomicInteger(0);
         ParallelizationTools.launchParallelizedCode(() -> {
@@ -97,7 +99,7 @@ public class Sift {
                 MatrixZoomData zd = matrix.getZoomData(new HiCZoom(lowRes));
                 if (zd != null) {
                     ExpectedModel poly = new LogExpectedPolynomial(zd, norm, MAX_DIST / lowRes);
-                    Set<SimpleLocation> points = ExtremePixels.getExtremePixelsForResolution(ds, zd,
+                    Set<ContactRecord> points = ExtremePixels.getExtremePixelsForResolution(ds, zd,
                             chromosome, lowRes, norm, MAX_DIST / lowRes, MIN_DIST / lowRes, poly);
                     matrix.clearCacheForZoom(new HiCZoom(lowRes));
 
@@ -106,10 +108,10 @@ public class Sift {
                         System.out.println(lowRes + " found (" + points.size() + ")");
                     }
 
-                    if (Main.printVerboseComments) {
-                        Feature2DList initLoops = convert(points, chromosome, lowRes);
-                        initLoops.exportFeatureList(new File(outname + "." + lowRes + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
-                    }
+                    //if (Main.printVerboseComments) {
+                    //Feature2DList initLoops = convert(points, chromosome, lowRes);
+                    //initLoops.exportFeatureList(new File(outname + "." + lowRes + ".sift.bedpe"), false, Feature2DList.ListFormat.NA);
+                    //}
                 }
                 currResIndex = rIndex.getAndIncrement();
             }
@@ -117,12 +119,23 @@ public class Sift {
 
         matrix.clearCache();
 
-        Map<Region, Integer> countsForRecord = FeatureUtils.addPointsToCountMap(pixelsForResolutions,
-                resolutions);
+        Set<ContactRecordBox> allRecords = collapse(pixelsForResolutions);
         pixelsForResolutions.clear();
-        Set<Region> finalPoints = FeatureUtils.getPointsWithMoreThan(countsForRecord, 3);
-        countsForRecord.clear();
-        return FeatureUtils.convertToFeature2Ds(finalPoints, chromosome);
+
+        Set<ContactRecordBox> finalBoxes = MultiResCentroidCollapser.coalesce(allRecords, 2);
+        allRecords.clear();
+
+        return FeatureUtils.convertToFeature2Ds(finalBoxes, chromosome);
+    }
+
+    private Set<ContactRecordBox> collapse(Map<Integer, Set<ContactRecord>> recordMap) {
+        HashSet<ContactRecordBox> records = new HashSet<>();
+        for (Integer res : recordMap.keySet()) {
+            for (ContactRecord record : recordMap.get(res)) {
+                records.add(new ContactRecordBox(record, res));
+            }
+        }
+        return records;
     }
 
     private Feature2DList convert(Set<SimpleLocation> locations, Chromosome chromosome, int res) {
