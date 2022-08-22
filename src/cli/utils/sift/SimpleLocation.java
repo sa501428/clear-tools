@@ -46,4 +46,8 @@ public class SimpleLocation {
     public int getBinY() {
         return this.binY;
     }
+
+    public Region toRegion(int res) {
+        return new Region(binX, binY, res);
+    }
 }

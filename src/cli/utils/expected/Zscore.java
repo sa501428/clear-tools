@@ -1,4 +1,4 @@
-package cli.utils.sift;
+package cli.utils.expected;
 
 public class Zscore {
 

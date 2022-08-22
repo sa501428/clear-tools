@@ -24,11 +24,11 @@
 
 package cli.clt;
 
-import cli.utils.HiCUtils;
 import cli.utils.apa.APADataExporter;
 import cli.utils.apa.APAUtils;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
+import cli.utils.general.HiCUtils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;

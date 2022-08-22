@@ -1,9 +1,9 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.GenericLocusParser;
 import cli.utils.flags.Anchor;
 import cli.utils.flags.FlagsAggregation;
+import cli.utils.general.BedFileParser;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.ChromosomeHandler;
@@ -37,7 +37,7 @@ public class Flags {
         }
         System.out.println("Norm being used: " + norm.getLabel());
 
-        GenomeWide1DList<Anchor> anchors = GenericLocusParser.loadFromBEDFile(handler, bedFile, cutoff, false);
+        GenomeWide1DList<Anchor> anchors = BedFileParser.loadFromBEDFile(handler, bedFile, cutoff, false);
         System.out.println("Number of anchors: " + anchors.size());
         FlagsAggregation apa = new FlagsAggregation(ds, outFolder, norm, anchors, resolution);
         apa.run();

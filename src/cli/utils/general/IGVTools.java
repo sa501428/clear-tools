@@ -1,4 +1,4 @@
-package cli.utils;
+package cli.utils.general;
 
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class IGVUtils {
+public class IGVTools {
     private final static double log2 = Math.log(2.0D);
 
     public static List<LocusScore> getLocusScores(DataTrack igvTrack, Chromosome chromosome, long gStart, long gEnd, int resolution,

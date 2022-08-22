@@ -1,4 +1,4 @@
-package cli.utils;
+package cli.utils.general;
 
 import cli.utils.flags.Anchor;
 import cli.utils.flags.AnchorWithScore;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-public class GenericLocusParser {
+public class BedFileParser {
 
     public static GenomeWide1DList<Anchor> loadFromBEDFile(ChromosomeHandler handler,
                                                            String bedFilePath, float cutoff, boolean isPercentile) {

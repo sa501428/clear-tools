@@ -24,7 +24,7 @@
 
 package cli.utils.cc;
 
-import cli.utils.ArrayTools;
+import cli.utils.pinpoint.ArrayTools;
 import javastraw.feature2D.Feature2D;
 
 import java.awt.*;

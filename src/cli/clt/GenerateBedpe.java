@@ -1,9 +1,9 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.GenericLocusParser;
 import cli.utils.flags.Anchor;
 import cli.utils.flags.LoopGenerator;
+import cli.utils.general.BedFileParser;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -37,8 +37,8 @@ public class GenerateBedpe {
 
         int percentile = parser.getPercentileOption(-1);
 
-        GenomeWide1DList<Anchor> forwardAnchors = GenericLocusParser.loadFromBEDFile(handler, forwardMotifFile, percentile, true);
-        GenomeWide1DList<Anchor> reverseAnchors = GenericLocusParser.loadFromBEDFile(handler, reverseMotifFile, percentile, true);
+        GenomeWide1DList<Anchor> forwardAnchors = BedFileParser.loadFromBEDFile(handler, forwardMotifFile, percentile, true);
+        GenomeWide1DList<Anchor> reverseAnchors = BedFileParser.loadFromBEDFile(handler, reverseMotifFile, percentile, true);
         System.out.println("Number of anchors: " + forwardAnchors.size() + " - " + reverseAnchors.size());
 
         Feature2DList output = createLoops(handler, forwardAnchors, reverseAnchors, minDist, maxDist);

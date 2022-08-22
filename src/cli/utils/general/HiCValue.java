@@ -1,4 +1,4 @@
-package cli;
+package cli.utils.general;
 
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.block.Block;

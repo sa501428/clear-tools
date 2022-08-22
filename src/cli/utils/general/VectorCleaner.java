@@ -1,8 +1,8 @@
-package cli.utils;
+package cli.utils.general;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
-public class VectorCleanerUtils {
+public class VectorCleaner {
     public static void inPlaceClean(double[] vec) {
         for (int k = 0; k < vec.length; k++) {
             if (Double.isInfinite(vec[k])) {

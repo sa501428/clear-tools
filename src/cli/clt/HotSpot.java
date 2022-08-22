@@ -1,8 +1,9 @@
 package cli.clt;
 
-import cli.utils.ExpectedUtils;
-import cli.utils.Welford;
-import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.ExpectedModel;
+import cli.utils.expected.ExpectedUtils;
+import cli.utils.expected.LogExpectedPolynomial;
+import cli.utils.expected.Welford;
 import cli.utils.sift.SiftUtils;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
@@ -232,7 +233,7 @@ public class HotSpot {
                                                          NormalizationType norm,
                                                          Map<SimpleLocation, Welford> results, double[] vector1, double[] vector2) {
 
-        LogExpectedModel expected = new LogExpectedModel(zd, norm, maxBin, 0);
+        ExpectedModel poly = new LogExpectedPolynomial(zd, norm, maxBin);
 
         Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
         while (iterator.hasNext()) {
@@ -241,7 +242,7 @@ public class HotSpot {
                 int dist = ExpectedUtils.getDist(cr);
                 if (vector1[cr.getBinX()] > 1 && vector1[cr.getBinY()] > 1 && vector2[cr.getBinX()] > 1 && vector2[cr.getBinY()] > 1) {
                     if (dist > minBin && dist < maxBin) {
-                        float percentContact = expected.getPercentContact(dist, cr.getCounts());
+                        float percentContact = poly.getPercentContact(cr);
                         percentContact = Math.min(1, Math.max(0, percentContact));
                         //percentContact2 = Math.exp(percentContact0 - 1);
 

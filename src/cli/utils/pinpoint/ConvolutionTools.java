@@ -1,4 +1,4 @@
-package cli.utils;
+package cli.utils.pinpoint;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 

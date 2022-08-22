@@ -1,6 +1,7 @@
-package cli.utils;
+package cli.utils.recap;
 
-import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.ExpectedModel;
+import cli.utils.flags.Utils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.basics.Chromosome;
@@ -37,7 +38,6 @@ public class RecapTools {
 
         if (!isLoopAnalysis) {
             categories.add("PRESENCE");
-            categories.add("PRESENCE_INF");
             return categories;
         }
 
@@ -49,28 +49,41 @@ public class RecapTools {
         return categories;
     }
 
-    public static Map<String, String> getStats(float[][] obsMatrix, float[][] eMatrix,
-                                               int window, double superDiagonal, float pseudoCount, boolean isDeepLoopAnalysis) {
+    public static Map<String, String> getStats(float[][] obsMatrix,
+                                               int window, float pseudoCount,
+                                               boolean isDeepLoopAnalysis, ExpectedModel polynomial,
+                                               Feature2D loop, int resolution) {
 
-        Map<String, String> loopAttributes = new HashMap<>();
-        float obs = obsMatrix[window][window];
-        addAttributes(loopAttributes, "OBS_", obsMatrix, window, isDeepLoopAnalysis);
+        Map<String, String> attributes = new HashMap<>();
 
-        if (eMatrix != null) {
+        if (isDeepLoopAnalysis) {
+            addMatrixSums(obsMatrix, attributes, "OBS_");
+            float[] manhattanDecay = calculateDecay(obsMatrix, window);
+            addRegressionStats(manhattanDecay, attributes, "OBS_");
+
+            float[][] eMatrix = new float[obsMatrix.length][obsMatrix.length];
+            Utils.fillInExpectedMatrix(eMatrix, loop, obsMatrix.length, polynomial, resolution, window);
+
             float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
-            if (!isDeepLoopAnalysis) {
-                float expected = eMatrix[window][window];
-                loopAttributes.put("PRESENCE", String.valueOf(LogExpectedModel.getP(obs, expected, superDiagonal)));
-                loopAttributes.put("PRESENCE_INF", String.valueOf(LogExpectedModel.getP(obs, pseudoCount, superDiagonal)));
-            }
-            addAttributes(loopAttributes, "OE_", oeMatrix, window, isDeepLoopAnalysis);
+            addMatrixSums(oeMatrix, attributes, "OE_");
+            manhattanDecay = calculateDecay(oeMatrix, window);
+            addRegressionStats(manhattanDecay, attributes, "OE_");
+        } else {
+            float obs = obsMatrix[window][window];
+            double p = getPresenceFrom(polynomial, loop, resolution, obs);
+            attributes.put("PRESENCE", String.valueOf(p));
         }
 
-        return loopAttributes;
+        return attributes;
     }
 
-    private static void addAttributes(Map<String, String> attributes, String stem, float[][] matrix, int window,
-                                      boolean isDeepLoopAnalysis) {
+    private static double getPresenceFrom(ExpectedModel model, Feature2D loop, int resolution, float counts) {
+        int midX = (int) (loop.getMidPt1() / resolution);
+        int midY = (int) (loop.getMidPt2() / resolution);
+        int dist = Math.abs(midX - midY);
+        return model.getPercentContact(dist, counts);
+    }
+
         /*
             DescriptiveStatistics stats = makeStats(matrix);
             float val = matrix[window][window];
@@ -85,17 +98,6 @@ public class RecapTools {
             attributes.put(stem + "MIN_ENRICHMENT", String.valueOf(val / stats.getMin()));
         */
 
-        if (isDeepLoopAnalysis) {
-            addMatrixSums(matrix, attributes, stem);
-
-            // calculates the decay vetor
-            float[] manhattanDecay = calculateDecay(matrix, window);
-            addRegressionStats(manhattanDecay, attributes, stem);
-        }
-    }
-
-
-
     private static void addMatrixSums(float[][] matrix, Map<String, String> attributes, String stem) {
 
         // initializes variables
@@ -108,7 +110,6 @@ public class RecapTools {
         populateRowColSums(matrix, rowSum, colSum);
         float[] normalizedRowSum = getNormalizedSum(rowSum);
         float[] normalizedColSum = getNormalizedSum(colSum);
-
 
         // calculate std deviations (amplitude and spread)
         // getStd functions return doubles
@@ -295,7 +296,12 @@ public class RecapTools {
                         } else if (categories.get(k).contains(ROW_SUM) || categories.get(k).contains(COL_SUM)) {
                             fillInVector(outputs.get(k), loop.getAttribute(key), currIndex, w, 2 * window + 1);
                         } else {
-                            outputs.get(k)[currIndex][w] = Float.parseFloat(loop.getAttribute(key));
+                            try {
+                                outputs.get(k)[currIndex][w] = Float.parseFloat(loop.getAttribute(key));
+                            } catch (Exception e) {
+                                System.err.println("failed key " + key);
+                                e.printStackTrace();
+                            }
                         }
                     }
                 }

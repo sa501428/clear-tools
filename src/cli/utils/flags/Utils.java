@@ -25,7 +25,7 @@
 package cli.utils.flags;
 
 
-import cli.utils.expected.LogExpectedModel;
+import cli.utils.expected.ExpectedModel;
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.block.Block;
 import javastraw.reader.block.ContactRecord;
@@ -131,7 +131,7 @@ public class Utils {
     }
 
     public static void fillInExpectedMatrix(float[][] matrix, Feature2D loop,
-                                            int matrixWidth, LogExpectedModel expectedVector,
+                                            int matrixWidth, ExpectedModel expectedVector,
                                             int resolution, int window) {
 
         long binXStart = (loop.getMidPt1() / resolution) - window;
@@ -142,7 +142,7 @@ public class Utils {
                 long X = relativeX + binXStart;
                 long Y = relativeY + binYStart;
                 int dist = (int) Math.abs(X - Y);
-                double expected = expectedVector.getExpFromUncompressedBin(dist);
+                double expected = expectedVector.getExpectedFromUncompressedBin(dist);
                 matrix[relativeX][relativeY] = (float) expected;
             }
         }

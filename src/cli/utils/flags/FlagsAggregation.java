@@ -25,7 +25,7 @@
 package cli.utils.flags;
 
 import cli.Main;
-import cli.utils.HiCUtils;
+import cli.utils.general.HiCUtils;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.Dataset;

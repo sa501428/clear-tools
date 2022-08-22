@@ -1,13 +1,11 @@
-package cli.utils;
+package cli.utils.expected;
 
-import cli.utils.sift.ZScores;
-
-public class WelfordStats {
+public class WelfordArray {
     private final long[] counts;
     private final double[] mu;
     private final double[] aggSquaredDiffs;
 
-    public WelfordStats(int n) {
+    public WelfordArray(int n) {
         counts = new long[n];
         mu = new double[n];
         aggSquaredDiffs = new double[n];
@@ -34,8 +32,8 @@ public class WelfordStats {
         return std;
     }
 
-    public ZScores getZscores() {
-        return new ZScores(getMean(), getStdDev());
+    public ZScoreArray getZscores() {
+        return new ZScoreArray(getMean(), getStdDev());
     }
 }
 

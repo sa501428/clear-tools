@@ -1,9 +1,9 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.HiCUtils;
-import cli.utils.VectorCleanerUtils;
 import cli.utils.flags.RegionConfiguration;
+import cli.utils.general.HiCUtils;
+import cli.utils.general.VectorCleaner;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -74,16 +74,16 @@ public class Cleaner {
 
                     double[] vector1 = dataset.getNormalizationVector(chr1.getIndex(), zoom, scaleNorm).getData().getValues().get(0);
                     double[] vector1b = dataset.getNormalizationVector(chr1.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-                    VectorCleanerUtils.inPlaceClean(vector1);
-                    VectorCleanerUtils.inPlaceClean(vector1b);
+                    VectorCleaner.inPlaceClean(vector1);
+                    VectorCleaner.inPlaceClean(vector1b);
 
                     double[] vector2 = vector1;
                     double[] vector2b = vector1b;
                     if (chr1.getIndex() != chr2.getIndex()) {
                         vector2 = dataset.getNormalizationVector(chr2.getIndex(), zoom, scaleNorm).getData().getValues().get(0);
                         vector2b = dataset.getNormalizationVector(chr2.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-                        VectorCleanerUtils.inPlaceClean(vector2);
-                        VectorCleanerUtils.inPlaceClean(vector2b);
+                        VectorCleaner.inPlaceClean(vector2);
+                        VectorCleaner.inPlaceClean(vector2b);
                     }
 
                     try {

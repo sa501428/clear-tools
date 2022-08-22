@@ -1,7 +1,7 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.IGVUtils;
+import cli.utils.general.IGVTools;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
@@ -32,7 +32,7 @@ public class ATA {
         // test
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes("hg38");
         String inputBigWig = "/Users/muhammad/Desktop/ATA/S3_w73_lvent_signal.bw";
-        DataTrack bigWig = IGVUtils.loadBigWig(inputBigWig, handler);
+        DataTrack bigWig = IGVTools.loadBigWig(inputBigWig, handler);
 
         Chromosome chrom = handler.getChromosomeFromName("chr1");
         int gStart = 1000000;
@@ -40,7 +40,7 @@ public class ATA {
         int resolution = 1;
 
 
-        List<LocusScore> loci = IGVUtils.getLocusScores(bigWig, chrom, gStart, gEnd, resolution, WindowFunction.count);
+        List<LocusScore> loci = IGVTools.getLocusScores(bigWig, chrom, gStart, gEnd, resolution, WindowFunction.count);
         if (loci.size() > 0) {
             for (LocusScore locus : loci) {
                 System.out.println(locus.getStart() + " " + locus.getEnd() + " " + locus.getScore());
@@ -71,8 +71,8 @@ public class ATA {
         final int gWindow = window * resolution;
         final int gWidth = width * resolution;
 
-        TribbleFeatureSource bedFile = IGVUtils.loadBed(inputBedFile, handler);
-        DataTrack bigWig = IGVUtils.loadBigWig(inputBigWig, handler);
+        TribbleFeatureSource bedFile = IGVTools.loadBed(inputBedFile, handler);
+        DataTrack bigWig = IGVTools.loadBigWig(inputBigWig, handler);
 
         AtomicInteger cIndex = new AtomicInteger(0);
 
@@ -96,7 +96,7 @@ public class ATA {
                         int gStart = midPoint - gWindow;
                         int gEnd = gStart + gWidth + 1;
 
-                        List<LocusScore> loci = IGVUtils.getLocusScores(bigWig, chrom, gStart, gEnd, 1, WindowFunction.count);
+                        List<LocusScore> loci = IGVTools.getLocusScores(bigWig, chrom, gStart, gEnd, 1, WindowFunction.count);
                         if (loci.size() > 0) {
                             peakCounter++;
                             for (LocusScore locus : loci) {
