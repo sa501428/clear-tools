@@ -1,6 +1,5 @@
 package cli.utils.expected;
 
-import cli.utils.sift.ExtremePixels;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationType;
@@ -101,7 +100,7 @@ public class LogExpectedSpline extends ExpectedModel {
 
     private void populateWithCounts(MatrixZoomData zd, NormalizationType norm, double[] initExpected,
                                     long[] countsPerBin, int maxBin) {
-        Iterator<ContactRecord> records = ExtremePixels.getIterator(zd, norm);
+        Iterator<ContactRecord> records = ExpectedUtils.getIterator(zd, norm);
         while (records.hasNext()) {
             ContactRecord record = records.next();
             int dist = ExpectedUtils.getDist(record);

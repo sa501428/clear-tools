@@ -33,37 +33,6 @@ public class ExpectedUtils {
         }
     }
 
-    public static double[] calculateRawExpected(MatrixZoomData zd, int maxBinDist,
-                                                boolean useLog, int smoothingWindow) {
-        double[] expected = new double[maxBinDist];
-        long[] counts = new long[maxBinDist];
-
-        Iterator<ContactRecord> iterator = zd.getDirectIterator();
-        while (iterator.hasNext()) {
-            ContactRecord record = iterator.next();
-            if (record.getCounts() > 1) {
-                int dist = getDist(record);
-                if (dist < maxBinDist) {
-                    expected[dist] += Math.log(1 + record.getCounts());
-                    counts[dist]++;
-                }
-            }
-        }
-
-        if (smoothingWindow > 0) {
-            smooth(expected, counts, smoothingWindow);
-        } else {
-            normalizeByCounts(expected, counts);
-        }
-
-        expm1(expected);
-        return expected;
-    }
-
-    private static void smooth(double[] expected, long[] counts, int smoothingWindow) {
-
-    }
-
     private static void expm1(double[] vector) {
         for (int z = 0; z < vector.length; z++) {
             vector[z] = Math.expm1(vector[z]);
@@ -93,5 +62,13 @@ public class ExpectedUtils {
 
     public static int getDist(ContactRecord record) {
         return Math.abs(record.getBinX() - record.getBinY());
+    }
+
+    public static Iterator<ContactRecord> getIterator(MatrixZoomData zd, NormalizationType norm) {
+        if (norm.getLabel().equalsIgnoreCase("none")) {
+            return zd.getDirectIterator();
+        } else {
+            return zd.getNormalizedIterator(norm);
+        }
     }
 }

@@ -40,10 +40,9 @@ public class ExtremePixels {
         }
 
         int minVal = 1;
-        //List<ContactRecord> records = populateRecordsInRange(zd, norm, maxBin, 1, minBin, nv);
 
         Set<ContactRecord> extremes = new HashSet<>();
-        Iterator<ContactRecord> it = getIterator(zd, norm);
+        Iterator<ContactRecord> it = ExpectedUtils.getIterator(zd, norm);
         while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > minVal && isReasonableNorm(cr, nv)) {
@@ -62,13 +61,5 @@ public class ExtremePixels {
 
     private static boolean isReasonableNorm(ContactRecord cr, double[] nv) {
         return nv[cr.getBinX()] >= Sift.MIN_NORM && nv[cr.getBinY()] >= Sift.MIN_NORM;
-    }
-
-    public static Iterator<ContactRecord> getIterator(MatrixZoomData zd, NormalizationType norm) {
-        if (norm.getLabel().equalsIgnoreCase("none")) {
-            return zd.getDirectIterator();
-        } else {
-            return zd.getNormalizedIterator(norm);
-        }
     }
 }
