@@ -65,7 +65,7 @@ public class LogBinnedExpectedModel extends ExpectedModel {
         return stats.getZscores();
     }
 
-    public LogExpectedSpline getSpline() {
-        return new LogExpectedSpline(stats.getMean());
+    public LogBinnedSpline getSpline() {
+        return new LogBinnedSpline(stats.getMean());
     }
 }

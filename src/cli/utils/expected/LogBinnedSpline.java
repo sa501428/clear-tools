@@ -3,13 +3,13 @@ package cli.utils.expected;
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
-public class LogExpectedSpline extends ExpectedModel {
+public class LogBinnedSpline extends ExpectedModel {
 
     private final int n;
     private final PolynomialSplineFunction mu;
     private final double nearDiagonalSignal;
 
-    public LogExpectedSpline(double[] compressedMu) {
+    public LogBinnedSpline(double[] compressedMu) {
         n = compressedMu.length;
         double[] indices = new double[n];
         for (int i = 0; i < n; i++) {

@@ -2,7 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.expected.ExpectedModel;
-import cli.utils.expected.LogExpectedPolynomial2;
+import cli.utils.expected.LinearBinnedSpline;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
@@ -162,7 +162,7 @@ public class Recap {
                         }
 
                         int maxBinDist = Math.max(getMaxDistance(loops, resolution, window), 9000000 / resolution);
-                        ExpectedModel poly = new LogExpectedPolynomial2(zd, norm, maxBinDist, 10);
+                        ExpectedModel poly = new LinearBinnedSpline(zd, norm, maxBinDist, 10);
 
                         float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, poly);
 

@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class LogExpectedPolynomial2 extends ExpectedModel {
+public class LinearBinnedSpline extends ExpectedModel {
 
     private static final int minValsPerBin = 10;
     public static int degree = 3;
@@ -20,8 +20,8 @@ public class LogExpectedPolynomial2 extends ExpectedModel {
     private final double nearDiagonalSignal;
     private final float maxX;
 
-    public LogExpectedPolynomial2(MatrixZoomData zd, NormalizationType norm,
-                                  int maxBin, int base) {
+    public LinearBinnedSpline(MatrixZoomData zd, NormalizationType norm,
+                              int maxBin, int base) {
         double[] finalVal = new double[1];
         function = fitDataToFunction(zd, norm, maxBin, finalVal, base);
         nearDiagonalSignal = Math.expm1(function.value(0.5));

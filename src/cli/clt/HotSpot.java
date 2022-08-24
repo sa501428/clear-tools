@@ -2,7 +2,7 @@ package cli.clt;
 
 import cli.utils.expected.ExpectedModel;
 import cli.utils.expected.ExpectedUtils;
-import cli.utils.expected.LogExpectedPolynomial2;
+import cli.utils.expected.LinearBinnedSpline;
 import cli.utils.expected.Welford;
 import cli.utils.sift.SiftUtils;
 import cli.utils.sift.SimpleLocation;
@@ -233,7 +233,7 @@ public class HotSpot {
                                                          NormalizationType norm,
                                                          Map<SimpleLocation, Welford> results, double[] vector1, double[] vector2) {
 
-        ExpectedModel poly = new LogExpectedPolynomial2(zd, norm, maxBin, 10);
+        ExpectedModel poly = new LinearBinnedSpline(zd, norm, maxBin, 10);
 
         Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
         while (iterator.hasNext()) {

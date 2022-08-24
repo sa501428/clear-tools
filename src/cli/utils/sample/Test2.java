@@ -1,8 +1,8 @@
 package cli.utils.sample;
 
+import cli.utils.expected.LinearBinnedSpline;
 import cli.utils.expected.LogBinnedExpectedModel;
-import cli.utils.expected.LogExpectedPolynomial2;
-import cli.utils.expected.LogExpectedSpline;
+import cli.utils.expected.LogBinnedSpline;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.mzd.MatrixZoomData;
@@ -35,10 +35,10 @@ public class Test2 {
                 int maxBin = (int) (chrom.getLength() / res);
 
                 LogBinnedExpectedModel model1 = new LogBinnedExpectedModel(zd, norm, maxBin, 0);
-                LogExpectedSpline spline = model1.getSpline();
+                LogBinnedSpline spline = model1.getSpline();
                 //LogExpectedPolynomial polynomial = new LogExpectedPolynomial(zd, norm, maxBin);
-                LogExpectedPolynomial2 polynomial2 = new LogExpectedPolynomial2(zd, norm, maxBin, 2);
-                LogExpectedPolynomial2 polynomial10 = new LogExpectedPolynomial2(zd, norm, maxBin, 10);
+                LinearBinnedSpline polynomial2 = new LinearBinnedSpline(zd, norm, maxBin, 2);
+                LinearBinnedSpline polynomial10 = new LinearBinnedSpline(zd, norm, maxBin, 10);
 
                 System.out.println("Got all points");
                 /*
