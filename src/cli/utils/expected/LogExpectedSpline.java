@@ -13,7 +13,7 @@ public class LogExpectedSpline extends ExpectedModel {
         n = compressedMu.length;
         double[] indices = new double[n];
         for (int i = 0; i < n; i++) {
-            indices[i] = i;
+            indices[i] = i + 0.5;
         }
 
         SplineInterpolator interpolator = new SplineInterpolator();
@@ -21,15 +21,9 @@ public class LogExpectedSpline extends ExpectedModel {
         nearDiagonalSignal = Math.expm1(mu.value(0.5));
     }
 
-    public void print() {
-        for (double k = 0; k <= n - 1; k += 0.5) {
-            System.out.println(k + "  " + mu.value(k));
-        }
-    }
-
     @Override
     public double getExpectedFromUncompressedBin(int dist0) {
-        double dist = Math.min(logp1(dist0), n - 1);
+        double dist = Math.max(0.5, Math.min(logp1(dist0), n - 1));
         return Math.expm1(mu.value(dist));
     }
 

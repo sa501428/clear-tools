@@ -2,11 +2,11 @@ package cli.utils.expected;
 
 import cli.utils.sift.ExtremePixels;
 import javastraw.reader.block.ContactRecord;
+import javastraw.reader.expected.QuickMedian;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationType;
-import org.apache.commons.math3.analysis.polynomials.PolynomialFunction;
-import org.apache.commons.math3.fitting.PolynomialCurveFitter;
-import org.apache.commons.math3.fitting.WeightedObservedPoint;
+import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
+import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -16,39 +16,66 @@ public class LogExpectedPolynomial2 extends ExpectedModel {
 
     private static final int minValsPerBin = 10;
     public static int degree = 3;
-    private final PolynomialFunction function;
+    private final PolynomialSplineFunction function;
     private final double nearDiagonalSignal;
     private final float maxX;
 
     public LogExpectedPolynomial2(MatrixZoomData zd, NormalizationType norm,
-                                  int maxBin) {
+                                  int maxBin, int base) {
         double[] finalVal = new double[1];
-        function = fitDataToFunction(zd, norm, maxBin, finalVal);
-
+        function = fitDataToFunction(zd, norm, maxBin, finalVal, base);
         nearDiagonalSignal = Math.expm1(function.value(0.5));
-        maxX = findAsymptotePoint(logp1i(maxBin) - 1, finalVal[0]);
+        maxX = logp1i(maxBin);
+        //maxX = findAsymptotePoint(logp1i(maxBin) - 1, finalVal[0]);
     }
 
-    private PolynomialFunction fitDataToFunction(MatrixZoomData zd, NormalizationType norm, int maxBin, double[] finalVal) {
+    private PolynomialSplineFunction fitDataToFunction(MatrixZoomData zd, NormalizationType norm, int maxBin,
+                                                       double[] finalVal, int base) {
 
         double[] averageForBin = getAverageInEachBin(zd, norm, maxBin, finalVal);
 
-        List<WeightedObservedPoint> points = new ArrayList<>(averageForBin.length);
-        for (int dist0 = 0; dist0 < averageForBin.length; dist0++) {
-            if (averageForBin[dist0] > 0) {
-                double dist = logp1(dist0);
-                double weight = Math.sqrt(1 / (1 + dist));
-                if (dist0 < 10) {
-                    weight = 10 / (1 + dist);
+        List<double[]> points = new ArrayList<>(averageForBin.length / 2);
+        int dx = 1;
+        int counter = 0;
+        for (int dist0 = 0; dist0 < averageForBin.length; dist0 += dx) {
+            double dist = logp1(dist0);
+            if (dx > 1) {
+                double newVal = QuickMedian.fastMedian(extract(averageForBin, dist0, dx));
+                if (newVal > 0) {
+                    points.add(new double[]{dist, newVal});
                 }
-
-                points.add(new WeightedObservedPoint(weight, dist, averageForBin[dist0]));
+            } else {
+                if (averageForBin[dist0] > 0) {
+                    points.add(new double[]{dist, averageForBin[dist0]});
+                }
+            }
+            if (++counter % base == 0) {
+                dx *= base;
             }
         }
+        points.add(new double[]{logp1(maxBin), finalVal[0]});
+        points.add(new double[]{logp1(maxBin) + 1, finalVal[0]});
         averageForBin = null;
 
-        PolynomialCurveFitter fitter = PolynomialCurveFitter.create(degree);
-        return new PolynomialFunction(fitter.fit(points));
+        double[] x = new double[points.size()];
+        double[] y = new double[points.size()];
+        for (int i = 0; i < points.size(); i++) {
+            x[i] = points.get(i)[0];
+            y[i] = points.get(i)[1];
+        }
+
+        SplineInterpolator interpolator = new SplineInterpolator();
+        return interpolator.interpolate(x, y);
+    }
+
+    private List<Double> extract(double[] array, int x0, int dx) {
+        List<Double> positives = new ArrayList<>(dx * 2 + 1);
+        for (int x = Math.max(0, x0 - dx); x < Math.min(x0 + dx + 1, array.length); x++) {
+            if (array[x] > 0) {
+                positives.add(array[x]);
+            }
+        }
+        return positives;
     }
 
     private double[] getAverageInEachBin(MatrixZoomData zd, NormalizationType norm, int maxBin, double[] finalVal) {
@@ -102,7 +129,8 @@ public class LogExpectedPolynomial2 extends ExpectedModel {
 
     @Override
     public double getExpectedFromUncompressedBin(int dist0) {
-        double dist = Math.min(logp1(dist0), maxX);
+        double dist = Math.max(0, logp1(dist0));
+        dist = Math.min(dist, maxX);
         return Math.expm1(function.value(dist));
     }
 

@@ -2,7 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.expected.ExpectedModel;
-import cli.utils.expected.LogExpectedPolynomial;
+import cli.utils.expected.LogExpectedPolynomial2;
 import cli.utils.sift.ContactRecordBox;
 import cli.utils.sift.ExtremePixels;
 import cli.utils.sift.FeatureUtils;
@@ -109,7 +109,7 @@ public class Sift {
 
                 MatrixZoomData zd = matrix.getZoomData(new HiCZoom(lowRes));
                 if (zd != null) {
-                    ExpectedModel poly = new LogExpectedPolynomial(zd, norm, MAX_DIST / lowRes);
+                    ExpectedModel poly = new LogExpectedPolynomial2(zd, norm, MAX_DIST / lowRes, 10);
                     Set<ContactRecord> points = ExtremePixels.getExtremePixelsForResolution(ds, zd,
                             chromosome, lowRes, norm, MAX_DIST / lowRes, MIN_DIST / lowRes, poly);
                     matrix.clearCacheForZoom(new HiCZoom(lowRes));

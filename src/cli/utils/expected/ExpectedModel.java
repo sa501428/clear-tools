@@ -47,4 +47,10 @@ public abstract class ExpectedModel {
     public boolean isReasonableEnrichment(ContactRecord cr) {
         return cr.getCounts() / getExpectedFromUncompressedBin(ExpectedUtils.getDist(cr)) > Sift.ENRICMENT_VS_EXPECTED;
     }
+
+    public void print(int maxBin) {
+        for (int k = 0; k < maxBin; k++) {
+            System.out.println(k + "  " + getExpectedFromUncompressedBin(k));
+        }
+    }
 }

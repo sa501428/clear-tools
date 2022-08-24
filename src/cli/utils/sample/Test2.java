@@ -1,7 +1,6 @@
 package cli.utils.sample;
 
 import cli.utils.expected.LogBinnedExpectedModel;
-import cli.utils.expected.LogExpectedPolynomial;
 import cli.utils.expected.LogExpectedPolynomial2;
 import cli.utils.expected.LogExpectedSpline;
 import javastraw.reader.Dataset;
@@ -37,8 +36,9 @@ public class Test2 {
 
                 LogBinnedExpectedModel model1 = new LogBinnedExpectedModel(zd, norm, maxBin, 0);
                 LogExpectedSpline spline = model1.getSpline();
-                LogExpectedPolynomial polynomial = new LogExpectedPolynomial(zd, norm, maxBin);
-                LogExpectedPolynomial2 polynomial2 = new LogExpectedPolynomial2(zd, norm, maxBin);
+                //LogExpectedPolynomial polynomial = new LogExpectedPolynomial(zd, norm, maxBin);
+                LogExpectedPolynomial2 polynomial2 = new LogExpectedPolynomial2(zd, norm, maxBin, 2);
+                LogExpectedPolynomial2 polynomial10 = new LogExpectedPolynomial2(zd, norm, maxBin, 10);
 
                 System.out.println("Got all points");
                 /*
@@ -58,8 +58,8 @@ public class Test2 {
                     data[0][x] = x;
                     data[1][x] = model1.getExpectedFromUncompressedBin(x);
                     data[2][x] = spline.getExpectedFromUncompressedBin(x);
-                    data[3][x] = polynomial.getExpectedFromUncompressedBin(x);
-                    data[4][x] = polynomial2.getExpectedFromUncompressedBin(x);
+                    data[3][x] = polynomial2.getExpectedFromUncompressedBin(x);
+                    data[4][x] = polynomial10.getExpectedFromUncompressedBin(x);
                     data[5][x] = evec[x];
                 }
                 MatrixTools.saveMatrixTextNumpy("multi_interp_" + norm.getLabel() + "_" + res + ".npy", data);
