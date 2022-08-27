@@ -14,7 +14,6 @@ public class Test2 {
 
     public static void main(String[] args) {
 
-
         Dataset ds = HiCFileTools.extractDatasetForCLT(
                 "/Users/muhammad/Desktop/hicfiles/chr10_subsample0.25.hic",
                 //"",

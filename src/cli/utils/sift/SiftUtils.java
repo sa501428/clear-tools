@@ -8,8 +8,6 @@ import java.util.*;
 public class SiftUtils {
     public static void coalesceAndRetainCentroids(Set<ContactRecord> features,
                                                   int binRadius) {
-        // HashSet intermediate for removing duplicates
-        // LinkedList used so that we can pop out highest obs values
         LinkedList<ContactRecord> featureLL = new LinkedList<>(features);
         List<ContactRecord> coalesced = new ArrayList<>();
 
