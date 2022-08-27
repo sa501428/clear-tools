@@ -19,29 +19,27 @@ public class LogExpectedSpline extends ExpectedModel {
     private final float maxX;
 
     public LogExpectedSpline(MatrixZoomData zd, NormalizationType norm, int maxBin) {
-        double[] finalVal = new double[1];
-        function = fitDataToFunction(zd, norm, maxBin, finalVal);
-        nearDiagonalSignal = Math.expm1(function.value(0.5));
         maxX = logp1i(maxBin);
-        //maxX = findAsymptotePoint(logp1i(maxBin) - 1, finalVal[0]);
+        function = fitDataToFunction(zd, norm, maxBin);
+        nearDiagonalSignal = Math.expm1(function.value(0.5));
     }
 
-    private PolynomialSplineFunction fitDataToFunction(MatrixZoomData zd, NormalizationType norm, int maxBin,
-                                                       double[] finalVal) {
+    private PolynomialSplineFunction fitDataToFunction(MatrixZoomData zd, NormalizationType norm, int maxBin) {
 
-        List<double[]> points = getAverageInEachBin(zd, norm, maxBin, finalVal);
+        List<double[]> points = getAverageInEachBin(zd, norm, maxBin);
         double[] x = new double[points.size()];
         double[] y = new double[points.size()];
         for (int i = 0; i < points.size(); i++) {
             x[i] = points.get(i)[0];
             y[i] = points.get(i)[1];
         }
+        points.clear();
 
         SplineInterpolator interpolator = new SplineInterpolator();
         return interpolator.interpolate(x, y);
     }
 
-    private List<double[]> getAverageInEachBin(MatrixZoomData zd, NormalizationType norm, int maxBin, double[] finalVal) {
+    private List<double[]> getAverageInEachBin(MatrixZoomData zd, NormalizationType norm, int maxBin) {
 
         double[] initExpected = new double[maxBin];
         long[] countsPerBin = new long[maxBin];

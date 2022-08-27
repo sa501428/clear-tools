@@ -43,3 +43,18 @@ Simple Identification of Enriched Verified Elements
 probability
 
 clean
+
+CAMP
+Comparisons Across Multiple Phenotypes
+
+ADAM
+analyze differences across maps
+
+SLASH
+Summarizing Loop Aggregate Statistics and Hierarchies
+
+ACE
+Annotating Cliques of Enrichment
+
+CORE
+Cliques Of Regional Enrichments
