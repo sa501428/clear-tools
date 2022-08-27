@@ -1,13 +1,13 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.expected.ExpectedModel;
-import cli.utils.expected.LogExpectedSpline;
 import cli.utils.sift.ContactRecordBox;
 import cli.utils.sift.ExtremePixels;
 import cli.utils.sift.FeatureUtils;
 import cli.utils.sift.SimpleLocation;
 import cli.utils.sift.collapse.MultiResCentroidCollapser;
+import javastraw.expected.ExpectedModel;
+import javastraw.expected.LogExpectedSpline;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
@@ -109,7 +109,7 @@ public class Sift {
 
                 MatrixZoomData zd = matrix.getZoomData(new HiCZoom(lowRes));
                 if (zd != null) {
-                    ExpectedModel poly = new LogExpectedSpline(zd, norm, MAX_DIST / lowRes);
+                    ExpectedModel poly = new LogExpectedSpline(zd, norm, chromosome, lowRes);
                     Set<ContactRecord> points = ExtremePixels.getExtremePixelsForResolution(ds, zd,
                             chromosome, lowRes, norm, MAX_DIST / lowRes, MIN_DIST / lowRes, poly);
                     matrix.clearCacheForZoom(new HiCZoom(lowRes));

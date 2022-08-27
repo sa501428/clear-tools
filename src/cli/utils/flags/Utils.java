@@ -25,7 +25,7 @@
 package cli.utils.flags;
 
 
-import cli.utils.expected.ExpectedModel;
+import javastraw.expected.ExpectedModel;
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.block.Block;
 import javastraw.reader.block.ContactRecord;

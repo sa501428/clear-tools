@@ -1,6 +1,6 @@
 package cli.utils.sample;
 
-import cli.utils.expected.ExpectedUtils;
+import javastraw.expected.ExpectedUtils;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;

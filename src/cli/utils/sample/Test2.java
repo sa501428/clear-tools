@@ -1,6 +1,6 @@
 package cli.utils.sample;
 
-import cli.utils.expected.LogExpectedSpline;
+import javastraw.expected.LogExpectedSpline;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.mzd.MatrixZoomData;
@@ -31,7 +31,7 @@ public class Test2 {
             for (NormalizationType norm : norms) {
 
                 int maxBin = (int) (chrom.getLength() / res);
-                LogExpectedSpline polynomial2 = new LogExpectedSpline(zd, norm, maxBin);
+                LogExpectedSpline polynomial2 = new LogExpectedSpline(zd, norm, chrom, res);
 
                 System.out.println("Got all points");
 

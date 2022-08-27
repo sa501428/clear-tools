@@ -1,12 +1,12 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.expected.ExpectedModel;
-import cli.utils.expected.LogExpectedSpline;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
 import cli.utils.recap.RecapTools;
+import javastraw.expected.ExpectedModel;
+import javastraw.expected.LogExpectedSpline;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -162,7 +162,7 @@ public class Recap {
                         }
 
                         int maxBinDist = Math.max(getMaxDistance(loops, resolution, window), 9000000 / resolution);
-                        ExpectedModel poly = new LogExpectedSpline(zd, norm, maxBinDist);
+                        ExpectedModel poly = new LogExpectedSpline(zd, norm, chrom1, resolution);
 
                         float pseudoCount = getMedianExpectedAt(maxBinDist - 2 * window, poly);
 

@@ -1,11 +1,11 @@
 package cli.clt;
 
-import cli.utils.expected.ExpectedModel;
-import cli.utils.expected.ExpectedUtils;
-import cli.utils.expected.LogExpectedSpline;
-import cli.utils.expected.Welford;
 import cli.utils.sift.SiftUtils;
 import cli.utils.sift.SimpleLocation;
+import javastraw.expected.ExpectedModel;
+import javastraw.expected.ExpectedUtils;
+import javastraw.expected.LogExpectedSpline;
+import javastraw.expected.Welford;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
@@ -113,7 +113,7 @@ public class HotSpot {
             double[] vector1 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(resolution), scaleNorm).getData().getValues().get(0);
             double[] vector2 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(resolution), vcNorm).getData().getValues().get(0);
 
-            iterateThruAndGrabPercentContact(zd, maxBin, minBin, norm, results, vector1, vector2);
+            iterateThruAndGrabPercentContact(zd, maxBin, minBin, norm, results, vector1, vector2, chrom, resolution);
             matrix.clearCache();
         }
 
@@ -231,9 +231,11 @@ public class HotSpot {
 
     private static void iterateThruAndGrabPercentContact(MatrixZoomData zd, int maxBin, int minBin,
                                                          NormalizationType norm,
-                                                         Map<SimpleLocation, Welford> results, double[] vector1, double[] vector2) {
+                                                         Map<SimpleLocation, Welford> results,
+                                                         double[] vector1, double[] vector2,
+                                                         Chromosome chrom, int resolution) {
 
-        ExpectedModel poly = new LogExpectedSpline(zd, norm, maxBin);
+        ExpectedModel poly = new LogExpectedSpline(zd, norm, chrom, resolution);
 
         Iterator<ContactRecord> iterator = zd.getNormalizedIterator(norm);
         while (iterator.hasNext()) {

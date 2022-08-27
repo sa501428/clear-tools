@@ -1,9 +1,9 @@
 package cli.utils.sift;
 
 import cli.clt.Sift;
-import cli.utils.expected.ExpectedModel;
-import cli.utils.expected.ExpectedUtils;
 import cli.utils.sift.collapse.CentroidCollapser;
+import javastraw.expected.ExpectedModel;
+import javastraw.expected.ExpectedUtils;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
@@ -48,7 +48,8 @@ public class ExtremePixels {
             if (cr.getCounts() > minVal && isReasonableNorm(cr, nv)) {
                 int dist = ExpectedUtils.getDist(cr);
                 if (dist > minBin && dist < maxBin) {
-                    if (poly.isReasonableEnrichment(cr) && poly.isReasonablePercentContact(cr)) {
+                    if (poly.isReasonableEnrichment(cr, Sift.ENRICMENT_VS_EXPECTED)
+                            && poly.isReasonablePercentContact(cr, Sift.MIN_PC, Sift.MAX_PC)) {
                         extremes.add(cr);
                     }
                 }
