@@ -28,14 +28,6 @@ public class NMSUtils {
         nonMaxSuppressionInGroup(initialPoints, toRemove, locationMap);
     }
 
-    /*
-    public static void filterOutByOverlap(Set<ContactRecord> initialPoints, int scalar) {
-        Set<ContactRecord> toRemove = new HashSet<>();
-        Map<SimpleLocation, List<ContactRecord>> locationMap = groupNearbyRecords(initialPoints, scalar);
-        nonMaxSuppressionInGroup(initialPoints, toRemove, locationMap);
-    }
-    */
-
     public static Map<SimpleLocation, LinkedList<ContactRecord>> groupNearbyRecords(Set<ContactRecord> initialPoints, int scalar) {
         Map<SimpleLocation, LinkedList<ContactRecord>> locationMap = new HashMap<>();
         for (ContactRecord cr : initialPoints) {
