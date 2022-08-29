@@ -272,10 +272,10 @@ public class RecapTools {
         List<String> categories = getCategories(isDeepLoopAnalysis);
 
         List<float[][]> outputs = new ArrayList<>();
-        for (int k = 0; k < categories.size(); k++) {
-            if (categories.get(k).contains(FULL_DECAY)) {
+        for (String category : categories) {
+            if (category.contains(FULL_DECAY)) {
                 outputs.add(new float[n][m * (window + 1)]);
-            } else if (categories.get(k).contains(ROW_SUM) || categories.get(k).contains(COL_SUM)) {
+            } else if (category.contains(ROW_SUM) || category.contains(COL_SUM)) {
                 outputs.add(new float[n][m * (2 * window + 1)]);
             } else {
                 outputs.add(new float[n][m]);

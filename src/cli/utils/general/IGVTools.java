@@ -30,31 +30,24 @@ public class IGVTools {
     }
 
     public static DataTrack loadBigWig(String inputBigWig, ChromosomeHandler handler) {
-
-        List<Chromosome> chrList = new ArrayList<>(Arrays.asList(handler.getChromosomeArray()));
-        List<org.broad.igv.feature.Chromosome> igvChrList = new ArrayList<>();
-        for (Chromosome chrom : chrList) {
-            igvChrList.add(chrom.toIGVChromosome());
-        }
-
-        Genome genome = new Genome(handler.getGenomeID(), igvChrList);
+        Genome genome = getGenome(handler);
         ResourceLocator locator = new ResourceLocator(inputBigWig);
-
         List<Track> tracks = (new TrackLoader()).load(locator, genome);
         return (DataTrack) tracks.get(0);
     }
 
     public static TribbleFeatureSource loadBed(String inputBed, ChromosomeHandler handler) throws IOException, TribbleIndexNotFoundException {
         ResourceLocator locator = new ResourceLocator(inputBed);
+        Genome genome = getGenome(handler);
+        return TribbleFeatureSource.getFeatureSource(locator, genome);
+    }
 
+    static Genome getGenome(ChromosomeHandler handler) {
         List<Chromosome> chrList = new ArrayList<>(Arrays.asList(handler.getChromosomeArray()));
         List<org.broad.igv.feature.Chromosome> igvChrList = new ArrayList<>();
         for (Chromosome chrom : chrList) {
             igvChrList.add(chrom.toIGVChromosome());
         }
-
-        Genome genome = new Genome(handler.getGenomeID(), igvChrList);
-
-        return TribbleFeatureSource.getFeatureSource(locator, genome);
+        return new Genome(handler.getGenomeID(), igvChrList);
     }
 }

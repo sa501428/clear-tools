@@ -82,14 +82,7 @@ public class Probability {
             double pseudocount = expected[expected.length-1];
             //double enrichment2 = (val + 1) / (expected[dist] + 1);
             double enrichment3 = (val + pseudocount) / (expected[dist] + pseudocount);
-            /*
-            System.out.println("Loop "+i+" "+loop.simpleString()+" pL "+proportionLoop +
-                    " O/E "+enrichment +
-                    //" O+1/E+1 "+enrichment2 +
-                    " O+ps/E+ps "+enrichment3 +
-                    " ps "+pseudocount
-            );
-            */
+
             System.out.println("Loop "+i+" "+loop.simpleString()+" pL "+proportionLoop +
                     " O/E "+enrichment +
                     //" O+1/E+1 "+enrichment2 +

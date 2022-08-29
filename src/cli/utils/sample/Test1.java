@@ -45,10 +45,8 @@ public class Test1 {
 
         /*
         int res1 = 100;
-
         double[] expected = ExpectedUtils.calculateRawExpected(zd, maxBin, true, 0);
         getAllEnrichedPoints(zd, expected);
-
          */
 
     }

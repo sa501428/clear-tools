@@ -107,11 +107,7 @@ public class Enhance {
 
                             for (int di = 0; di < datasets.length; di++) {
                                 final Dataset ds = datasets[di];
-                                MatrixZoomData zd;
-                                synchronized (ds) {
-                                    zd = HiCFileTools.getMatrixZoomData(ds, chr1, chr2, zoom);
-                                }
-
+                                MatrixZoomData zd = HiCFileTools.getMatrixZoomData(ds, chr1, chr2, zoom);
                                 if (zd != null) {
                                     try {
                                         Utils.addLocalBoundedRegion(output, zd,
@@ -131,10 +127,6 @@ public class Enhance {
                             if (exportNPY) {
                                 MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + ".npy")).getAbsolutePath(),
                                         output);
-                            /*
-                            MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_agg_norm.npy")).getAbsolutePath(),
-                                AggNorm.getAggNormedMatrix(output));
-                            */
                             }
                             WritingTools.writeToMND(output, resolution, chr1.getName(), chr2.getName(),
                                     binXStart, binYStart, bwMND);

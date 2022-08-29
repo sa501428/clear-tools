@@ -40,7 +40,7 @@ public class ConnectedComponents {
     private static final int NOT_SET = 0;
     private static final int IN_QUEUE = -1;
 
-    public static float ABSOLUTE_CUTOFF = 10f;
+    public static final float ABSOLUTE_CUTOFF = 10f;
 
     public static void extractMaxima(float[][] kde, int binXStart, int binYStart, long resolution,
                                      List<Feature2D> pinpointedLoops, Feature2D loop, String saveString) {
@@ -106,11 +106,6 @@ public class ConnectedComponents {
                 }
             }
         }
-
-        //if (Main.printVerboseComments) {
-        //    MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), image);
-        //    MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_label.npy")).getAbsolutePath(), labels);
-        //}
 
         labels = null;
         return results;

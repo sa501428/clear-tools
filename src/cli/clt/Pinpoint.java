@@ -102,7 +102,6 @@ public class Pinpoint {
 
                 Matrix matrix = dataset.getMatrix(chr1, chr2);
                 if (matrix != null) {
-
                     List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
                     if (loops != null && loops.size() > 0) {
                         MatrixZoomData zd = matrix.getZoomData(zoom);
@@ -112,7 +111,6 @@ public class Pinpoint {
                                 for (Feature2D loop : loops) {
 
                                     int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
-
                                     int binXStart = (int) ((loop.getStart1() / resolution) - window);
                                     int binYStart = (int) ((loop.getStart2() / resolution) - window);
 

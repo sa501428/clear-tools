@@ -92,29 +92,21 @@ public class HotSpot {
         int maxBin = MAX_DIST / resolution;
 
         for (Dataset ds : datasets) {
-            Matrix matrix;
-            synchronized (ds) {
-                matrix = ds.getMatrix(chrom, chrom, resolution);
-            }
-            if (matrix == null) {
-                System.err.println("matrix for " + chrom.getName() + " == null -> continuing");
-                continue;
-            }
-            MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
-            if (zd == null) {
-                System.err.println("zd for " + chrom.getName() + " == null -> continuing");
-                continue;
-            }
+            Matrix matrix = ds.getMatrix(chrom, chrom, resolution);
+            if (matrix != null) {
+                MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
+                if (zd != null) {
+                    // iterating through chrom using type 1 iteration
+                    NormalizationType scaleNorm = ds.getNormalizationHandler().getNormTypeFromString("SCALE");
+                    NormalizationType vcNorm = ds.getNormalizationHandler().getNormTypeFromString("VC");
 
-            // iterating through chrom using type 1 iteration
-            NormalizationType scaleNorm = ds.getNormalizationHandler().getNormTypeFromString("SCALE");
-            NormalizationType vcNorm = ds.getNormalizationHandler().getNormTypeFromString("VC");
+                    double[] vector1 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(resolution), scaleNorm).getData().getValues().get(0);
+                    double[] vector2 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(resolution), vcNorm).getData().getValues().get(0);
 
-            double[] vector1 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(resolution), scaleNorm).getData().getValues().get(0);
-            double[] vector2 = ds.getNormalizationVector(chrom.getIndex(), new HiCZoom(resolution), vcNorm).getData().getValues().get(0);
-
-            iterateThruAndGrabPercentContact(zd, maxBin, minBin, norm, results, vector1, vector2, chrom, resolution);
-            matrix.clearCache();
+                    iterateThruAndGrabPercentContact(zd, maxBin, minBin, norm, results, vector1, vector2, chrom, resolution);
+                }
+                matrix.clearCache();
+            }
         }
 
         initialHighIntensityFilter(results, countThreshold);
@@ -217,18 +209,6 @@ public class HotSpot {
         return attributes;
     }
 
-    /*
-    private static Zscore getOverallZscoreMetric(Collection<Welford> values) {
-        Welford overallWelford = new Welford();
-        for (Welford welford : values) {
-            overallWelford.addValue(welford.getStdDev());
-            //overallWelford.addValue(welford.getRange());
-        }
-        System.out.println("Overall welford: " + overallWelford.getSummary());
-        return overallWelford.getZscore();
-    }
-     */
-
     private static void iterateThruAndGrabPercentContact(MatrixZoomData zd, int maxBin, int minBin,
                                                          NormalizationType norm,
                                                          Map<SimpleLocation, Welford> results,
@@ -258,11 +238,4 @@ public class HotSpot {
         System.out.print(".");
         //System.out.println("Finished recording locations for this file");
     }
-
-    /*
-    public static long distance(long x, long y) {
-        return Math.max(Math.abs(x), Math.abs(y));
-    }
-    */
-
 }

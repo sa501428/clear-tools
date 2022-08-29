@@ -12,8 +12,8 @@ import java.util.Set;
 
 public class BoundingBoxWithContacts {
 
-    public static int buffer = 10;
-    public static int width = 2;
+    public static final int buffer = 10;
+    public static final int width = 2;
 
     private final List<ContactRecord> contacts;
     private int minR, maxR, minC, maxC;

@@ -25,15 +25,11 @@
 package cli.utils.apa;
 
 import javastraw.feature2D.Feature2D;
-import javastraw.reader.mzd.MatrixZoomData;
-import javastraw.reader.type.NormalizationType;
-import javastraw.tools.HiCFileTools;
 import javastraw.tools.MatrixTools;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -114,38 +110,6 @@ public class APAUtils {
         }
         return new ArrayList<>(sizeFilteredFeatures);
     }
-
-    public static RealMatrix extractLocalizedData(MatrixZoomData zd, Feature2D loop,
-                                                  int L, int resolution, int window, NormalizationType norm) throws IOException {
-        long loopX = loop.getMidPt1() / resolution;
-        long loopY = loop.getMidPt2() / resolution;
-        long binXStart = loopX - window;
-        long binXEnd = loopX + (window + 1);
-        long binYStart = loopY - window;
-        long binYEnd = loopY + (window + 1);
-
-        return HiCFileTools.extractLocalBoundedRegion(zd, binXStart, binXEnd, binYStart, binYEnd, L, L, norm, false);
-    }
-
-    public static List<RealMatrix> extractLocalizedRowSums(MatrixZoomData zd, Feature2D loop,
-                                                           int L, int resolution, int window, NormalizationType norm) throws IOException {
-        long loopX = loop.getMidPt1() / resolution;
-        long loopY = loop.getMidPt2() / resolution;
-        long binXStart = loopX - window;
-        long binXEnd = loopX + (window + 1);
-        long binYStart = loopY - window;
-        long binYEnd = loopY + (window + 1);
-        long chrXend = zd.getChr2().getLength() / zd.getBinSize() + 1;
-        long chrYend = zd.getChr1().getLength() / zd.getBinSize() + 1;
-
-        List<RealMatrix> vectors = new ArrayList<>();
-
-        vectors.add(HiCFileTools.extractLocalRowSums(zd, binXStart, binXEnd, 0, chrXend, L, norm, false));
-        vectors.add(HiCFileTools.extractLocalRowSums(zd, binYStart, binYEnd, 0, chrYend, L, norm, false));
-
-        return vectors;
-    }
-
 
     public static void inPlaceSumVectors(double[] globalSum, double[] vector) {
         for (int j = 0; j < globalSum.length; j++) {

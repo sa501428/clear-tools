@@ -52,11 +52,8 @@ public class Utils {
 
         long binXEnd = binXStart + (matrixWidth + 1);
         long binYEnd = binYStart + (matrixWidth + 1);
-        List<Block> blocks;
-        synchronized (key) {
-            blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
-                    binXEnd, binYEnd, norm, false);
-        }
+        List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
+                binXEnd, binYEnd, norm, false);
 
         fillInMatrixFromBlocks(matrix, blocks, binXStart, binYStart);
         blocks.clear();
