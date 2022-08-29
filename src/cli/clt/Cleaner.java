@@ -81,7 +81,7 @@ public class Cleaner {
 
                     try {
                         for (Feature2D loop : loops) {
-                            if (dist(loop) > MIN_LOOP_SIZE) {
+                            if (passesMinLoopSize(loop)) {
                                 if (normHasHighValPixel(loop.getStart1(), loop.getEnd1(), resolution, vector1b)
                                         && normHasHighValPixel(loop.getStart2(), loop.getEnd2(), resolution, vector2b)) {
                                     goodLoops.add(loop);
@@ -104,7 +104,11 @@ public class Cleaner {
         return goodLoopsList;
     }
 
-    private static long dist(Feature2D loop) {
+    public static boolean passesMinLoopSize(Feature2D loop) {
+        return dist(loop) > MIN_LOOP_SIZE;
+    }
+
+    public static long dist(Feature2D loop) {
         return (Math.min(Math.abs(loop.getEnd1() - loop.getStart2()),
                 Math.abs(loop.getMidPt1() - loop.getMidPt2())) / MIN_LOOP_SIZE) * MIN_LOOP_SIZE;
     }

@@ -1,5 +1,6 @@
 package cli.utils.general;
 
+import cli.clt.Cleaner;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -14,6 +15,8 @@ import java.util.List;
 import java.util.*;
 
 public class FusionTools {
+
+    private static final int MAX_RADIUS = 15000;
 
     public static void coalesceFeaturesToCentroid(String[] fileNames, String genomeID, String outFile) {
         Feature2DList list = combineAll(fileNames, genomeID);
@@ -37,12 +40,12 @@ public class FusionTools {
     public static List<Feature2D> coalescePixelsToCentroid(List<Feature2D> features) {
         // HashSet intermediate for removing duplicates
         // LinkedList used so that we can pop out highest obs values
-        Map<SimpleLocation, LinkedList<Feature2D>> map = groupNearbyRecords(new HashSet<>(features), 1000000);
+        Map<SimpleLocation, LinkedList<Feature2D>> map = groupNearbyRecords(simpleFilter(features), 1000000);
         Set<Feature2D> coalesced = new HashSet<>();
 
         for (LinkedList<Feature2D> featureLL : map.values()) {
 
-            long clusterRadius = getClusterWidth(features);
+            long clusterRadius = Math.min(getClusterWidth(features), MAX_RADIUS);
 
             while (!featureLL.isEmpty()) {
 
@@ -96,6 +99,16 @@ public class FusionTools {
         }
 
         return new ArrayList<>(coalesced);
+    }
+
+    private static Set<Feature2D> simpleFilter(List<Feature2D> features) {
+        Set<Feature2D> featureSet = new HashSet<>();
+        for (Feature2D feature : features) {
+            if (Cleaner.passesMinLoopSize(feature)) {
+                featureSet.add(feature);
+            }
+        }
+        return featureSet;
     }
 
     private static long getHalfWidth(Set<Feature2D> pixelList) {
