@@ -16,13 +16,13 @@ import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Cleaner {
+
+    private static final int MIN_LOOP_SIZE = 25000;
 
     public static void run(String[] args) {
         if (args.length != 4) {
@@ -48,9 +48,7 @@ public class Cleaner {
         int resolution = 1000;
         HiCZoom zoom = new HiCZoom(resolution);
 
-        NormalizationType scaleNorm = dataset.getNormalizationHandler().getNormTypeFromString("SCALE");
         NormalizationType vcNorm = dataset.getNormalizationHandler().getNormTypeFromString("VC");
-
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
         final int chromosomePairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
@@ -70,27 +68,24 @@ public class Cleaner {
 
                 List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
                 if (loops != null && loops.size() > 0) {
-                    List<Feature2D> goodLoops = new ArrayList<>();
+                    Set<Feature2D> goodLoops = new HashSet<>();
 
-                    double[] vector1 = dataset.getNormalizationVector(chr1.getIndex(), zoom, scaleNorm).getData().getValues().get(0);
                     double[] vector1b = dataset.getNormalizationVector(chr1.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-                    VectorCleaner.inPlaceClean(vector1);
                     VectorCleaner.inPlaceClean(vector1b);
 
-                    double[] vector2 = vector1;
                     double[] vector2b = vector1b;
                     if (chr1.getIndex() != chr2.getIndex()) {
-                        vector2 = dataset.getNormalizationVector(chr2.getIndex(), zoom, scaleNorm).getData().getValues().get(0);
                         vector2b = dataset.getNormalizationVector(chr2.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-                        VectorCleaner.inPlaceClean(vector2);
                         VectorCleaner.inPlaceClean(vector2b);
                     }
 
                     try {
                         for (Feature2D loop : loops) {
-                            if (normsAreGood(loop.getStart1(), loop.getEnd1(), resolution, vector1, vector1b)
-                                    && normsAreGood(loop.getStart2(), loop.getEnd2(), resolution, vector2, vector2b)) {
-                                goodLoops.add(loop);
+                            if (dist(loop) > MIN_LOOP_SIZE) {
+                                if (normHasHighValPixel(loop.getStart1(), loop.getEnd1(), resolution, vector1b)
+                                        && normHasHighValPixel(loop.getStart2(), loop.getEnd2(), resolution, vector2b)) {
+                                    goodLoops.add(loop);
+                                }
                             }
                         }
                     } catch (Exception e) {
@@ -98,7 +93,7 @@ public class Cleaner {
                     }
 
                     synchronized (key) {
-                        goodLoopsList.addByKey(Feature2DList.getKey(chr1, chr2), goodLoops);
+                        goodLoopsList.addByKey(Feature2DList.getKey(chr1, chr2), new ArrayList<>(goodLoops));
                     }
                 }
                 //System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");
@@ -109,23 +104,22 @@ public class Cleaner {
         return goodLoopsList;
     }
 
-    private static boolean normsAreGood(long start, long end, int resolution, double[] vector1, double[] vector2) {
+    private static long dist(Feature2D loop) {
+        return (Math.min(Math.abs(loop.getEnd1() - loop.getStart2()),
+                Math.abs(loop.getMidPt1() - loop.getMidPt2())) / MIN_LOOP_SIZE) * MIN_LOOP_SIZE;
+    }
+
+    private static boolean normHasHighValPixel(long start, long end, int resolution, double[] vector) {
 
         int x0 = (int) (start / resolution);
         int xF = (int) (end / resolution) + 1;
-        boolean normValuesAreGood = true;
 
         for (int k = x0; k < xF + 1; k++) {
-            if (valueIsBad(vector1[k]) || valueIsBad(vector2[k])) {
-                normValuesAreGood = false;
-                break;
+            if (vector[k] > 1 && vector[k] >= vector[k - 1] && vector[k] >= vector[k + 1]) {
+                return true;
             }
         }
 
-        return normValuesAreGood;
-    }
-
-    private static boolean valueIsBad(double v) {
-        return Double.isNaN(v) || v < 1;
+        return false;
     }
 }

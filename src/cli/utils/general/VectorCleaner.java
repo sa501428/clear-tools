@@ -5,7 +5,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 public class VectorCleaner {
     public static void inPlaceClean(double[] vec) {
         for (int k = 0; k < vec.length; k++) {
-            if (Double.isInfinite(vec[k])) {
+            if (Double.isInfinite(vec[k]) || vec[k] < 0) {
                 vec[k] = Double.NaN;
             }
         }
