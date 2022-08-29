@@ -1,13 +1,14 @@
 package cli.clt;
 
+import cli.utils.FeatureStats;
+import cli.utils.flags.Utils;
+import cli.utils.general.FusionTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
-import javastraw.reader.block.Block;
-import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
@@ -19,8 +20,8 @@ import javastraw.tools.ParallelizationTools;
 
 import java.awt.*;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SimpleMax {
@@ -86,15 +87,25 @@ public class SimpleMax {
                         MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
                         if (zd != null) { // if it's not empty
                             try {
-                                // newLoops is the output looplist that has the calibrated centers
-                                List<Feature2D> newLoops = new ArrayList<>();
-                                for (Feature2D loop : loops) {
-                                    // loop through the looplist
-                                    getTheMaxPixel(loop, zd, resolution, newLoops, norm);
+                                Set<Feature2D> newLoops = new HashSet<>();
+                                Collection<LinkedList<Feature2D>> loopGroups = FusionTools.groupNearbyRecords(
+                                        new HashSet<>(loops), 500000).values();
+                                for (LinkedList<Feature2D> group : loopGroups) {
+                                    long minR = (FeatureStats.minStart1(group) / resolution) - 1;
+                                    long minC = (FeatureStats.minStart2(group) / resolution) - 1;
+                                    long maxR = (FeatureStats.maxEnd1(group) / resolution) + 1;
+                                    long maxC = (FeatureStats.maxEnd2(group) / resolution) + 1;
+                                    float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, norm);
+                                    for (Feature2D loop : group) {
+                                        getTheMaxPixel(regionMatrix, loop, resolution, newLoops, minR, minC);
+                                    }
+                                    regionMatrix = null;
                                 }
+
                                 synchronized (finalLoopList) {
-                                    finalLoopList.addByKey(Feature2DList.getKey(chrom1, chrom1), newLoops);
+                                    finalLoopList.addByKey(Feature2DList.getKey(chrom1, chrom1), new ArrayList<>(newLoops));
                                 }
+
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 System.exit(76);
@@ -111,55 +122,38 @@ public class SimpleMax {
         return finalLoopList;
     }
 
-    private static void getTheMaxPixel(Feature2D loop, MatrixZoomData zd, int resolution, List<Feature2D> newLoops,
-                                       NormalizationType norm) {
-        // Initialize variables
-        // can assume loop from top right corner of diagonal
-        long binXStart = loop.getStart1() / resolution;
-        long binYStart = loop.getStart2() / resolution;
-        long binXEnd = (loop.getEnd1() / resolution) + 1;
-        long binYEnd = (loop.getEnd2() / resolution) + 1;
+    private static void getTheMaxPixel(float[][] regionMatrix, Feature2D loop, int resolution,
+                                       Set<Feature2D> newLoops, long minR, long minC) {
 
-        boolean getDataUnderDiagonal = true;
+        int r0 = (int) ((loop.getStart1() / resolution) - minR);
+        int c0 = (int) ((loop.getStart2() / resolution) - minC);
+        int rF = (int) ((loop.getEnd1() / resolution) + 1 - minR);
+        int cF = (int) ((loop.getEnd2() / resolution) + 1 - minC);
 
-        List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart, binXEnd, binYEnd, norm, getDataUnderDiagonal);
-        int[] binCoords = getMaxPixelInBox(blocks, binXStart, binYStart, binXEnd, binYEnd);
-        blocks.clear();
+        int[] binCoords = getMaxPixelInBox(regionMatrix, r0, rF, c0, cF);
 
         // arbitrarily chose binCoordsNONE, since NONE and VC have same coordinates
-        long startX = (long) binCoords[0] * resolution;
+        long startX = (binCoords[0] + minR) * resolution;
         long endX = startX + resolution;
-        long startY = (long) binCoords[1] * resolution;
+        long startY = (binCoords[1] + minC) * resolution;
         long endY = startY + resolution;
         Feature2D feature = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX, endX,
                 loop.getChr2(), startY, endY, Color.BLACK, loop.getAttributes());
         newLoops.add(feature);
-
     }
 
-    private static int[] getMaxPixelInBox(List<Block> blocks, long binXStart, long binYStart, long binXEnd, long binYEnd) {
-        float maxCounts = 0;
-        int[] coordinates = new int[2];
-        for (Block b : blocks) {
-            if (b != null) {
-                for (ContactRecord rec : b.getContactRecords()) {
-                    // try checking if bounds fixed bug
-                    if (inBounds(rec, binXStart, binYStart, binXEnd, binYEnd)) {
-                        if (rec.getCounts() > maxCounts) { // will skip NaNs
-                            maxCounts = rec.getCounts();
-                            coordinates[0] = rec.getBinX();
-                            coordinates[1] = rec.getBinY();
-                        }
-                    }
+    private static int[] getMaxPixelInBox(float[][] matrix, int r0, int rF, int c0, int cF) {
+        float maxCounts = matrix[r0][c0];
+        int[] coordinates = new int[]{r0, c0};
+        for (int r = r0; r < rF; r++) {
+            for (int c = c0; c < cF; c++) {
+                if (matrix[r][c] > maxCounts) { // will skip NaNs
+                    maxCounts = matrix[r][c];
+                    coordinates[0] = r;
+                    coordinates[1] = c;
                 }
             }
         }
         return coordinates;
-    }
-
-    private static boolean inBounds(ContactRecord rec, long binXStart, long binYStart, long binXEnd, long binYEnd) {
-        int x = rec.getBinX();
-        int y = rec.getBinY();
-        return x >= binXStart && x < binXEnd && y >= binYStart && y < binYEnd;
     }
 }
