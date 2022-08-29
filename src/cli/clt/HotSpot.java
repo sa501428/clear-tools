@@ -1,6 +1,6 @@
 package cli.clt;
 
-import cli.utils.sift.SiftUtils;
+import cli.utils.hotspot.HotSpotUtils;
 import cli.utils.sift.SimpleLocation;
 import javastraw.expected.ExpectedModel;
 import javastraw.expected.ExpectedUtils;
@@ -125,7 +125,7 @@ public class HotSpot {
         Set<ContactRecord> records = new HashSet<>(candidateHotSpotsSet);
         records.addAll(ubiquitousPeaksSet);
         // records is currently the union of the candidateHotSpotsSet and ubiquitousPeaksSet
-        SiftUtils.coalesceAndRetainCentroids(records, 30000 / resolution);
+        HotSpotUtils.coalesceAndRetainCentroids(records, 30000 / resolution);
         records.removeAll(ubiquitousPeaksSet);
         // now records is the final set of hotspots (as ContactRecords)
 

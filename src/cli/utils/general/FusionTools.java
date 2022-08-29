@@ -1,5 +1,6 @@
 package cli.utils.general;
 
+import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -36,57 +37,65 @@ public class FusionTools {
     public static List<Feature2D> coalescePixelsToCentroid(List<Feature2D> features) {
         // HashSet intermediate for removing duplicates
         // LinkedList used so that we can pop out highest obs values
-        LinkedList<Feature2D> featureLL = new LinkedList<>(new HashSet<>(features));
-        List<Feature2D> coalesced = new ArrayList<>();
+        Map<SimpleLocation, LinkedList<Feature2D>> map = groupNearbyRecords(new HashSet<>(features), 1000000);
+        Set<Feature2D> coalesced = new HashSet<>();
 
-        long clusterRadius = getClusterWidth(features);
+        for (LinkedList<Feature2D> featureLL : map.values()) {
 
-        while (!featureLL.isEmpty()) {
+            long clusterRadius = getClusterWidth(features);
 
-            Feature2D pixel = featureLL.pollFirst();
-            if (pixel != null) {
-                featureLL.remove(pixel);
-                Set<Feature2D> pixelList = new HashSet<>();
-                pixelList.add(pixel);
+            while (!featureLL.isEmpty()) {
 
-                long pixelListMid1 = pixel.getMidPt1();
-                long pixelListMid2 = pixel.getMidPt2();
+                Feature2D pixel = featureLL.pollFirst();
+                if (pixel != null) {
+                    featureLL.remove(pixel);
+                    Set<Feature2D> pixelList = new HashSet<>();
+                    pixelList.add(pixel);
 
-                int prevSize = 0;
+                    DescriptiveStatistics stats1 = getStats(pixelList, true);
+                    DescriptiveStatistics stats2 = getStats(pixelList, false);
 
-                while (prevSize != pixelList.size()) {
-                    prevSize = pixelList.size();
-                    for (Feature2D px : featureLL) {
-                        if (distance(pixelListMid1 - px.getMidPt1(),
-                                pixelListMid2 - px.getMidPt2()) <= clusterRadius) {
-                            pixelList.add(px);
+                    long median1 = (long) stats1.getPercentile(50);
+                    long median2 = (long) stats2.getPercentile(50);
+
+                    int prevSize = 0;
+
+                    while (prevSize != pixelList.size()) {
+                        prevSize = pixelList.size();
+                        for (Feature2D px : featureLL) {
+                            if (distance(median1 - px.getMidPt1(),
+                                    median2 - px.getMidPt2()) <= clusterRadius) {
+                                pixelList.add(px);
+                            }
                         }
+                        featureLL.removeAll(pixelList);
+                        stats1 = getStats(pixelList, true);
+                        stats2 = getStats(pixelList, false);
+                        median1 = (long) stats1.getPercentile(50);
+                        median2 = (long) stats2.getPercentile(50);
                     }
-                    pixelListMid1 = median(pixelList, true);
-                    pixelListMid2 = median(pixelList, false);
-                    featureLL.removeAll(pixelList);
+
+                    long r = getRadius(pixelList, median1, median2);
+                    long halfWidth = getHalfWidth(pixelList);
+
+                    long start1 = (long) (stats1.getMin() - halfWidth);
+                    long start2 = (long) (stats2.getMin() - halfWidth);
+                    long end1 = (long) (stats1.getMax() + halfWidth);
+                    long end2 = (long) (stats2.getMax() + halfWidth);
+
+                    Map<String, String> attributes = new HashMap<>(4);
+                    attributes.put("Radius", String.valueOf(r));
+                    attributes.put("Centroid1", String.valueOf(median1));
+                    attributes.put("Centroid2", String.valueOf(median2));
+                    attributes.put("NumCollapsed", String.valueOf(pixelList.size()));
+
+                    coalesced.add(new Feature2D(Feature2D.FeatureType.PEAK, pixel.getChr1(), start1, end1,
+                            pixel.getChr2(), start2, end2, Color.BLACK, attributes));
                 }
-
-                long r = getRadius(pixelList, pixelListMid1, pixelListMid2);
-                long halfWidth = getHalfWidth(pixelList);
-
-                long start1 = pixelListMid1 - halfWidth;
-                long start2 = pixelListMid2 - halfWidth;
-                long end1 = pixelListMid1 + halfWidth;
-                long end2 = pixelListMid2 + halfWidth;
-
-                Map<String, String> attributes = new HashMap<>(4);
-                attributes.put("Radius", String.valueOf(r));
-                attributes.put("Centroid1", String.valueOf(pixelListMid1));
-                attributes.put("Centroid2", String.valueOf(pixelListMid2));
-                attributes.put("NumCollapsed", String.valueOf(pixelList.size()));
-
-                coalesced.add(new Feature2D(Feature2D.FeatureType.PEAK, pixel.getChr1(), start1, end1,
-                        pixel.getChr2(), start2, end2, Color.BLACK, attributes));
             }
         }
 
-        return coalesced;
+        return new ArrayList<>(coalesced);
     }
 
     private static long getHalfWidth(Set<Feature2D> pixelList) {
@@ -116,7 +125,7 @@ public class FusionTools {
         return r;
     }
 
-    private static long median(Set<Feature2D> pixelList, boolean is1) {
+    private static DescriptiveStatistics getStats(Set<Feature2D> pixelList, boolean is1) {
         DescriptiveStatistics stats = new DescriptiveStatistics();
         for (Feature2D px : pixelList) {
             if (is1) {
@@ -125,10 +134,25 @@ public class FusionTools {
                 stats.addValue(px.getMidPt2());
             }
         }
-        return (long) stats.getPercentile(50);
+        return stats;
     }
 
     public static long distance(long x, long y) {
         return (long) Math.sqrt(x * x + y * y);
+    }
+
+    public static Map<SimpleLocation, LinkedList<Feature2D>> groupNearbyRecords(Set<Feature2D> initialPoints, int scalar) {
+        Map<SimpleLocation, LinkedList<Feature2D>> locationMap = new HashMap<>();
+        for (Feature2D feature : initialPoints) {
+            SimpleLocation region = new SimpleLocation((int) (feature.getMidPt1() / scalar), (int) (feature.getMidPt2() / scalar));
+            if (locationMap.containsKey(region)) {
+                locationMap.get(region).add(feature);
+            } else {
+                LinkedList<Feature2D> values = new LinkedList<>();
+                values.add(feature);
+                locationMap.put(region, values);
+            }
+        }
+        return locationMap;
     }
 }

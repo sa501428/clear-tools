@@ -1,11 +1,11 @@
-package cli.utils.sift;
+package cli.utils.hotspot;
 
 import cli.utils.general.FusionTools;
 import javastraw.reader.block.ContactRecord;
 
 import java.util.*;
 
-public class SiftUtils {
+public class HotSpotUtils {
     public static void coalesceAndRetainCentroids(Set<ContactRecord> features,
                                                   int binRadius) {
         LinkedList<ContactRecord> featureLL = new LinkedList<>(features);
