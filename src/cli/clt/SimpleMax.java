@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SimpleMax {
 
+    private static final NormalizationType VC = NormalizationHandler.VC;
+
     public static void printUsageAndExit() {
         System.out.println("simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>");
         System.exit(7);
@@ -69,6 +71,7 @@ public class SimpleMax {
                                                NormalizationType norm) {
 
         Feature2DList finalLoopList = new Feature2DList();
+        HiCZoom zoom = new HiCZoom(resolution);
 
         AtomicInteger currChromIndex = new AtomicInteger(0);
         Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
@@ -84,20 +87,21 @@ public class SimpleMax {
                     Matrix matrix = ds.getMatrix(chrom1, chrom1, resolution);
                     if (matrix != null) {
                         // load matrix in "resolution" resolution of that chromosome in sparse format
-                        MatrixZoomData zd = matrix.getZoomData(new HiCZoom(resolution));
+                        MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) { // if it's not empty
                             try {
+                                double[] nv = ds.getNormalizationVector(chrom1.getIndex(), zoom, VC).getData().getValues().get(0);
                                 Set<Feature2D> newLoops = new HashSet<>();
                                 Collection<LinkedList<Feature2D>> loopGroups = FusionTools.groupNearbyRecords(
                                         new HashSet<>(loops), 500000).values();
                                 for (LinkedList<Feature2D> group : loopGroups) {
-                                    long minR = (FeatureStats.minStart1(group) / resolution) - 1;
-                                    long minC = (FeatureStats.minStart2(group) / resolution) - 1;
-                                    long maxR = (FeatureStats.maxEnd1(group) / resolution) + 1;
-                                    long maxC = (FeatureStats.maxEnd2(group) / resolution) + 1;
+                                    int minR = (int) ((FeatureStats.minStart1(group) / resolution) - 1);
+                                    int minC = (int) ((FeatureStats.minStart2(group) / resolution) - 1);
+                                    int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + 1);
+                                    int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + 1);
                                     float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, norm);
                                     for (Feature2D loop : group) {
-                                        getTheMaxPixel(regionMatrix, loop, resolution, newLoops, minR, minC);
+                                        getTheMaxPixel(regionMatrix, loop, resolution, newLoops, minR, minC, nv);
                                     }
                                     regionMatrix = null;
                                 }
@@ -123,37 +127,42 @@ public class SimpleMax {
     }
 
     private static void getTheMaxPixel(float[][] regionMatrix, Feature2D loop, int resolution,
-                                       Set<Feature2D> newLoops, long minR, long minC) {
+                                       Set<Feature2D> newLoops, int minR, int minC, double[] nv) {
 
         int r0 = (int) ((loop.getStart1() / resolution) - minR);
         int c0 = (int) ((loop.getStart2() / resolution) - minC);
         int rF = (int) ((loop.getEnd1() / resolution) + 1 - minR);
         int cF = (int) ((loop.getEnd2() / resolution) + 1 - minC);
 
-        int[] binCoords = getMaxPixelInBox(regionMatrix, r0, rF, c0, cF);
+        int[] binCoords = getMaxPixelInBox(regionMatrix, r0, rF, c0, cF, nv, minR, minC);
 
-        // arbitrarily chose binCoordsNONE, since NONE and VC have same coordinates
-        long startX = (binCoords[0] + minR) * resolution;
-        long endX = startX + resolution;
-        long startY = (binCoords[1] + minC) * resolution;
-        long endY = startY + resolution;
-        Feature2D feature = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX, endX,
-                loop.getChr2(), startY, endY, Color.BLACK, loop.getAttributes());
-        newLoops.add(feature);
+        if (binCoords != null) {
+            long startX = (long) (binCoords[0] + minR) * resolution;
+            long endX = startX + resolution;
+            long startY = (long) (binCoords[1] + minC) * resolution;
+            long endY = startY + resolution;
+            Feature2D feature = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX, endX,
+                    loop.getChr2(), startY, endY, Color.BLACK, loop.getAttributes());
+            newLoops.add(feature);
+        }
     }
 
-    private static int[] getMaxPixelInBox(float[][] matrix, int r0, int rF, int c0, int cF) {
-        float maxCounts = matrix[r0][c0];
-        int[] coordinates = new int[]{r0, c0};
+    private static int[] getMaxPixelInBox(float[][] matrix, int r0, int rF, int c0, int cF,
+                                          double[] nv, int minR, int minC) {
+        float maxCounts = 0;
+        int[] coordinates = new int[]{-1, -1};
         for (int r = r0; r < rF; r++) {
             for (int c = c0; c < cF; c++) {
-                if (matrix[r][c] > maxCounts) { // will skip NaNs
+                if (matrix[r][c] > maxCounts && nv[minR + r] > 1 && nv[minC + c] > 1) { // will skip NaNs
                     maxCounts = matrix[r][c];
                     coordinates[0] = r;
                     coordinates[1] = c;
                 }
             }
         }
-        return coordinates;
+        if (maxCounts > 0) {
+            return coordinates;
+        }
+        return null;
     }
 }
