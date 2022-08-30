@@ -18,17 +18,17 @@ public class Main {
         System.out.println("\t" + "-V, --version print version");
         System.out.println("Commands: \n" +
                 "flags [--cutoff int] [--res int] [--norm string] <input.hic> <loops.bedpe> <out_folder>\n" +
-                "enhance [--res int] [--norm string] <out_folder> <loops.bedpe> <hic_files>\n" +
-                "probability [--res int] <input.hic> <loops.bedpe> <out_folder>\n" +
+                //"enhance [--res int] [--norm string] <out_folder> <loops.bedpe> <hic_files>\n" +
+                //"probability [--res int] <input.hic> <loops.bedpe> <out_folder>\n" +
                 "pinpoint [--res int] <input.hic> <loops.bedpe> <output.bedpe>\n" +
                 "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
                 "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
                 "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
                 "recap [--loop] <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
                 "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <outfile>\n" +
-                "fuse <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
+                "fuse[-nms] <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
                 "sift [--window int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +
-                "seer [--res int] [--low-res int] [-k norm] [--seed seed] <file> <out_folder> <num_contacts>\n" +
+                //"seer [--res int] [--low-res int] [-k norm] [--seed seed] <file> <out_folder> <num_contacts>\n" +
                 "hack [--res int] <out_folder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
                 "simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>");
         System.out.println("Exit code " + exitCode);
@@ -75,7 +75,7 @@ public class Main {
         } else if (command.startsWith("sift")) {
             new Sift(args, parser);
         } else if (command.startsWith("fuse") || command.startsWith("fusion")) {
-            new Fusion(args, parser);
+            new Fusion(args, parser, command.contains("nms"));
         } else if (command.startsWith("seer")) {
             Seer.run(args, parser);
         } else if (command.startsWith("hack")) {

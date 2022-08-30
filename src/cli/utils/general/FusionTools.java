@@ -18,23 +18,52 @@ public class FusionTools {
 
     private static final int MAX_RADIUS = 1000;
 
-    public static void coalesceFeaturesToCentroid(String[] fileNames, String genomeID, String outFile) {
+    public static void coalesceFeatures(String[] fileNames, String genomeID, String outFile, boolean useNMS) {
         Feature2DList list = combineAll(fileNames, genomeID);
-        list.filterLists((chr, feature2DList) -> coalescePixelsToCentroid(feature2DList));
+        if (useNMS) {
+            list.filterLists((chr, feature2DList) -> removeOverlappingPixels(feature2DList));
+        } else {
+            list.filterLists((chr, feature2DList) -> coalescePixelsToCentroid(feature2DList));
+        }
         list.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
     }
 
-    public static Feature2DList combineAll(String[] fileNames, String genomeID) {
-        final Feature2DList combinedLoops = new Feature2DList();
+    private static List<Feature2D> removeOverlappingPixels(List<Feature2D> features) {
+        Map<SimpleLocation, LinkedList<Feature2D>> map = groupNearbyRecords(simpleFilter(features), 1000000);
+        Set<Feature2D> coalesced = new HashSet<>();
 
-        ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
-        for (String path : fileNames) {
-            Feature2DList loopList = Feature2DParser.loadFeatures(path, handler,
-                    false, null, false);
-            loopList.processLists(combinedLoops::addByKey);
+        for (LinkedList<Feature2D> featureLL : map.values()) {
+
+            featureLL.sort((o1, o2) -> {
+                int val = Long.compare(o1.getWidth1(), o2.getWidth1());
+                if (val == 0) {
+                    return Long.compare(o1.getWidth2(), o2.getWidth2());
+                }
+                return val;
+            });
+
+            while (!featureLL.isEmpty()) {
+
+                Feature2D pixel = featureLL.pollFirst();
+                if (pixel != null) {
+                    featureLL.remove(pixel);
+                    Set<Feature2D> pixelList = new HashSet<>();
+                    pixelList.add(pixel);
+
+                    for (Feature2D px : featureLL) {
+                        if (hasOverlap(px, pixel)) {
+                            pixelList.add(px);
+                        }
+                    }
+                    featureLL.removeAll(pixelList);
+                    pixel.addStringAttribute("NumCollapsed", String.valueOf(pixelList.size()));
+                    coalesced.add(pixel);
+                }
+            }
         }
+        map.clear();
 
-        return combinedLoops;
+        return new ArrayList<>(coalesced);
     }
 
     public static List<Feature2D> coalescePixelsToCentroid(List<Feature2D> features) {
@@ -97,6 +126,7 @@ public class FusionTools {
                 }
             }
         }
+        map.clear();
 
         return new ArrayList<>(coalesced);
     }
@@ -154,6 +184,18 @@ public class FusionTools {
         return (long) Math.sqrt(x * x + y * y);
     }
 
+
+    private static boolean hasOverlap(Feature2D px1, Feature2D px2) {
+        return getWidth(px1.getStart1(), px1.getEnd1(), px2.getStart1(), px2.getEnd1()) *
+                getWidth(px1.getStart2(), px1.getEnd2(), px2.getStart2(), px2.getEnd2()) > 0;
+    }
+
+    private static int getWidth(long p1, long p2, long g1, long g2) {
+        long start = Math.max(p1, g1);
+        long end = Math.min(p2, g2);
+        return (int) Math.max(0, end - start);
+    }
+
     public static Map<SimpleLocation, LinkedList<Feature2D>> groupNearbyRecords(Set<Feature2D> initialPoints, int scalar) {
         Map<SimpleLocation, LinkedList<Feature2D>> locationMap = new HashMap<>();
         for (Feature2D feature : initialPoints) {
@@ -167,5 +209,18 @@ public class FusionTools {
             }
         }
         return locationMap;
+    }
+
+    public static Feature2DList combineAll(String[] fileNames, String genomeID) {
+        final Feature2DList combinedLoops = new Feature2DList();
+
+        ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
+        for (String path : fileNames) {
+            Feature2DList loopList = Feature2DParser.loadFeatures(path, handler,
+                    false, null, false);
+            loopList.processLists(combinedLoops::addByKey);
+        }
+
+        return combinedLoops;
     }
 }

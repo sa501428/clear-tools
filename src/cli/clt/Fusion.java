@@ -4,7 +4,7 @@ import cli.Main;
 import cli.utils.general.FusionTools;
 
 public class Fusion {
-    public Fusion(String[] args, CommandLineParser parser) {
+    public Fusion(String[] args, CommandLineParser parser, boolean useNMS) {
         if (args.length < 5) {
             Main.printGeneralUsageAndExit(5);
         }
@@ -13,7 +13,7 @@ public class Fusion {
         String outFile = args[2];
         String[] bedpeFiles = new String[args.length - 3];
         System.arraycopy(args, 3, bedpeFiles, 0, bedpeFiles.length);
-        FusionTools.coalesceFeaturesToCentroid(bedpeFiles, genomeID, outFile);
+        FusionTools.coalesceFeatures(bedpeFiles, genomeID, outFile, useNMS);
         System.out.println("fusion complete");
     }
 }
