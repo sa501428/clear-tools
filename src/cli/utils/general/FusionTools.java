@@ -16,7 +16,7 @@ import java.util.*;
 
 public class FusionTools {
 
-    private static final int MAX_RADIUS = 15000;
+    private static final int MAX_RADIUS = 1000;
 
     public static void coalesceFeaturesToCentroid(String[] fileNames, String genomeID, String outFile) {
         Feature2DList list = combineAll(fileNames, genomeID);
