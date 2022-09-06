@@ -10,5 +10,6 @@
     <orderEntry type="library" name="igv" level="project" />
     <orderEntry type="library" name="java-straw.2.16.0" level="project" />
     <orderEntry type="library" name="jargs" level="project" />
+    <orderEntry type="library" name="circe" level="project" />
   </component>
 </module>

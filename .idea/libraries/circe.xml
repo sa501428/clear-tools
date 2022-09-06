@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="circe">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/circe.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/circe.jar!/doc" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/circe.jar!/" />
+    </SOURCES>
+  </library>
+</component>

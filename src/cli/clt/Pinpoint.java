@@ -1,5 +1,7 @@
 package cli.clt;
 
+import circe.clt.Circe;
+import circe.utils.gpu.GPUController;
 import cli.Main;
 import cli.utils.cc.ConnectedComponents;
 import cli.utils.flags.RegionConfiguration;
@@ -81,7 +83,24 @@ public class Pinpoint {
             System.out.println("Pinpointing location for loops");
         }
 
-        final float[][] kernel = ConvolutionTools.getManhattanKernel(Math.max(10, 200 / resolution));
+        int kernelSize = Math.max(10, 200 / resolution);
+
+        final int[] globalMaxWidth = new int[1];
+        loopList.processLists((s, list) -> {
+            int maxWidth = 0;
+            for (Feature2D feature : list) {
+                maxWidth = (int) Math.max(maxWidth, feature.getWidth1() / resolution);
+                maxWidth = (int) Math.max(maxWidth, feature.getWidth2() / resolution);
+            }
+            globalMaxWidth[0] = Math.max(globalMaxWidth[0], maxWidth);
+        });
+
+        int window = Math.max(globalMaxWidth[0], 10);
+        int matrixWidth = 3 * window + 1;
+
+        GPUController gpuController = Circe.buildGPUController(kernelSize, matrixWidth, kernelSize / 2 + 1);
+
+        final float[][] kernel = ConvolutionTools.getManhattanKernel(kernelSize);
         //float maxK = ArrayTools.getMax(kernel);
 
         HiCZoom zoom = new HiCZoom(resolution);
@@ -115,11 +134,11 @@ public class Pinpoint {
                                 List<Feature2D> pinpointedLoops = new ArrayList<>();
                                 for (Feature2D loop : loops) {
 
-                                    int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
+                                    //int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
                                     int binXStart = (int) ((loop.getStart1() / resolution) - window);
                                     int binYStart = (int) ((loop.getStart2() / resolution) - window);
 
-                                    int matrixWidth = 3 * window + 1;
+                                    //int matrixWidth = 3 * window + 1;
                                     float[][] output = new float[matrixWidth][matrixWidth];
 
                                     Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm);
@@ -129,7 +148,8 @@ public class Pinpoint {
                                     saveString = String.join("_", saveStrings);
 
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
-                                    float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
+                                    //float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
+                                    float[][] kde = gpuController.process(output, kernel);
                                     output = null; // clear output
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
 
