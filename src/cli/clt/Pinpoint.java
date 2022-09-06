@@ -79,6 +79,9 @@ public class Pinpoint {
             System.out.println("Pinpointing location for loops");
         }
 
+        final float[][] kernel = ConvolutionTools.getManhattanKernel(Math.max(10, 200 / resolution));
+        //float maxK = ArrayTools.getMax(kernel);
+
         HiCZoom zoom = new HiCZoom(resolution);
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
@@ -124,7 +127,7 @@ public class Pinpoint {
                                     saveString = String.join("_", saveStrings);
 
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
-                                    float[][] kde = ConvolutionTools.sparseConvolution(output);
+                                    float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
                                     output = null; // clear output
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
 
