@@ -29,6 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Pinpoint {
+    private static final boolean ONLY_GET_ONE = true;
+
     public static void run(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(5);
@@ -132,7 +134,7 @@ public class Pinpoint {
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
 
                                     ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
-                                            pinpointedLoops, loop, saveString);
+                                            pinpointedLoops, loop, saveString, ONLY_GET_ONE);
 
                                     kde = null;
 
