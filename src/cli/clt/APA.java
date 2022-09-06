@@ -190,7 +190,7 @@ public class APA {
                             try {
                                 for (Feature2D loop : loops) {
 
-                                    Utils.addLocalizedData(output, zd, loop, matrixWidthL, resolution, window, norm, key);
+                                    Utils.addLocalizedData(output, zd, loop, matrixWidthL, resolution, window, norm);
                                     if (useAgNorm) {
                                         int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
                                         int binYStart = (int) ((loop.getMidPt2() / resolution) - window);

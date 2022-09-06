@@ -160,7 +160,7 @@ public class FlagsAggregation {
                     for (int li = 0; li < loops.size(); li += linc) {
                         Feature2D loop = loops.get(li);
                         try {
-                            Utils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window, norm, key);
+                            Utils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window, norm);
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
                             System.err.println("Unable to find data for loop: " + loop);

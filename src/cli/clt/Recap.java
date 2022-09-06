@@ -125,7 +125,6 @@ public class Recap {
                 handler.getChromosomeArrayWithoutAllByAll(), false);
 
         int numTotalLoops = loopList.getNumTotalFeatures();
-        final Object key = new Object();
 
         for (int di = 0; di < filepaths.length; di++) {
 
@@ -169,7 +168,7 @@ public class Recap {
                         try {
                             for (Feature2D loop : loops) {
                                 float[][] obsMatrix = new float[matrixWidth][matrixWidth];
-                                Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm, key);
+                                Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm);
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
                                 Map<String, String> attributes = RecapTools.getStats(obsMatrix,

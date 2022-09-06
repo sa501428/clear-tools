@@ -120,7 +120,7 @@ public class Pinpoint {
                                     int matrixWidth = 3 * window + 1;
                                     float[][] output = new float[matrixWidth][matrixWidth];
 
-                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm, key);
+                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm);
 
                                     String saveString = loop.simpleString();
                                     String[] saveStrings = saveString.split("\\s+");
