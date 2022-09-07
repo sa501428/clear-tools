@@ -71,6 +71,8 @@ public class Main {
             ata.run();
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
+        } else if (command.startsWith("split") || command.startsWith("join")) {
+            new SplitOrJoin(command, args);
         } else if (command.startsWith("sieve")) {
             new Sieve(args, parser);
         } else if (command.startsWith("hotspot")) {

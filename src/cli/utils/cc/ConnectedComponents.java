@@ -46,15 +46,22 @@ public class ConnectedComponents {
                                      List<Feature2D> pinpointedLoops, Feature2D loop, String saveString,
                                      boolean onlyGetOne) {
         if (onlyGetOne) {
-            Pixel max = getMax(kde, ABSOLUTE_CUTOFF / 0.85);
+            Pixel max = getMax(kde);
             if (max != null) {
                 long start1 = resolution * (binXStart + max.x);
                 long start2 = resolution * (binYStart + max.y);
                 long end1 = start1 + resolution;
                 long end2 = start2 + resolution;
 
+                Map<String, String> map = loop.getAttributes();
+                if (kde[max.x][max.y] > (ABSOLUTE_CUTOFF / 0.85)) {
+                    map.put("simple_threshold_test", "1");
+                } else {
+                    map.put("simple_threshold_test", "0");
+                }
+
                 Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
-                        loop.getChr2(), start2, end2, Color.BLACK, new HashMap<>());
+                        loop.getChr2(), start2, end2, Color.BLACK, map);
                 pinpointedLoops.add(feature);
             }
         } else {
@@ -126,12 +133,12 @@ public class ConnectedComponents {
         return results;
     }
 
-    public static Pixel getMax(float[][] image, double threshold) {
+    public static Pixel getMax(float[][] image) {
         int r = image.length;
         int c = image[0].length;
 
         int[] max = new int[]{-1, -1};
-        double maxVal = threshold;
+        double maxVal = 0;
 
         for (int i = 0; i < r; i++) {
             for (int j = 0; j < c; j++) {
@@ -142,7 +149,7 @@ public class ConnectedComponents {
             }
         }
 
-        if (maxVal > threshold) {
+        if (maxVal > 0) {
             return new Pixel(max[0], max[1]);
         }
         return null;
