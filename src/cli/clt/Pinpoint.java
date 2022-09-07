@@ -43,7 +43,7 @@ public class Pinpoint {
         ChromosomeHandler handler = dataset.getChromosomeHandler();
 
         Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
-                false, null, false);
+                true, null, false);
 
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
@@ -53,7 +53,7 @@ public class Pinpoint {
             try {
                 norm = dataset.getNormalizationHandler().getNormTypeFromString(possibleNorm);
             } catch (Exception e) {
-                norm = NormalizationPicker.getFirstValidNormInThisOrder(dataset, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
+                norm = NormalizationPicker.getFirstValidNormInThisOrder(dataset, new String[]{possibleNorm, "SCALE", "KR", "VC", "NONE"});
             }
         }
         System.out.println("Normalization being used: " + norm.getLabel());
@@ -65,8 +65,8 @@ public class Pinpoint {
 
         Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution, norm);
 
-        String originalLoops = loopListPath.replace(".bedpe", "");
-        originalLoops += "_pinpointed.bedpe";
+        String originalLoops = outFile.replace(".bedpe", "");
+        originalLoops += "_with_original.bedpe";
 
         loopList.exportFeatureList(new File(originalLoops), false, Feature2DList.ListFormat.NA);
 

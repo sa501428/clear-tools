@@ -55,9 +55,9 @@ public class ConnectedComponents {
 
                 Map<String, String> map = loop.getAttributes();
                 if (kde[max.x][max.y] > (ABSOLUTE_CUTOFF / 0.85)) {
-                    map.put("simple_threshold_test", "1");
+                    map.put("threshold", "" + kde[max.x][max.y]);
                 } else {
-                    map.put("simple_threshold_test", "0");
+                    map.put("threshold", "" + kde[max.x][max.y]);
                 }
 
                 Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
