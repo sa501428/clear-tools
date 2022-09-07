@@ -1,9 +1,14 @@
 package cli.clt;
 
 import cli.Main;
+import cli.utils.FeatureStats;
 import cli.utils.flags.RegionConfiguration;
+import cli.utils.flags.Utils;
+import cli.utils.general.FusionTools;
 import cli.utils.general.HiCUtils;
 import javastraw.expected.ExpectedModel;
+import javastraw.expected.Welford;
+import javastraw.expected.Zscore;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -72,13 +77,14 @@ public class Sieve {
         }
 
         final Feature2DList newLoopList = new Feature2DList();
+        int buffer = 2 * window;
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
         final int chromosomePairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
                 handler.getChromosomeArrayWithoutAllByAll(), false);
 
         final AtomicInteger currChromPair = new AtomicInteger(0);
-        final AtomicInteger currNumLoops = new AtomicInteger(0);
+        final AtomicInteger numLoopsDone = new AtomicInteger(0);
 
         ParallelizationTools.launchParallelizedCode(() -> {
             int threadPair = currChromPair.getAndIncrement();
@@ -87,40 +93,98 @@ public class Sieve {
                 Chromosome chrom1 = config.getChr1();
                 Chromosome chrom2 = config.getChr2();
 
-                List<Feature2D> loops = loopList.get(chrom1.getIndex(), chrom2.getIndex());
-                loops = new ArrayList<>(new HashSet<>(loops));
+                Set<Feature2D> loopsToAssessGlobal = new HashSet<>(loopList.get(chrom1.getIndex(), chrom2.getIndex()));
                 Set<Feature2D> loopsToKeep = new HashSet<>();
-                if (loops.size() > 0) {
-                    Matrix matrix = ds.getMatrix(chrom1, chrom2);
-                    if (matrix != null) {
-                        for (int resolution : resolutions) {
-                            HiCZoom zoom = new HiCZoom(resolution);
-                            MatrixZoomData zd = matrix.getZoomData(zoom);
-                            if (zd != null) {
-                                try {
-                                    // figure out if this loop is present at the resolution given
+                Matrix matrix = ds.getMatrix(chrom1, chrom2);
+                int numLoopsForThisChromosome = loopsToAssessGlobal.size();
 
-                                    synchronized (newLoopList) {
-                                        newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
-                                                new ArrayList<>(loopsToKeep));
+                if (matrix != null) {
+                    for (int resolution : resolutions) {
+                        HiCZoom zoom = new HiCZoom(resolution);
+                        MatrixZoomData zd = matrix.getZoomData(zoom);
+                        if (zd != null) {
+                            double[] nv = ds.getNormalizationVector(chrom1.getIndex(), zoom, norm).getData().getValues().get(0);
+                            Set<Feature2D> loopsToAssessThisRound = filterByAccessibility(loopsToAssessGlobal, nv, resolution);
+
+                            if (loopsToAssessThisRound.size() > 0) {
+                                Collection<LinkedList<Feature2D>> loopGroups = FusionTools.groupNearbyRecords(
+                                        loopsToAssessThisRound, 200 * resolution).values();
+
+                                for (LinkedList<Feature2D> group : loopGroups) {
+                                    int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
+                                    int minC = (int) ((FeatureStats.minStart2(group) / resolution) - buffer);
+                                    int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + buffer);
+                                    int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + buffer);
+                                    float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, norm);
+                                    for (Feature2D loop : group) {
+                                        float zScore = getLocalZscore(regionMatrix, loop, resolution, minR, minC, window);
+                                        if (zScore > 2) {
+                                            loop.addStringAttribute("sieve_resolution_passed", "" + resolution);
+                                            loop.addStringAttribute("sieve_local_zscore", "" + zScore);
+                                            loopsToKeep.add(loop);
+                                        }
                                     }
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                    System.exit(76);
+                                    System.out.print(".");
+                                    regionMatrix = null;
                                 }
                             }
-                            matrix.clearCacheForZoom(zoom);
+                            loopsToAssessGlobal.removeAll(loopsToKeep);
                         }
-                        matrix.clearCache();
+                        matrix.clearCacheForZoom(zoom);
                     }
-
+                    matrix.clearCache();
                 }
+
+                synchronized (newLoopList) {
+                    newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
+                            new ArrayList<>(loopsToKeep));
+                }
+
+                if (numLoopsForThisChromosome > 0) {
+                    int num = numLoopsDone.addAndGet(numLoopsForThisChromosome);
+                    System.out.println("\n" + chrom1.getName() + " done\nNumber of loops processed overall: " + num);
+                }
+
                 threadPair = currChromPair.getAndIncrement();
             }
         });
 
-
         return newLoopList;
+    }
+
+    private static float getLocalZscore(float[][] regionMatrix, Feature2D loop, int resolution,
+                                        int minR, int minC, int window) {
+
+        int r = (int) (loop.getMidPt1() / resolution) - minR;
+        int c = (int) (loop.getMidPt2() / resolution) - minC;
+
+        Welford welford = new Welford();
+        for (int i = r - window; i < r + window + 1; i++) {
+            for (int j = c - window; j < c + window + 1; j++) {
+                if (i != r && j != c) {
+                    welford.addValue(regionMatrix[i][j]);
+                }
+            }
+        }
+        Zscore zscore = welford.getZscore();
+        return zscore.getZscore(regionMatrix[r][c]);
+    }
+
+    private static Set<Feature2D> filterByAccessibility(Set<Feature2D> loops, double[] nv, int resolution) {
+        Set<Feature2D> goodLoops = new HashSet<>();
+        for (Feature2D loop : loops) {
+            if (Cleaner.passesMinLoopSize(loop)) {
+                if (isAccessible(loop.getMidPt1(), resolution, nv)
+                        && isAccessible(loop.getMidPt2(), resolution, nv)) {
+                    goodLoops.add(loop);
+                }
+            }
+        }
+        return goodLoops;
+    }
+
+    private static boolean isAccessible(long mid, int resolution, double[] nv) {
+        return nv[(int) (mid / resolution)] > 1;
     }
 
     private static int getMaxDistance(List<Feature2D> loops, int resolution, int window) {
