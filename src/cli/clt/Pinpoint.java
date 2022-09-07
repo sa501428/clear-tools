@@ -1,7 +1,5 @@
 package cli.clt;
 
-import circe.clt.Circe;
-import circe.utils.gpu.GPUController;
 import cli.Main;
 import cli.utils.cc.ConnectedComponents;
 import cli.utils.flags.RegionConfiguration;
@@ -98,7 +96,7 @@ public class Pinpoint {
         int window = Math.max(globalMaxWidth[0], 10);
         int matrixWidth = 3 * window + 1;
 
-        GPUController gpuController = Circe.buildGPUController(kernelSize, matrixWidth, kernelSize / 2 + 1);
+        //GPUController gpuController = Circe.buildGPUController(kernelSize, matrixWidth, kernelSize / 2 + 1);
 
         final float[][] kernel = ConvolutionTools.getManhattanKernel(kernelSize);
         //float maxK = ArrayTools.getMax(kernel);
@@ -148,8 +146,11 @@ public class Pinpoint {
                                     saveString = String.join("_", saveStrings);
 
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
-                                    //float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
-                                    float[][] kde = gpuController.process(output, kernel);
+                                    float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
+                                    //float[][] kde;
+                                    //synchronized (key) {
+                                    //    kde = gpuController.process(output, kernel);
+                                    //}
                                     output = null; // clear output
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
 
