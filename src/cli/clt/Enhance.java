@@ -112,7 +112,7 @@ public class Enhance {
                                     try {
                                         Utils.addLocalBoundedRegion(output, zd,
                                                 binXStart, binYStart, matrixWidth,
-                                                NormalizationHandler.NONE, keys[di]);
+                                                NormalizationHandler.NONE);
                                     } catch (Exception e) {
                                         System.err.println(e.getMessage());
                                         System.err.println("Unable to find data for loop: " + loop);

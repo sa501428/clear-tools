@@ -6,10 +6,10 @@ import java.util.BitSet;
 
 public class ConvolutionTools {
 
-    public static float[][] sparseConvolution(float[][] image) {
+    public static float[][] sparseConvolution(float[][] image, float[][] kernel) {
 
-        float[][] kernel = getManhattanKernel(getApproxBandWidth(image));
-        float maxK = ArrayTools.getMax(kernel);
+        //float[][] kernel = getManhattanKernel(getApproxBandWidth(image));
+        //float maxK = ArrayTools.getMax(kernel);
 
         float[][] result = new float[image.length][image[0].length];
 
@@ -35,12 +35,12 @@ public class ConvolutionTools {
             }
         }
 
-        ArrayTools.inPlaceDivideArrayBy(result, maxK);
+        //ArrayTools.inPlaceDivideArrayBy(result, maxK);
 
         return result;
     }
 
-    private static float[][] getManhattanKernel(int width) {
+    public static float[][] getManhattanKernel(int width) {
         float[][] kernel = new float[width][width];
         int halfWidth = width / 2;
         for (int i = 0; i < width; i++) {
@@ -52,11 +52,13 @@ public class ConvolutionTools {
             }
         }
 
-        // normalize sum to 1
-        float sum = ArrayTools.getSum(kernel);
+        float maxK = ArrayTools.getMax(kernel);
+
+        // normalize center to 1
+        //float sum = ArrayTools.getSum(kernel);
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < width; j++) {
-                kernel[i][j] /= sum;
+                kernel[i][j] /= maxK;
             }
         }
         return kernel;

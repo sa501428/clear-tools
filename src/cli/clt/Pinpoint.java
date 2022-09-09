@@ -29,6 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Pinpoint {
+    private static final boolean ONLY_GET_ONE = true;
+
     public static void run(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(5);
@@ -41,7 +43,7 @@ public class Pinpoint {
         ChromosomeHandler handler = dataset.getChromosomeHandler();
 
         Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
-                false, null, false);
+                true, null, false);
 
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
@@ -51,7 +53,7 @@ public class Pinpoint {
             try {
                 norm = dataset.getNormalizationHandler().getNormTypeFromString(possibleNorm);
             } catch (Exception e) {
-                norm = NormalizationPicker.getFirstValidNormInThisOrder(dataset, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
+                norm = NormalizationPicker.getFirstValidNormInThisOrder(dataset, new String[]{possibleNorm, "SCALE", "KR", "VC", "NONE"});
             }
         }
         System.out.println("Normalization being used: " + norm.getLabel());
@@ -63,8 +65,8 @@ public class Pinpoint {
 
         Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution, norm);
 
-        String originalLoops = loopListPath.replace(".bedpe", "");
-        originalLoops += "_pinpointed.bedpe";
+        String originalLoops = outFile.replace(".bedpe", "");
+        originalLoops += "_with_original.bedpe";
 
         loopList.exportFeatureList(new File(originalLoops), false, Feature2DList.ListFormat.NA);
 
@@ -78,6 +80,26 @@ public class Pinpoint {
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
         }
+
+        int kernelSize = Math.max(10, 200 / resolution);
+
+        final int[] globalMaxWidth = new int[1];
+        loopList.processLists((s, list) -> {
+            int maxWidth = 0;
+            for (Feature2D feature : list) {
+                maxWidth = (int) Math.max(maxWidth, feature.getWidth1() / resolution);
+                maxWidth = (int) Math.max(maxWidth, feature.getWidth2() / resolution);
+            }
+            globalMaxWidth[0] = Math.max(globalMaxWidth[0], maxWidth);
+        });
+
+        int window = Math.max(globalMaxWidth[0], 10);
+        int matrixWidth = 3 * window + 1;
+
+        //GPUController gpuController = Circe.buildGPUController(kernelSize, matrixWidth, kernelSize / 2 + 1);
+
+        final float[][] kernel = ConvolutionTools.getManhattanKernel(kernelSize);
+        //float maxK = ArrayTools.getMax(kernel);
 
         HiCZoom zoom = new HiCZoom(resolution);
 
@@ -110,26 +132,30 @@ public class Pinpoint {
                                 List<Feature2D> pinpointedLoops = new ArrayList<>();
                                 for (Feature2D loop : loops) {
 
-                                    int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
+                                    //int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
                                     int binXStart = (int) ((loop.getStart1() / resolution) - window);
                                     int binYStart = (int) ((loop.getStart2() / resolution) - window);
 
-                                    int matrixWidth = 3 * window + 1;
+                                    //int matrixWidth = 3 * window + 1;
                                     float[][] output = new float[matrixWidth][matrixWidth];
 
-                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm, key);
+                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm);
 
                                     String saveString = loop.simpleString();
                                     String[] saveStrings = saveString.split("\\s+");
                                     saveString = String.join("_", saveStrings);
 
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
-                                    float[][] kde = ConvolutionTools.sparseConvolution(output);
+                                    float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
+                                    //float[][] kde;
+                                    //synchronized (key) {
+                                    //    kde = gpuController.process(output, kernel);
+                                    //}
                                     output = null; // clear output
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
 
                                     ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
-                                            pinpointedLoops, loop, saveString);
+                                            pinpointedLoops, loop, saveString, ONLY_GET_ONE);
 
                                     kde = null;
 

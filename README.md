@@ -30,15 +30,20 @@ COMParing Interactions from Loops across Experiments
 
 Highly Observable Transitions in Selective Pixels Of Tissues
 
-## additional tools
-
-## SIFT / SIEVE
+## SIFT
 
 Search and Identify Focal Targets
-
 Simple Identification of Focal Targets
 
-Simple Identification of Enriched Verified Elements
+## SIEVE
+
+Selecting Interactions Enriched Versus Environment
+
+## SIMPLE
+
+Simple Identification of Maximum Point of Local Enrichment
+
+## additional tools
 
 probability
 
@@ -52,6 +57,8 @@ analyze differences across maps
 
 SLASH
 Summarizing Loop Aggregate Statistics and Hierarchies
+
+TODO
 
 ACE
 Annotating Cliques of Enrichment

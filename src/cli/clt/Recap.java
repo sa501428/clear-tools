@@ -53,14 +53,10 @@ public class Recap {
         
         Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[0], false, false, true);
 
-
-        // grabs chromosomes...
-        // todo: what is this Feature2DList object? I think it is storing arg[0] (bedpe file) as an object
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
                 false, null, false);
 
-        // get a norm and print norm
         String possibleNorm = parser.getNormalizationStringOption();
         try {
             if (possibleNorm != null && possibleNorm.length() > 0) {
@@ -76,14 +72,9 @@ public class Recap {
         ds.clearCache(false);
         ds = null;
 
-        // I'm guessing getNumTotalFeatures gets the number of loops in the looplist?
         int numRows = loopList.getNumTotalFeatures();
         System.out.println("Number of loops: " + numRows);
 
-        // since parser stores the options and their values from when you input arguments in the command line
-        // parser.getResolutionOption takes the option stored
-        // stores it in int resolution
-        // by default, 1kb res
         int resolution = parser.getResolutionOption(1000);
         if (resolution < 1) {
             resolution = 1000;
@@ -110,13 +101,10 @@ public class Recap {
                                             ChromosomeHandler handler, int resolution, int window,
                                             NormalizationType norm, boolean isDeepLoopAnalysis) {
 
-        // VerboseComments is a boolean that, if true, will have extra print statements describing task progress
-        // probably for debugging
         if (Main.printVerboseComments) {
             System.out.println("Start Recap/Compile process");
         }
 
-        // todo: ask Muhammad about this... what exactly is the zoom object
         HiCZoom zoom = new HiCZoom(resolution);
         int matrixWidth = 1 + 2 * window;
 
@@ -125,7 +113,6 @@ public class Recap {
                 handler.getChromosomeArrayWithoutAllByAll(), false);
 
         int numTotalLoops = loopList.getNumTotalFeatures();
-        final Object key = new Object();
 
         for (int di = 0; di < filepaths.length; di++) {
 
@@ -169,7 +156,7 @@ public class Recap {
                         try {
                             for (Feature2D loop : loops) {
                                 float[][] obsMatrix = new float[matrixWidth][matrixWidth];
-                                Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm, key);
+                                Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm);
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
                                 Map<String, String> attributes = RecapTools.getStats(obsMatrix,

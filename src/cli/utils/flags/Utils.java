@@ -41,14 +41,14 @@ import java.util.List;
 public class Utils {
 
     public static void addLocalizedData(float[][] matrix, MatrixZoomData zd, Feature2D loop,
-                                        int matrixWidth, int resolution, int window, NormalizationType norm, final Object key) {
+                                        int matrixWidth, int resolution, int window, NormalizationType norm) {
         long binXStart = (loop.getMidPt1() / resolution) - window;
         long binYStart = (loop.getMidPt2() / resolution) - window;
-        addLocalBoundedRegion(matrix, zd, binXStart, binYStart, matrixWidth, norm, key);
+        addLocalBoundedRegion(matrix, zd, binXStart, binYStart, matrixWidth, norm);
     }
 
     public static void addLocalBoundedRegion(float[][] matrix, MatrixZoomData zd, long binXStart, long binYStart,
-                                             int matrixWidth, NormalizationType norm, final Object key) {
+                                             int matrixWidth, NormalizationType norm) {
 
         long binXEnd = binXStart + (matrixWidth + 1);
         long binYEnd = binYStart + (matrixWidth + 1);
