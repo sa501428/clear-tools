@@ -31,6 +31,7 @@ public class Main {
                 "sift [--window int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +
                 //"seer [--res int] [--low-res int] [-k norm] [--seed seed] <file> <out_folder> <num_contacts>\n" +
                 "hack [--res int] <out_folder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
+                "simple [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>\n" +
                 "simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>");
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
@@ -90,7 +91,11 @@ public class Main {
         } else if (command.startsWith("generate")) {
             GenerateBedpe.run(args, parser);
         } else if (command.startsWith("simple")) {
-            SimpleMax.run(args, parser);
+            if (command.contains("max")) {
+                SimpleMax.run(args, parser);
+            } else {
+                SimplePeak.run(args, parser);
+            }
         } else {
             printGeneralUsageAndExit(3);
         }

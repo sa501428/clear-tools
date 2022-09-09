@@ -35,9 +35,13 @@ Highly Observable Transitions in Selective Pixels Of Tissues
 Search and Identify Focal Targets
 Simple Identification of Focal Targets
 
-## / SIEVE
+## SIEVE
 
 Selecting Interactions Enriched Versus Environment
+
+## SIMPLE
+
+Simple Identification of Maximum Point of Local Enrichment
 
 ## additional tools
 
@@ -53,6 +57,8 @@ analyze differences across maps
 
 SLASH
 Summarizing Loop Aggregate Statistics and Hierarchies
+
+TODO
 
 ACE
 Annotating Cliques of Enrichment
