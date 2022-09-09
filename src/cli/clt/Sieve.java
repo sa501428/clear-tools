@@ -35,11 +35,13 @@ public class Sieve {
     /**
      * retain hi-res loops if at a 'loop-y' location per low-res assessment
      */
-    public Sieve(String[] args, CommandLineParser parser) {
+    public Sieve(String[] args, CommandLineParser parser, String command) {
         // sieve <loops.bedpe> <output.bedpe> <file1.hic> <res1,res2,...>
         if (args.length != 5) {
             Main.printGeneralUsageAndExit(5);
         }
+
+        boolean beStrict = command.contains("strict") || command.contains("conserv");
 
         String loopListPath = args[1];
         String outfile = args[2];
@@ -62,7 +64,7 @@ public class Sieve {
             window = 5;
         }
 
-        Feature2DList result = retainMaxPeaks(ds, loopList, handler, resolutions, window, norm);
+        Feature2DList result = retainMaxPeaks(ds, loopList, handler, resolutions, window, norm, beStrict);
         result.exportFeatureList(new File(outfile), false, Feature2DList.ListFormat.NA);
 
         System.out.println("sieve complete");
@@ -70,7 +72,7 @@ public class Sieve {
 
     private static Feature2DList retainMaxPeaks(Dataset ds, Feature2DList loopList,
                                                 ChromosomeHandler handler, int[] resolutions, int window,
-                                                NormalizationType norm) {
+                                                NormalizationType norm, boolean beStrict) {
 
         if (Main.printVerboseComments) {
             System.out.println("Start Recap/Compile process");
@@ -124,11 +126,16 @@ public class Sieve {
                                             loopsToKeep.add(loop);
                                         }
                                     }
-                                    System.out.print(".");
                                     regionMatrix = null;
                                 }
+                                System.out.print(".");
                             }
-                            loopsToAssessGlobal.removeAll(loopsToKeep);
+                            if (beStrict) {
+                                loopsToAssessGlobal.retainAll(loopsToKeep);
+                                loopsToKeep.clear();
+                            } else {
+                                loopsToAssessGlobal.removeAll(loopsToKeep);
+                            }
                         }
                         matrix.clearCacheForZoom(zoom);
                     }
@@ -136,8 +143,13 @@ public class Sieve {
                 }
 
                 synchronized (newLoopList) {
-                    newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
-                            new ArrayList<>(loopsToKeep));
+                    if (beStrict) {
+                        newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
+                                new ArrayList<>(loopsToAssessGlobal));
+                    } else {
+                        newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
+                                new ArrayList<>(loopsToKeep));
+                    }
                 }
 
                 if (numLoopsForThisChromosome > 0) {

@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.32.1";
+    public static final String VERSION_NUM = "0.32.2";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static boolean printVerboseComments = false;
@@ -75,7 +75,7 @@ public class Main {
         } else if (command.startsWith("split") || command.startsWith("join")) {
             new SplitOrJoin(command, args);
         } else if (command.startsWith("sieve")) {
-            new Sieve(args, parser);
+            new Sieve(args, parser, command);
         } else if (command.startsWith("hotspot")) {
             HotSpot.run(args, parser);
         } else if (command.startsWith("sift")) {
