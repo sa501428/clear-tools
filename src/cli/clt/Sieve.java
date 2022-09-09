@@ -49,7 +49,7 @@ public class Sieve {
         Dataset ds = HiCFileTools.extractDatasetForCLT(filepath, false, false, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
-                false, null, false);
+                true, null, false);
 
         String possibleNorm = parser.getNormalizationStringOption();
         if (possibleNorm != null && possibleNorm.length() > 0) {
@@ -59,7 +59,7 @@ public class Sieve {
 
         int window = parser.getWindowSizeOption(0);
         if (window < 2) {
-            window = 2;
+            window = 5;
         }
 
         Feature2DList result = retainMaxPeaks(ds, loopList, handler, resolutions, window, norm);
@@ -118,7 +118,7 @@ public class Sieve {
                                     float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, norm);
                                     for (Feature2D loop : group) {
                                         float zScore = getLocalZscore(regionMatrix, loop, resolution, minR, minC, window);
-                                        if (zScore > 2) {
+                                        if (zScore > 1) {
                                             loop.addStringAttribute("sieve_resolution_passed", "" + resolution);
                                             loop.addStringAttribute("sieve_local_zscore", "" + zScore);
                                             loopsToKeep.add(loop);
