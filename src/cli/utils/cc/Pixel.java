@@ -1,7 +1,8 @@
 package cli.utils.cc;
 
 public class Pixel {
-    final int x, y;
+    public final int x;
+    public final int y;
 
     Pixel(int x, int y) {
         this.x = x;
