@@ -5,7 +5,6 @@ import cli.utils.cc.ConnectedComponents;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
-import cli.utils.pinpoint.CentroidFinder;
 import cli.utils.pinpoint.ConvolutionTools;
 import cli.utils.pinpoint.LocalNorms;
 import javastraw.feature2D.Feature2D;
@@ -14,8 +13,6 @@ import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
-import javastraw.reader.block.Block;
-import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.norm.NormalizationPicker;
@@ -26,7 +23,9 @@ import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -66,9 +65,7 @@ public class Pinpoint {
             resolution = HiCUtils.getHighestResolution(dataset.getBpZooms()).getBinSize();
         }
 
-        boolean doCentroid = parser.getCentroidOption();
-
-        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution, norm, doCentroid);
+        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution, norm);
 
         String originalLoops = outFile.replace(".bedpe", "");
         originalLoops += "_with_original.bedpe";
@@ -80,7 +77,7 @@ public class Pinpoint {
     }
 
     private static Feature2DList localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
-                                          int resolution, NormalizationType norm, boolean doCentroid) {
+                                          int resolution, NormalizationType norm) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
@@ -140,45 +137,32 @@ public class Pinpoint {
                                     //int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
                                     int binXStart = (int) ((loop.getStart1() / resolution) - window);
                                     int binYStart = (int) ((loop.getStart2() / resolution) - window);
+                                    
+                                    //int matrixWidth = 3 * window + 1;
+                                    float[][] output = new float[matrixWidth][matrixWidth];
 
-
-                                    if (doCentroid) {
-
-                                        int binXEnd = binXStart + (matrixWidth + 1);
-                                        int binYEnd = binYStart + (matrixWidth + 1);
-
-                                        List<ContactRecord> records = getBlocksInRegion(zd, binXStart, binYStart,
-                                                binXEnd, binYEnd, norm);
-
-                                        CentroidFinder.findCentroid(records, binXStart, binYStart, binXEnd, binYEnd,
-                                                resolution, pinpointedLoops, loop, "", true);
-                                    } else {
-                                        //int matrixWidth = 3 * window + 1;
-                                        float[][] output = new float[matrixWidth][matrixWidth];
-
-                                        Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, NONE);
-                                        if (!norm.getLabel().equalsIgnoreCase("none")) {
-                                            LocalNorms.normalizeLocally(output, norm);
-                                        }
-
-                                        String saveString = loop.simpleString();
-                                        String[] saveStrings = saveString.split("\\s+");
-                                        saveString = String.join("_", saveStrings);
-
-                                        //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
-                                        float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
-                                        //float[][] kde;
-                                        //synchronized (key) {
-                                        //    kde = gpuController.process(output, kernel);
-                                        //}
-                                        output = null; // clear output
-                                        //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
-
-                                        ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
-                                                pinpointedLoops, loop, saveString, ONLY_GET_ONE);
-
-                                        kde = null;
+                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, NONE);
+                                    if (!norm.getLabel().equalsIgnoreCase("none")) {
+                                        LocalNorms.normalizeLocally(output, norm);
                                     }
+
+                                    String saveString = loop.simpleString();
+                                    String[] saveStrings = saveString.split("\\s+");
+                                    saveString = String.join("_", saveStrings);
+
+                                    //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
+                                    float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
+                                    //float[][] kde;
+                                    //synchronized (key) {
+                                    //    kde = gpuController.process(output, kernel);
+                                    //}
+                                    output = null; // clear output
+                                    //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
+
+                                    ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
+                                            pinpointedLoops, loop, saveString, ONLY_GET_ONE);
+
+                                    kde = null;
 
                                     if (currNumLoops.incrementAndGet() % 100 == 0) {
                                         System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
@@ -202,30 +186,5 @@ public class Pinpoint {
             }
         });
         return refinedLoops;
-    }
-
-    private static List<ContactRecord> getBlocksInRegion(MatrixZoomData zd, int binXStart, int binYStart, int binXEnd, int binYEnd, NormalizationType norm) {
-        List<Block> initialBlocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
-                binXEnd, binYEnd, norm, false);
-
-        Set<ContactRecord> recordSet = new HashSet<>();
-        for (Block block : initialBlocks) {
-            for (ContactRecord record : block.getContactRecords()) {
-                if (isContainedIn(record, binXStart, binXEnd, binYStart, binYEnd)) {
-                    recordSet.add(record);
-                }
-            }
-        }
-
-        return new ArrayList<>(recordSet);
-    }
-
-    private static boolean isContainedIn(ContactRecord record, int binXStart, int binXEnd, int binYStart, int binYEnd) {
-        return isInBounds(record.getBinX(), binXStart, binXEnd) &&
-                isInBounds(record.getBinY(), binYStart, binYEnd);
-    }
-
-    private static boolean isInBounds(int bin, int binStart, int binEnd) {
-        return bin >= binStart && bin <= binEnd;
     }
 }

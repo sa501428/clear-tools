@@ -58,7 +58,6 @@ public class CommandLineParser extends CmdLineParser {
     private final Option interChromosomalOption = addBooleanOption("include-inter");
     private final Option aggregateNormalization = addBooleanOption("ag-norm");
     private final Option isLoopAnalysis = addBooleanOption("loop");
-    private final Option centroidOption = addBooleanOption("centroid");
 
     public CommandLineParser() {
     }
@@ -97,10 +96,6 @@ public class CommandLineParser extends CmdLineParser {
 
     public boolean getVerboseOption() {
         return optionToBoolean(verboseOption);
-    }
-
-    public boolean getCentroidOption() {
-        return optionToBoolean(centroidOption);
     }
 
     public boolean getNpyOption() {
