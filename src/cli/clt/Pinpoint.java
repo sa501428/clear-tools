@@ -131,6 +131,7 @@ public class Pinpoint {
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
                             try {
+                                int counter = 0;
                                 List<Feature2D> pinpointedLoops = new ArrayList<>();
                                 for (Feature2D loop : loops) {
 
@@ -138,12 +139,17 @@ public class Pinpoint {
                                     int binXStart = (int) ((loop.getStart1() / resolution) - window);
                                     int binYStart = (int) ((loop.getStart2() / resolution) - window);
 
+                                    counter++;
+
                                     //int matrixWidth = 3 * window + 1;
                                     float[][] output = new float[matrixWidth][matrixWidth];
                                     Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, NONE);
 
-                                    if (!norm.getLabel().equalsIgnoreCase("none")) {
-                                        LocalNorms.normalizeLocally(output, norm);
+                                    //if (!norm.getLabel().equalsIgnoreCase("none")) {
+                                    //    LocalNorms.normalizeLocally(output, norm);
+                                    //}
+                                    if (counter < 3) {
+                                        //MatrixTools.saveMatrixTextNumpy(chr1.getName()+"_loop"+counter+"_raw.npy", output);
                                     }
 
                                     String saveString = loop.simpleString();
@@ -152,12 +158,24 @@ public class Pinpoint {
 
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
                                     float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
+
+                                    if (counter < 3) {
+                                        //MatrixTools.saveMatrixTextNumpy(chr1.getName()+"_loop"+counter+"_kde.npy", kde);
+                                    }
+
                                     //float[][] kde;
                                     //synchronized (key) {
                                     //    kde = gpuController.process(output, kernel);
                                     //}
                                     output = null; // clear output
                                     //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
+
+                                    LocalNorms.normalizeLocally(kde);
+
+                                    if (counter < 3) {
+                                        //MatrixTools.saveMatrixTextNumpy(chr1.getName()+"_loop"+counter+"_kde_norm2.npy", kde);
+                                    }
+
 
                                     ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
                                             pinpointedLoops, loop, saveString, ONLY_GET_ONE);

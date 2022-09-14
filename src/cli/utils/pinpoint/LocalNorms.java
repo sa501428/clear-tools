@@ -1,9 +1,7 @@
 package cli.utils.pinpoint;
 
-import javastraw.reader.type.NormalizationType;
-
 public class LocalNorms {
-    public static void normalizeLocally(float[][] output, NormalizationType norm) {
+    public static void normalizeLocally(float[][] output) {
         // todo
         boolean doSqrt = true; //norm.getLabel().toLowerCase().contains("sqrt");
         float[] rowMeans = new float[output.length];
@@ -17,7 +15,6 @@ public class LocalNorms {
                 if (output[i][j] > 0) {
                     rowMeans[i] += output[i][j];
                     colMeans[j] += output[i][j];
-
                     rowCounts[i]++;
                     colCounts[j]++;
                 }
