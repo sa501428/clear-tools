@@ -3,7 +3,7 @@ package cli.utils.pinpoint;
 public class LocalNorms {
     public static void normalizeLocally(float[][] output) {
         // todo
-        boolean doSqrt = true; //norm.getLabel().toLowerCase().contains("sqrt");
+        boolean doSqrt = false; //norm.getLabel().toLowerCase().contains("sqrt");
         float[] rowMeans = new float[output.length];
         float[] colMeans = new float[output[0].length];
 
