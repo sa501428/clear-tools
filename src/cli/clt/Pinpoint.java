@@ -137,11 +137,11 @@ public class Pinpoint {
                                     //int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
                                     int binXStart = (int) ((loop.getStart1() / resolution) - window);
                                     int binYStart = (int) ((loop.getStart2() / resolution) - window);
-                                    
+
                                     //int matrixWidth = 3 * window + 1;
                                     float[][] output = new float[matrixWidth][matrixWidth];
-
                                     Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, NONE);
+
                                     if (!norm.getLabel().equalsIgnoreCase("none")) {
                                         LocalNorms.normalizeLocally(output, norm);
                                     }
