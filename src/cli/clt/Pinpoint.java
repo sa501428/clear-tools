@@ -15,7 +15,6 @@ import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
-import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
@@ -49,23 +48,12 @@ public class Pinpoint {
 
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
-        NormalizationType norm = NormalizationHandler.NONE;
-        String possibleNorm = parser.getNormalizationStringOption();
-        if (possibleNorm != null && possibleNorm.length() > 0) {
-            try {
-                norm = dataset.getNormalizationHandler().getNormTypeFromString(possibleNorm);
-            } catch (Exception e) {
-                norm = NormalizationPicker.getFirstValidNormInThisOrder(dataset, new String[]{possibleNorm, "SCALE", "KR", "VC", "NONE"});
-            }
-        }
-        System.out.println("Normalization being used: " + norm.getLabel());
-
         int resolution = parser.getResolutionOption(-1);
         if (resolution < 1) {
             resolution = HiCUtils.getHighestResolution(dataset.getBpZooms()).getBinSize();
         }
 
-        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution, norm);
+        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution);
 
         String originalLoops = outFile.replace(".bedpe", "");
         originalLoops += "_with_original.bedpe";
@@ -77,7 +65,7 @@ public class Pinpoint {
     }
 
     private static Feature2DList localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
-                                          int resolution, NormalizationType norm) {
+                                          int resolution) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
@@ -131,55 +119,24 @@ public class Pinpoint {
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
                             try {
-                                int counter = 0;
                                 List<Feature2D> pinpointedLoops = new ArrayList<>();
                                 for (Feature2D loop : loops) {
 
-                                    //int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
                                     int binXStart = (int) ((loop.getStart1() / resolution) - window);
                                     int binYStart = (int) ((loop.getStart2() / resolution) - window);
 
-                                    counter++;
-
-                                    //int matrixWidth = 3 * window + 1;
                                     float[][] output = new float[matrixWidth][matrixWidth];
                                     Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, NONE);
-
-                                    //if (!norm.getLabel().equalsIgnoreCase("none")) {
-                                    //    LocalNorms.normalizeLocally(output, norm);
-                                    //}
-                                    if (counter < 3) {
-                                        //MatrixTools.saveMatrixTextNumpy(chr1.getName()+"_loop"+counter+"_raw.npy", output);
-                                    }
 
                                     String saveString = loop.simpleString();
                                     String[] saveStrings = saveString.split("\\s+");
                                     saveString = String.join("_", saveStrings);
 
-                                    //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
                                     float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
-
-                                    if (counter < 3) {
-                                        //MatrixTools.saveMatrixTextNumpy(chr1.getName()+"_loop"+counter+"_kde.npy", kde);
-                                    }
-
-                                    //float[][] kde;
-                                    //synchronized (key) {
-                                    //    kde = gpuController.process(output, kernel);
-                                    //}
                                     output = null; // clear output
-                                    //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
-
                                     LocalNorms.normalizeLocally(kde);
-
-                                    if (counter < 3) {
-                                        //MatrixTools.saveMatrixTextNumpy(chr1.getName()+"_loop"+counter+"_kde_norm2.npy", kde);
-                                    }
-
-
                                     ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
                                             pinpointedLoops, loop, saveString, ONLY_GET_ONE);
-
                                     kde = null;
 
                                     if (currNumLoops.incrementAndGet() % 100 == 0) {
