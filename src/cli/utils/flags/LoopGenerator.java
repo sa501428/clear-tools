@@ -5,14 +5,12 @@ import javastraw.feature2D.Feature2D;
 import javastraw.reader.basics.Chromosome;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
+import java.util.*;
 
 public class LoopGenerator {
     public static List<Feature2D> generate(GenomeWide1DList<Anchor> anchors, Chromosome chrom1, Chromosome chrom2,
-                                           long minGenomeDist, long maxGenomeDist) {
+                                           long minGenomeDist, long maxGenomeDist, int res) {
         List<Feature2D> results = new ArrayList<>();
         if (chrom1.getIndex() == chrom2.getIndex()) {
             List<Anchor> aList = anchors.getFeatures("" + chrom1.getIndex());
@@ -21,7 +19,7 @@ public class LoopGenerator {
             for (int i = 0; i < aList.size(); i++) {
                 for (int j = i + 1; j < aList.size(); j++) {
                     Feature2D feature2D = createIntraFeature(chrom1, aList.get(i), aList.get(j),
-                            minGenomeDist, maxGenomeDist);
+                            minGenomeDist, maxGenomeDist, res);
                     if (feature2D != null) {
                         results.add(feature2D);
                     }
@@ -38,17 +36,35 @@ public class LoopGenerator {
     }
 
     public static Feature2D createIntraFeature(Chromosome chrom1, Anchor a1, Anchor a2,
-                                               long minGenomeDist, long maxGenomeDist) {
+                                               long minGenomeDist, long maxGenomeDist, int resolution) {
         int dist = a2.getMid() - a1.getMid();
         if (dist < 0) {
             System.err.println("Weird error!!");
             System.exit(10);
         }
         if (dist > minGenomeDist && dist <= maxGenomeDist) {
-            return new Feature2D(Feature2D.FeatureType.PEAK, chrom1.getName(), a1.getStart(), a1.getEnd(),
-                    chrom1.getName(), a2.getStart(), a2.getEnd(), Color.BLACK, new HashMap<>(0));
+            Map<String, String> attributes = new HashMap<>(4);
+            attributes.put("motif_start_1", "" + a1.getStart());
+            attributes.put("motif_end_1", "" + a1.getEnd());
+            attributes.put("motif_start_2", "" + a2.getStart());
+            attributes.put("motif_end_2", "" + a2.getEnd());
+            if (resolution > 1) {
+                long x1 = round(a1.getStart(), resolution);
+                long y1 = round(a2.getStart(), resolution);
+                long x2 = Math.max(round(a1.getEnd(), resolution) + 1, x1 + resolution);
+                long y2 = Math.max(round(a2.getEnd(), resolution) + 1, y1 + resolution);
+                return new Feature2D(Feature2D.FeatureType.PEAK,
+                        chrom1.getName(), x1, x2, chrom1.getName(), y1, y2, Color.BLACK, attributes);
+            } else {
+                return new Feature2D(Feature2D.FeatureType.PEAK, chrom1.getName(), a1.getStart(), a1.getEnd(),
+                        chrom1.getName(), a2.getStart(), a2.getEnd(), Color.BLACK, attributes);
+            }
         }
         return null;
+    }
+
+    private static long round(int number, int resolution) {
+        return (long) (number / resolution) * resolution;
     }
 
     private static Feature2D createFeature(Chromosome chrom1, Anchor a1, Chromosome chrom2, Anchor a2) {

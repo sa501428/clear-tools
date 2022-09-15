@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class GenerateBedpe {
 
     public static void run(String[] args, CommandLineParser parser) {
-        // generate <forward.bed> <reverse.bed> <min> <max> <genome> <outname>
+        // generate <forward.bed> <reverse.bed> <min> <max> <genome> <out.bedpe>
 
         if (args.length != 7) {
             Main.printGeneralUsageAndExit(4);
@@ -33,6 +33,8 @@ public class GenerateBedpe {
         String genomeID = args[5];
         String outname = args[6];
 
+        int resolution = parser.getResolutionOption(0);
+
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
 
         int percentile = parser.getPercentileOption(-1);
@@ -41,15 +43,14 @@ public class GenerateBedpe {
         GenomeWide1DList<Anchor> reverseAnchors = BedFileParser.loadFromBEDFile(handler, reverseMotifFile, percentile, true);
         System.out.println("Number of anchors: " + forwardAnchors.size() + " - " + reverseAnchors.size());
 
-        Feature2DList output = createLoops(handler, forwardAnchors, reverseAnchors, minDist, maxDist);
-        System.out.println(outname + ".bedpe");
-        output.exportFeatureList(new File(outname + ".bedpe"), false, Feature2DList.ListFormat.NA);
+        Feature2DList output = createLoops(handler, forwardAnchors, reverseAnchors, minDist, maxDist, resolution);
+        output.exportFeatureList(new File(outname), false, Feature2DList.ListFormat.NA);
         System.out.println("generation complete");
     }
 
     private static Feature2DList createLoops(ChromosomeHandler handler, GenomeWide1DList<Anchor> forwardAnchors,
                                              GenomeWide1DList<Anchor> reverseAnchors,
-                                             long minDist, long maxDist) {
+                                             long minDist, long maxDist, int resolution) {
         Feature2DList output = new Feature2DList();
         Chromosome[] chromosomes = handler.getChromosomeArrayWithoutAllByAll();
 
@@ -59,7 +60,7 @@ public class GenerateBedpe {
             while (currIndex < chromosomes.length) {
                 Chromosome chromosome = chromosomes[currIndex];
                 if (forwardAnchors.size() > 0 && reverseAnchors.size() > 0) {
-                    List<Feature2D> newLoops = generate(chromosome, forwardAnchors, reverseAnchors, minDist, maxDist);
+                    List<Feature2D> newLoops = generate(chromosome, forwardAnchors, reverseAnchors, minDist, maxDist, resolution);
                     if (newLoops.size() > 0) {
                         synchronized (output) {
                             output.addByKey(Feature2DList.getKey(chromosome, chromosome), newLoops);
@@ -73,7 +74,8 @@ public class GenerateBedpe {
     }
 
     private static List<Feature2D> generate(Chromosome chromosome, GenomeWide1DList<Anchor> forwardAnchors,
-                                            GenomeWide1DList<Anchor> reverseAnchors, long minGenomeDist, long maxGenomeDist) {
+                                            GenomeWide1DList<Anchor> reverseAnchors, long minGenomeDist,
+                                            long maxGenomeDist, int resolution) {
 
         List<Anchor> forwards = forwardAnchors.getFeatures("" + chromosome.getIndex());
         forwards.sort(Comparator.comparingInt(Anchor::getMid));
@@ -87,7 +89,7 @@ public class GenerateBedpe {
             for (Anchor reverse : reverses) {
                 if (forward.getEnd() < reverse.getStart()) {
                     Feature2D feature2D = LoopGenerator.createIntraFeature(chromosome, forward, reverse,
-                            minGenomeDist, maxGenomeDist);
+                            minGenomeDist, maxGenomeDist, resolution);
                     if (feature2D != null) {
                         results.add(feature2D);
                     }

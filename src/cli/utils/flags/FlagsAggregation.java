@@ -136,7 +136,7 @@ public class FlagsAggregation {
                     long maxDist = (long) (Math.pow(2, distBin) * 1000000L);
                     minDist = Math.max(minDist, 200000);
 
-                    List<Feature2D> loops = LoopGenerator.generate(anchors, chr1, chr2, minDist, maxDist);
+                    List<Feature2D> loops = LoopGenerator.generate(anchors, chr1, chr2, minDist, maxDist, 0);
                     if (loops.size() < 1) {
                         if (Main.printVerboseComments) {
                             System.out.println("CHR " + chr1.getName() + " CHR " + chr2.getName() + " - no loops, check loop filtering constraints");
