@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Cleaner {
 
     private static final int MIN_LOOP_SIZE = 25000;
+    public static String usage = "clean <input.hic> <loops.bedpe> <output.bedpe>";
 
     public static void run(String[] args) {
         if (args.length != 4) {

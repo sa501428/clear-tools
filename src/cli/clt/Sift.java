@@ -49,6 +49,7 @@ public class Sift {
 
 
     private static final int[] resolutions = new int[]{100, 200, 500, 1000, 2000, 5000, 10000}; //  10000
+    public static String usage = "sift [--window int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>";
     private NormalizationType norm = NormalizationHandler.NONE;
     private static final int MAX_DIST = 10000000;
     private static final int MIN_DIST = 10000;

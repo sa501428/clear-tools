@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NormHack {
+    public static String usage = "hack [--res int] <out_folder> <file1.hic,file2.hic,...> <name1,name2,...>";
+
     public static void run(String[] args, CommandLineParser parser) {
         File outFolder = UNIXTools.makeDir(new File(args[1]));
         String[] filepaths = args[2].split(",");

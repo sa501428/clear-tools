@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SimpleMax {
 
     private static final NormalizationType VC = NormalizationHandler.VC;
+    public static String usage = "simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>";
 
     public static void printUsageAndExit() {
         System.out.println("simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>");

@@ -12,9 +12,11 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 
 public class Flags {
+    public static String usage = "flags [--cutoff int] [--res int] [--norm string] <input.hic> <loops.bedpe> <out_folder>";
+
     public static void run(String[] args, int resolution, int cutoff, String normString) {
 
-        if(args.length != 4){
+        if (args.length != 4) {
             Main.printGeneralUsageAndExit(4);
         }
 

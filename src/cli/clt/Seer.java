@@ -21,6 +21,10 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Seer {
+
+    // "seer [--res int] [--low-res int] [-k norm] [--seed seed] <file> <out_folder> <num_contacts>\n" +
+
+
     /* takes in one file currently (for ease of testing: can change later to a list of files and easily iterate over).
     resolution also input but currently set to 50 manually.
     */

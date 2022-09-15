@@ -20,8 +20,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class GenerateBedpe {
 
+    public static String usage = "generate <forward.bed> <reverse.bed> " +
+            "<min_genome_dist> <max_genome_dist> <genomeID> <output.bedpe>";
+
     public static void run(String[] args, CommandLineParser parser) {
-        // generate <forward.bed> <reverse.bed> <min> <max> <genome> <out.bedpe>
 
         if (args.length != 7) {
             Main.printGeneralUsageAndExit(4);

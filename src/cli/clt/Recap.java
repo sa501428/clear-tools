@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Recap {
 
+    public static String usage = "recap [--loop] <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>";
     private NormalizationType norm;
 
     public Recap(String[] args, CommandLineParser parser) {

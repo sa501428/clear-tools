@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ATA {
 
+    public static String usage = "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>";
     private final String inputBigWig;
     private final String bedFile;
     private final String outFile;

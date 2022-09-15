@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Pinpoint {
     private static final boolean ONLY_GET_ONE = true;
     private static final NormalizationType NONE = NormalizationHandler.NONE;
+    public static String usage = "pinpoint [--res int] <input.hic> <loops.bedpe> <output.bedpe>";
 
     public static void run(String[] args, CommandLineParser parser) {
         if (args.length != 4) {

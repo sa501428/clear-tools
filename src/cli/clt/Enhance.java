@@ -33,8 +33,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Enhance {
+
+    // "enhance [--res int] [--norm string] <out_folder> <loops.bedpe> <hic_files>\n" +
+
     public static void run(String[] args, int resolution, boolean exportNPY) {
-        if(args.length < 4){
+        if (args.length < 4) {
             Main.printGeneralUsageAndExit(5);
         }
 
