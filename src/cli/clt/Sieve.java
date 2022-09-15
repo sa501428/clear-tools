@@ -120,7 +120,7 @@ public class Sieve {
                                     int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + buffer);
                                     float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, norm);
                                     for (Feature2D loop : group) {
-                                        float zScore = getLocalZscore(regionMatrix, loop, resolution, minR, minC, window);
+                                        double zScore = getLocalZscore(regionMatrix, loop, resolution, minR, minC, window);
                                         if (zScore > 1) {
                                             loop.addStringAttribute("sieve_resolution_passed", "" + resolution);
                                             loop.addStringAttribute("sieve_local_zscore", "" + zScore);
@@ -165,8 +165,8 @@ public class Sieve {
         return newLoopList;
     }
 
-    private static float getLocalZscore(float[][] regionMatrix, Feature2D loop, int resolution,
-                                        int minR, int minC, int window) {
+    private static double getLocalZscore(float[][] regionMatrix, Feature2D loop, int resolution,
+                                         int minR, int minC, int window) {
 
         int r = (int) (loop.getMidPt1() / resolution) - minR;
         int c = (int) (loop.getMidPt2() / resolution) - minC;
