@@ -30,6 +30,7 @@ public class HotSpot {
 
     // The Z-Score Cutoff is currently hardcoded at 2, which has a confidence interval of 97.72%
     private static final float ZSCORE_CUTOFF = 2f;
+    public static String usage = "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <outfile>";
 
     private static void printUsageAndExit() {
         System.out.println("hotspot [--res resolution] [--norm normalization] <file1.hic,file2.hic,...> <out_file>");

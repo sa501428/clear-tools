@@ -58,6 +58,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Various updates by mshamim and suhas-rao
  */
 public class APA {
+    public static String usage = "apa [--ag-norm] [-k NORM] [--window val]" +
+            " [--min-dist val] [--max-dist val] [--include-inter] [-r resolution]" +
+            " <input.hic> <loops.bedpe> <outfolder>";
     private final String loopListPath;
     private final File outputDirectory;
     private final Dataset ds;
@@ -69,7 +72,6 @@ public class APA {
     private final int maxPeakDist;
     private final int window;
     private final int matrixWidthL;
-    private final int numCPUThreads;
     private final int resolution;
     private final boolean includeInterChr;
     private final boolean useAgNorm;
@@ -104,7 +106,6 @@ public class APA {
         maxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
         includeInterChr = parser.getIncludeInterChromosomal();
         resolution = parser.getResolutionOption(5000);
-        numCPUThreads = parser.getNumThreads(4);
 
         matrixWidthL = 2 * window + 1;
         globalAPAMatrix = new float[matrixWidthL][matrixWidthL];
@@ -168,7 +169,6 @@ public class APA {
 
                 Matrix matrix = ds.getMatrix(chr1, chr2);
                 if (matrix != null) {
-
 
                     List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
                     if (loops != null && loops.size() > 0) {

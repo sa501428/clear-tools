@@ -23,13 +23,16 @@ import java.io.File;
 import java.util.List;
 
 public class Probability {
+
+    // "probability [--res int] <input.hic> <loops.bedpe> <out_folder>\n" +
+
     private static final int DEFAULT_MAX_DIST = 20000000;
     private static final int DEFAULT_WINDOW = 1000000;
 
 
     public static void run(String[] args, int resolution, boolean useLog) {
 
-        if(args.length != 4){
+        if (args.length != 4) {
             Main.printGeneralUsageAndExit(4);
         }
 

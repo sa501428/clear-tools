@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.33.0";
+    public static final String VERSION_NUM = "0.34.0";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static boolean printVerboseComments = false;
@@ -16,23 +16,21 @@ public class Main {
         System.out.println("\t" + "-h, --help print help");
         System.out.println("\t" + "-v, --verbose verbose mode");
         System.out.println("\t" + "-V, --version print version");
-        System.out.println("Commands: \n" +
-                "flags [--cutoff int] [--res int] [--norm string] <input.hic> <loops.bedpe> <out_folder>\n" +
-                //"enhance [--res int] [--norm string] <out_folder> <loops.bedpe> <hic_files>\n" +
-                //"probability [--res int] <input.hic> <loops.bedpe> <out_folder>\n" +
-                "pinpoint [--res int] <input.hic> <loops.bedpe> <output.bedpe>\n" +
-                "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
-                "apa [options] <input.hic> <loops.bedpe> <outfolder>\n" +
-                "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>\n" +
-                "recap [--loop] <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
-                "sieve <loops.bedpe> <output.bedpe> <file.hic> <res1,...>\n" +
-                "hotspot [--res int] [--norm string] <file1.hic,file2.hic,...> <outfile>\n" +
-                "fuse[-nms] <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]\n" +
-                "sift [--window int] [--min double] [--max double] [--res int] [--low-res int] <file.hic> <outfile>\n" +
-                //"seer [--res int] [--low-res int] [-k norm] [--seed seed] <file> <out_folder> <num_contacts>\n" +
-                "hack [--res int] <out_folder> <file1.hic,file2.hic,...> <name1,name2,...>\n" +
-                "simple [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>\n" +
-                "simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>");
+        System.out.println("Commands:");
+        System.out.println(Flags.usage);
+        System.out.println(Pinpoint.usage);
+        System.out.println(Cleaner.usage);
+        System.out.println(APA.usage);
+        System.out.println(ATA.usage);
+        System.out.println(Recap.usage);
+        System.out.println(Sieve.usage);
+        System.out.println(HotSpot.usage);
+        System.out.println(Fusion.usage);
+        System.out.println(Sift.usage);
+        System.out.println(NormHack.usage);
+        System.out.println(SimplePeak.usage);
+        System.out.println(SimpleMax.usage);
+        System.out.println(GenerateBedpe.usage);
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
@@ -81,7 +79,7 @@ public class Main {
         } else if (command.startsWith("sift")) {
             new Sift(args, parser);
         } else if (command.startsWith("fuse") || command.startsWith("fusion")) {
-            new Fusion(args, parser, command.contains("nms"));
+            new Fusion(args, command);
         } else if (command.startsWith("seer")) {
             Seer.run(args, parser);
         } else if (command.startsWith("hack")) {

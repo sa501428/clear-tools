@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sieve {
 
+    public static String usage = "sieve[-strict] <loops.bedpe> <output.bedpe> <file.hic> <res1,...>";
     private NormalizationType norm = NormalizationHandler.VC;
 
     /**

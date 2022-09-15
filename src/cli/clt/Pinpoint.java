@@ -6,6 +6,7 @@ import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
 import cli.utils.pinpoint.ConvolutionTools;
+import cli.utils.pinpoint.LocalNorms;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -14,7 +15,6 @@ import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
-import javastraw.reader.norm.NormalizationPicker;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Pinpoint {
     private static final boolean ONLY_GET_ONE = true;
+    private static final NormalizationType NONE = NormalizationHandler.NONE;
+    public static String usage = "pinpoint [--res int] <input.hic> <loops.bedpe> <output.bedpe>";
 
     public static void run(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
@@ -47,23 +49,12 @@ public class Pinpoint {
 
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
-        NormalizationType norm = NormalizationHandler.NONE;
-        String possibleNorm = parser.getNormalizationStringOption();
-        if (possibleNorm != null && possibleNorm.length() > 0) {
-            try {
-                norm = dataset.getNormalizationHandler().getNormTypeFromString(possibleNorm);
-            } catch (Exception e) {
-                norm = NormalizationPicker.getFirstValidNormInThisOrder(dataset, new String[]{possibleNorm, "SCALE", "KR", "VC", "NONE"});
-            }
-        }
-        System.out.println("Normalization being used: " + norm.getLabel());
-
         int resolution = parser.getResolutionOption(-1);
         if (resolution < 1) {
             resolution = HiCUtils.getHighestResolution(dataset.getBpZooms()).getBinSize();
         }
 
-        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution, norm);
+        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution);
 
         String originalLoops = outFile.replace(".bedpe", "");
         originalLoops += "_with_original.bedpe";
@@ -75,7 +66,7 @@ public class Pinpoint {
     }
 
     private static Feature2DList localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
-                                          int resolution, NormalizationType norm) {
+                                          int resolution) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
@@ -132,31 +123,21 @@ public class Pinpoint {
                                 List<Feature2D> pinpointedLoops = new ArrayList<>();
                                 for (Feature2D loop : loops) {
 
-                                    //int window = (int) (Math.max(loop.getWidth1(), loop.getWidth2()) / resolution + 1);
                                     int binXStart = (int) ((loop.getStart1() / resolution) - window);
                                     int binYStart = (int) ((loop.getStart2() / resolution) - window);
 
-                                    //int matrixWidth = 3 * window + 1;
                                     float[][] output = new float[matrixWidth][matrixWidth];
-
-                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm);
+                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, NONE);
 
                                     String saveString = loop.simpleString();
                                     String[] saveStrings = saveString.split("\\s+");
                                     saveString = String.join("_", saveStrings);
 
-                                    //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
                                     float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
-                                    //float[][] kde;
-                                    //synchronized (key) {
-                                    //    kde = gpuController.process(output, kernel);
-                                    //}
                                     output = null; // clear output
-                                    //MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_kde.npy")).getAbsolutePath(), kde);
-
+                                    LocalNorms.normalizeLocally(kde);
                                     ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
                                             pinpointedLoops, loop, saveString, ONLY_GET_ONE);
-
                                     kde = null;
 
                                     if (currNumLoops.incrementAndGet() % 100 == 0) {
