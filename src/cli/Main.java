@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.35.0";
+    public static final String VERSION_NUM = "0.35.1";
     public static final int DEFAULT_RESOLUTION = 5000;
     public static final int DEFAULT_CUTOFF = 500;
     public static boolean printVerboseComments = false;
@@ -17,20 +17,12 @@ public class Main {
         System.out.println("\t" + "-v, --verbose verbose mode");
         System.out.println("\t" + "-V, --version print version");
         System.out.println("Commands:");
-        System.out.println(Flags.usage);
-        System.out.println(Pinpoint.usage);
-        System.out.println(Cleaner.usage);
-        System.out.println(APA.usage);
-        System.out.println(ATA.usage);
-        System.out.println(Recap.usage);
-        System.out.println(Sieve.usage);
-        System.out.println(HotSpot.usage);
-        System.out.println(Fusion.usage);
-        System.out.println(Sift.usage);
-        System.out.println(NormHack.usage);
-        System.out.println(SimplePeak.usage);
-        System.out.println(SimpleMax.usage);
-        System.out.println(GenerateBedpe.usage);
+        for (String usage : new String[]{Flags.usage, Pinpoint.usage, Cleaner.usage, APA.usage, ATA.usage, Recap.usage,
+                Sieve.usage, HotSpot.usage, Fusion.usage, Sift.usage, NormHack.usage, SimplePeak.usage, SimpleMax.usage,
+                GenerateBedpe.usage}) {
+            System.out.println(usage);
+        }
+
         System.out.println("Exit code " + exitCode);
         System.exit(exitCode);
     }
