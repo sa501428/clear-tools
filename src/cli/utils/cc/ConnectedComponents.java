@@ -146,9 +146,24 @@ public class ConnectedComponents {
         }
 
         if (maxVal > 0) {
-            return new Pixel(max[0], max[1]);
+            int numMaxima = getNumMaxima(image, maxVal * 0.99);
+            if (numMaxima == 1) {
+                return new Pixel(max[0], max[1]);
+            }
         }
         return null;
+    }
+
+    private static int getNumMaxima(float[][] image, double threshold) {
+        int count = 0;
+        for (int i = 0; i < image.length; i++) {
+            for (int j = 0; j < image[i].length; j++) {
+                if (image[i][j] > threshold) {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     private static LocalMaxima processRegion(float[][] image, double threshold, int[][] labels, Queue<Pixel> points, int id) {
