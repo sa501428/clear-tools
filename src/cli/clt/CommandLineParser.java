@@ -56,6 +56,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option maxDistValOption = addIntegerOption("max-dist");
     private final Option cornerRegionDimensionsOption = addIntegerOption("corner-width");
     private final Option interChromosomalOption = addBooleanOption("include-inter");
+    private final Option useBinaryOption = addBooleanOption("binary");
     private final Option aggregateNormalization = addBooleanOption("ag-norm");
     private final Option isLoopAnalysis = addBooleanOption("loop");
 

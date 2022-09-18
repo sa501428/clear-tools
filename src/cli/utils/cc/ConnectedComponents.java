@@ -26,6 +26,7 @@ package cli.utils.cc;
 
 import cli.utils.pinpoint.ArrayTools;
 import javastraw.feature2D.Feature2D;
+import javastraw.tools.MatrixTools;
 
 import java.awt.*;
 import java.util.List;
@@ -46,7 +47,7 @@ public class ConnectedComponents {
                                      List<Feature2D> pinpointedLoops, Feature2D loop, String saveString,
                                      boolean onlyGetOne) {
         if (onlyGetOne) {
-            Pixel max = getMax(kde);
+            Pixel max = getMax(kde, (int) Math.max(100 / resolution, 3));
             if (max != null) {
                 long start1 = resolution * (binXStart + max.x);
                 long start2 = resolution * (binYStart + max.y);
@@ -59,6 +60,8 @@ public class ConnectedComponents {
                 Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
                         loop.getChr2(), start2, end2, Color.BLACK, map);
                 pinpointedLoops.add(feature);
+            } else {
+                MatrixTools.saveMatrixTextNumpy(saveString + ".kde.npy", kde);
             }
         } else {
             float threshold = ArrayTools.getMax(kde) * 0.85f;
@@ -129,41 +132,70 @@ public class ConnectedComponents {
         return results;
     }
 
-    public static Pixel getMax(float[][] image) {
-        int r = image.length;
-        int c = image[0].length;
-
-        int[] max = new int[]{-1, -1};
-        double maxVal = 0;
-
-        for (int i = 0; i < r; i++) {
-            for (int j = 0; j < c; j++) {
-                if (image[i][j] > maxVal) {
-                    maxVal = image[i][j];
-                    max = new int[]{i, j};
-                }
-            }
-        }
-
+    public static Pixel getMax(float[][] image, int dist) {
+        double maxVal = getMaxInMatrix(image);
         if (maxVal > 0) {
-            int numMaxima = getNumMaxima(image, maxVal * 0.99);
-            if (numMaxima == 1) {
-                return new Pixel(max[0], max[1]);
+            LinkedList<Pixel> pixels = getAllEnrichedPixels(image, maxVal * 0.99);
+            if (pixels.size() == 1) {
+                return pixels.get(0);
             }
+            return pickBestCentroid(pixels, dist);
         }
         return null;
     }
 
-    private static int getNumMaxima(float[][] image, double threshold) {
-        int count = 0;
-        for (int i = 0; i < image.length; i++) {
-            for (int j = 0; j < image[i].length; j++) {
-                if (image[i][j] > threshold) {
-                    count++;
+    private static double getMaxInMatrix(float[][] image) {
+        float maxVal = 0;
+        for (float[] row : image) {
+            for (float val : row) {
+                if (val > maxVal) {
+                    maxVal = val;
                 }
             }
         }
-        return count;
+        return maxVal;
+    }
+
+    public static Pixel pickBestCentroid(LinkedList<Pixel> regions, int dist) {
+        List<PixelSet> pixelSets = new ArrayList<>();
+        while (regions.size() > 0) {
+            Pixel pixel = regions.pollFirst();
+            PixelSet pixelSet = new PixelSet(pixel);
+            regions.remove(pixel);
+
+            int prevSize = 0;
+            while (prevSize != pixelSet.size()) {
+                prevSize = pixelSet.size();
+                for (Pixel px : regions) {
+                    if (pixelSet.distanceTo(px) < dist) {
+                        pixelSet.add(px);
+                    }
+                }
+                regions.removeAll(pixelSet.pixels);
+            }
+            if (pixelSet.size() > 1) { // centroids should have more than 1
+                pixelSets.add(pixelSet);
+            }
+        }
+
+        if (pixelSets.size() > 0) {
+            pixelSets.sort(Comparator.comparingInt(PixelSet::size));
+            Collections.reverse(pixelSets);
+            return pixelSets.get(0).toPixel();
+        }
+        return null;
+    }
+
+    private static LinkedList<Pixel> getAllEnrichedPixels(float[][] image, double threshold) {
+        LinkedList<Pixel> pixels = new LinkedList<>();
+        for (int i = 0; i < image.length; i++) {
+            for (int j = 0; j < image[i].length; j++) {
+                if (image[i][j] > threshold) {
+                    pixels.add(new Pixel(i, j));
+                }
+            }
+        }
+        return pixels;
     }
 
     private static LocalMaxima processRegion(float[][] image, double threshold, int[][] labels, Queue<Pixel> points, int id) {
