@@ -24,20 +24,11 @@
 
 package cli.utils.cc;
 
-import cli.utils.pinpoint.ArrayTools;
-import javastraw.feature2D.Feature2D;
-import javastraw.tools.MatrixTools;
-
-import java.awt.*;
-import java.util.List;
-import java.util.Queue;
-import java.util.*;
-
 /**
  * Implementation of 2-pass algorithm for finding connected components
  */
-public class ConnectedComponents {
-
+public class Landscape {
+/*
     private static final int NOT_SET = 0;
     private static final int IN_QUEUE = -1;
 
@@ -46,24 +37,23 @@ public class ConnectedComponents {
     public static void extractMaxima(float[][] kde, int binXStart, int binYStart, long resolution,
                                      List<Feature2D> pinpointedLoops, Feature2D loop, String saveString,
                                      boolean onlyGetOne) {
-        if (onlyGetOne) {
-            Pixel max = getMax(kde, (int) Math.max(100 / resolution, 3));
-            if (max != null) {
-                long start1 = resolution * (binXStart + max.x);
-                long start2 = resolution * (binYStart + max.y);
-                long end1 = start1 + resolution;
-                long end2 = start2 + resolution;
 
-                Map<String, String> map = loop.getAttributes();
-                map.put("threshold", "" + kde[max.x][max.y]);
+        Pixel max = getMax(kde, (int) Math.max(100 / resolution, 3));
+        if (max != null) {
+            long start1 = resolution * (binXStart + max.x);
+            long start2 = resolution * (binYStart + max.y);
+            long end1 = start1 + resolution;
+            long end2 = start2 + resolution;
 
-                Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
-                        loop.getChr2(), start2, end2, Color.BLACK, map);
-                pinpointedLoops.add(feature);
-            } else {
-                MatrixTools.saveMatrixTextNumpy(saveString + ".kde.npy", kde);
-            }
-        } else {
+            Map<String, String> map = loop.getAttributes();
+            map.put("threshold", "" + kde[max.x][max.y]);
+
+            Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
+                    loop.getChr2(), start2, end2, Color.BLACK, map);
+            pinpointedLoops.add(feature);
+        }
+
+        {
             float threshold = ArrayTools.getMax(kde) * 0.85f;
             if (threshold > ABSOLUTE_CUTOFF) {
                 List<LocalMaxima> maxima = detect(kde, threshold, saveString);
@@ -74,7 +64,8 @@ public class ConnectedComponents {
                     for (LocalMaxima max : maxima) {
                         Map<String, String> attributes = new HashMap<>();
                         attributes.put("pinpoint_area", "" + max.area);
-                        attributes.put("pinpoint_enrichment", "" + max.maxVal);
+                        attributes.put("pinpoint_max_enrichment", "" + max.maxVal);
+                        attributes.put("pinpoint_mean_enrichment", "" + max.meanVal);
 
                         if (best.maxVal < max.maxVal) {
                             best = max;
@@ -90,21 +81,58 @@ public class ConnectedComponents {
                         pinpointedLoops.add(feature);
                     }
 
-
-                    long start1 = resolution * (binXStart + best.maxCoordinate.x);
-                    long start2 = resolution * (binYStart + best.maxCoordinate.y);
-                    long end1 = start1 + resolution;
-                    long end2 = start2 + resolution;
-                    loop.addStringAttribute("pinpoint_start1", "" + start1);
-                    loop.addStringAttribute("pinpoint_start2", "" + start2);
-                    loop.addStringAttribute("pinpoint_end1", "" + end1);
-                    loop.addStringAttribute("pinpoint_end2", "" + end2);
-
                     best = null;
                     maxima.clear();
                 }
             }
         }
+    }
+
+    private static List<Feature2D> removeOverlappingPixels(List<Feature2D> features, boolean useNMS) {
+        Map<SimpleLocation, LinkedList<Feature2D>> map = groupNearbyRecords(simpleFilter(features), 1000000);
+        Set<Feature2D> coalesced = new HashSet<>();
+
+        for (LinkedList<Feature2D> featureLL : map.values()) {
+            featureLL.sort((o1, o2) -> {
+                int val = Long.compare(o1.getWidth1(), o2.getWidth1());
+                if (val == 0) {
+                    return Long.compare(o1.getWidth2(), o2.getWidth2());
+                }
+                return val;
+            });
+
+            while (!featureLL.isEmpty()) {
+
+                Feature2D pixel = featureLL.pollFirst();
+                if (pixel != null) {
+                    featureLL.remove(pixel);
+                    int buffer = (int) Math.max(pixel.getWidth1(), pixel.getWidth2());
+
+                    Set<Feature2D> pixelList = new HashSet<>();
+                    pixelList.add(pixel);
+                    for (Feature2D px : featureLL) {
+                        if (hasOverlap(px, pixel, buffer)) {
+                            pixelList.add(px);
+                        }
+                    }
+
+                    featureLL.removeAll(pixelList);
+                    pixel.addStringAttribute("NumCollapsed", String.valueOf(pixelList.size()));
+
+                    long start1 = FeatureStats.minStart1(pixelList);
+                    long start2 = FeatureStats.minStart2(pixelList);
+                    long end1 = FeatureStats.maxEnd1(pixelList);
+                    long end2 = FeatureStats.maxEnd2(pixelList);
+                    coalesced.add(new Feature2D(Feature2D.FeatureType.PEAK, pixel.getChr1(), start1, end1,
+                            pixel.getChr2(), start2, end2, Color.BLACK, pixel.getAttributes()));
+
+                    pixelList.clear();
+                }
+            }
+        }
+        map.clear();
+
+        return new ArrayList<>(coalesced);
     }
 
     public static List<LocalMaxima> detect(float[][] image, double threshold, String saveString) {
@@ -142,18 +170,6 @@ public class ConnectedComponents {
             return pickBestCentroid(pixels, dist);
         }
         return null;
-    }
-
-    private static double getMaxInMatrix(float[][] image) {
-        float maxVal = 0;
-        for (float[] row : image) {
-            for (float val : row) {
-                if (val > maxVal) {
-                    maxVal = val;
-                }
-            }
-        }
-        return maxVal;
     }
 
     public static Pixel pickBestCentroid(LinkedList<Pixel> regions, int dist) {
@@ -231,4 +247,6 @@ public class ConnectedComponents {
 
         return new LocalMaxima(maxCoordinate, maxVal, area);
     }
+    
+ */
 }
