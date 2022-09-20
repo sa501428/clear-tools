@@ -89,18 +89,22 @@ public class APA {
         loopListPath = args[2];
         outputDirectory = HiCFileTools.createValidDirectory(args[3]);
 
-        useAgNorm = parser.getAggregateNormalization();
+        String possibleNorm = parser.getNormalizationStringOption();
+        useAgNorm = parser.getAggregateNormalization() || isAgNorm(possibleNorm);
         if (useAgNorm) {
             norm = NormalizationHandler.NONE;
         } else {
-            String possibleNorm = parser.getNormalizationStringOption();
             try {
                 norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
             } catch (Exception e) {
                 norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
             }
         }
+
         System.out.println("Using normalization: " + norm.getLabel());
+        if (useAgNorm) {
+            System.out.println("Will apply aggregate normalization.");
+        }
         window = parser.getWindowSizeOption(10);
         minPeakDist = parser.getMinDistVal(2 * window);
         maxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
@@ -116,6 +120,11 @@ public class APA {
             globalRowSum = null;
             globalColSum = null;
         }
+    }
+
+    private boolean isAgNorm(String norm) {
+        String normLower = norm.toLowerCase();
+        return normLower.contains("ag") && normLower.contains("norm");
     }
 
     private void printUsageAndExit() {
