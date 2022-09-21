@@ -1,15 +1,16 @@
 package cli.clt;
 
 import cli.Main;
+import cli.utils.clean.LoopSizeFilter;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.VectorCleaner;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
-import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.basics.ChromosomeTools;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
@@ -22,30 +23,41 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Cleaner {
 
-    private static final int MIN_LOOP_SIZE = 25000;
-    public static String usage = "clean <input.hic> <loops.bedpe> <output.bedpe>";
+    public static String usage = "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
+            "clean <genomeID> <loops.bedpe> <output.bedpe>";
+    private static boolean doOracleCleaning = false;
 
     public static void run(String[] args) {
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(5);
         }
 
-        Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, true, true);
+        Dataset dataset = null;
+        ChromosomeHandler handler;
+        if (args[1].endsWith(".hic")) {
+            dataset = HiCFileTools.extractDatasetForCLT(args[1], false, true, true);
+            handler = dataset.getChromosomeHandler();
+        } else {
+            doOracleCleaning = true;
+            handler = ChromosomeTools.loadChromosomes(args[1]);
+        }
+
         String bedpeFile = args[2];
         String outFile = args[3];
 
-        ChromosomeHandler handler = dataset.getChromosomeHandler();
-        Feature2DList loopList = Feature2DParser.loadFeatures(bedpeFile, handler,
-                true, null, false);
+        Feature2DList loopList = LoopSizeFilter.loadFilteredBedpe(bedpeFile, handler, true);
 
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
-        Feature2DList cleanList = cleanupLoops(dataset, loopList, handler);
-        cleanList.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.FINAL);
+        if (dataset != null) {
+            Feature2DList cleanList = cleanupLoops(dataset, loopList, handler);
+            cleanList.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.FINAL);
+        }
     }
 
     private static Feature2DList cleanupLoops(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler) {
 
+        //List<HiCZoom> resolutions = getResolutions(loopList);
         int resolution = 1000;
         HiCZoom zoom = new HiCZoom(resolution);
 
@@ -82,11 +94,9 @@ public class Cleaner {
 
                     try {
                         for (Feature2D loop : loops) {
-                            if (passesMinLoopSize(loop)) {
-                                if (normHasHighValPixel(loop.getStart1(), loop.getEnd1(), resolution, vector1b)
-                                        && normHasHighValPixel(loop.getStart2(), loop.getEnd2(), resolution, vector2b)) {
-                                    goodLoops.add(loop);
-                                }
+                            if (normHasHighValPixel(loop.getStart1(), loop.getEnd1(), resolution, vector1b)
+                                    && normHasHighValPixel(loop.getStart2(), loop.getEnd2(), resolution, vector2b)) {
+                                goodLoops.add(loop);
                             }
                         }
                     } catch (Exception e) {
@@ -103,15 +113,6 @@ public class Cleaner {
         });
 
         return goodLoopsList;
-    }
-
-    public static boolean passesMinLoopSize(Feature2D loop) {
-        return dist(loop) > MIN_LOOP_SIZE;
-    }
-
-    public static long dist(Feature2D loop) {
-        return (Math.min(Math.abs(loop.getEnd1() - loop.getStart2()),
-                Math.abs(loop.getMidPt1() - loop.getMidPt2())) / MIN_LOOP_SIZE) * MIN_LOOP_SIZE;
     }
 
     private static boolean normHasHighValPixel(long start, long end, int resolution, double[] vector) {

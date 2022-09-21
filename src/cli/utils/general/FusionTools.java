@@ -1,11 +1,10 @@
 package cli.utils.general;
 
-import cli.clt.Cleaner;
 import cli.utils.FeatureStats;
+import cli.utils.clean.LoopSizeFilter;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
-import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -24,7 +23,7 @@ public class FusionTools {
     }
 
     private static List<Feature2D> removeOverlappingPixels(List<Feature2D> features, boolean useNMS) {
-        Map<SimpleLocation, LinkedList<Feature2D>> map = groupNearbyRecords(simpleFilter(features), 1000000);
+        Map<SimpleLocation, LinkedList<Feature2D>> map = groupNearbyRecords(new HashSet<>(features), 1000000);
         Set<Feature2D> coalesced = new HashSet<>();
 
         for (LinkedList<Feature2D> featureLL : map.values()) {
@@ -76,16 +75,6 @@ public class FusionTools {
         map.clear();
 
         return new ArrayList<>(coalesced);
-    }
-
-    private static Set<Feature2D> simpleFilter(List<Feature2D> features) {
-        Set<Feature2D> featureSet = new HashSet<>();
-        for (Feature2D feature : features) {
-            if (Cleaner.passesMinLoopSize(feature)) {
-                featureSet.add(feature);
-            }
-        }
-        return featureSet;
     }
 
     private static long getHalfWidth(Set<Feature2D> pixelList) {
@@ -163,8 +152,7 @@ public class FusionTools {
 
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
         for (String path : fileNames) {
-            Feature2DList loopList = Feature2DParser.loadFeatures(path, handler,
-                    false, null, false);
+            Feature2DList loopList = LoopSizeFilter.loadFilteredBedpe(path, handler, false);
             loopList.processLists(combinedLoops::addByKey);
         }
 
