@@ -24,7 +24,6 @@
 
 package cli.clt;
 
-import cli.Main;
 import jargs.gnu.CmdLineParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.type.NormalizationHandler;
@@ -96,8 +95,8 @@ public class CommandLineParser extends CmdLineParser {
         return optionToBoolean(logOption);
     }
 
-    public int getCutoffOption() {
-        return optionToInteger(cutoffOption, Main.DEFAULT_CUTOFF);
+    public int getCutoffOption(int defaultValue) {
+        return optionToInteger(cutoffOption, defaultValue);
     }
 
     public double getThresholdOption(double defaultVal) {

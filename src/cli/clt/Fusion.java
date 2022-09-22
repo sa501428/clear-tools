@@ -6,7 +6,7 @@ import cli.utils.general.FusionTools;
 public class Fusion {
     public static String usage = "fuse[-nms] <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]";
 
-    public Fusion(String[] args, String command) {
+    public static void run(String[] args, String command) {
         if (args.length < 5) {
             Main.printGeneralUsageAndExit(5);
         }

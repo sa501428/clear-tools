@@ -30,7 +30,7 @@ public class Probability {
     private static final int DEFAULT_WINDOW = 1000000;
 
 
-    public static void run(String[] args, int resolution, boolean useLog) {
+    public static void run(String[] args, CommandLineParser parser) {
 
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(4);
@@ -39,6 +39,9 @@ public class Probability {
         String hicFile = args[1];
         String bedpeFile = args[2];
         String outFolder = args[3];
+
+        int resolution = parser.getResolutionOption(5000);
+        boolean useLog = parser.getLogOption();
 
         Dataset ds = HiCFileTools.extractDatasetForCLT(hicFile, false, true, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();
