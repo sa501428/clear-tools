@@ -58,10 +58,7 @@ public class Cleaner {
 
     private static Feature2DList cleanupLoops(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler) {
 
-        //List<HiCZoom> resolutions = getResolutions(loopList);
-        int resolution = 1000;
-        HiCZoom zoom = new HiCZoom(resolution);
-
+        Set<HiCZoom> resolutions = getResolutions(loopList);
         NormalizationType vcNorm = dataset.getNormalizationHandler().getNormTypeFromString("VC");
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
@@ -84,19 +81,11 @@ public class Cleaner {
                 if (loops != null && loops.size() > 0) {
                     Set<Feature2D> goodLoops = new HashSet<>();
 
-                    double[] vector1b = dataset.getNormalizationVector(chr1.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-                    VectorCleaner.inPlaceClean(vector1b);
-
-                    double[] vector2b = vector1b;
-                    if (chr1.getIndex() != chr2.getIndex()) {
-                        vector2b = dataset.getNormalizationVector(chr2.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-                        VectorCleaner.inPlaceClean(vector2b);
-                    }
-
+                    Map<Integer, double[]> vectorMap = loadVectors(dataset, chr1, vcNorm, resolutions);
                     try {
                         for (Feature2D loop : loops) {
-                            if (normHasHighValPixel(loop.getStart1(), loop.getEnd1(), resolution, vector1b)
-                                    && normHasHighValPixel(loop.getStart2(), loop.getEnd2(), resolution, vector2b)) {
+                            if (normIsOk(loop.getMidPt1(), (int) loop.getWidth1(), vectorMap)
+                                    && normIsOk(loop.getMidPt2(), (int) loop.getWidth2(), vectorMap)) {
                                 goodLoops.add(loop);
                             }
                         }
@@ -108,7 +97,6 @@ public class Cleaner {
                         goodLoopsList.addByKey(Feature2DList.getKey(chr1, chr2), new ArrayList<>(goodLoops));
                     }
                 }
-                //System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");
                 threadPair = currChromPair.getAndIncrement();
             }
         });
@@ -116,17 +104,40 @@ public class Cleaner {
         return goodLoopsList;
     }
 
-    private static boolean normHasHighValPixel(long start, long end, int resolution, double[] vector) {
-
-        int x0 = (int) (start / resolution);
-        int xF = (int) (end / resolution) + 1;
-
-        for (int k = x0; k < xF + 1; k++) {
-            if (vector[k] > 1 && vector[k] >= vector[k - 1] && vector[k] >= vector[k + 1]) {
-                return true;
-            }
+    private static Map<Integer, double[]> loadVectors(Dataset dataset, Chromosome chrom, NormalizationType vcNorm,
+                                                      Set<HiCZoom> zooms) {
+        Map<Integer, double[]> vectorMap = new HashMap<>();
+        for (HiCZoom zoom : zooms) {
+            double[] vector = dataset.getNormalizationVector(chrom.getIndex(), zoom,
+                    vcNorm).getData().getValues().get(0);
+            VectorCleaner.inPlaceClean(vector);
+            vectorMap.put(zoom.getBinSize(), vector);
         }
+        return vectorMap;
+    }
 
-        return false;
+    private static Set<HiCZoom> getResolutions(Feature2DList loopList) {
+        Set<HiCZoom> zooms = new HashSet<>();
+        Set<Integer> resolutions = getResolutionSet(loopList);
+        for (Integer res : resolutions) {
+            zooms.add(new HiCZoom(res));
+        }
+        return zooms;
+    }
+
+    private static Set<Integer> getResolutionSet(Feature2DList loopList) {
+        Set<Integer> resolutions = new HashSet<>();
+        loopList.processLists((s, list) -> {
+            for (Feature2D feature2D : list) {
+                resolutions.add((int) feature2D.getWidth1());
+                resolutions.add((int) feature2D.getWidth2());
+            }
+        });
+        return resolutions;
+    }
+
+    private static boolean normIsOk(long pos, int resolution, Map<Integer, double[]> vMap) {
+        double[] vector = vMap.get(resolution);
+        return vector[(int) (pos / resolution)] > 0;
     }
 }
