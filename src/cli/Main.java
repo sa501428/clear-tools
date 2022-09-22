@@ -18,7 +18,7 @@ public class Main {
         for (String usage : new String[]{Flags.usage, Pinpoint.usage, Cleaner.usage, APA.usage, ATA.usage, Recap.usage,
                 Sieve.usage, HotSpot.usage, Fusion.usage, Sift.usage, NormHack.usage, SimplePeak.usage, SimpleMax.usage,
                 GenerateBedpe.usage}) {
-            System.out.println(usage);
+            System.out.println("\t" + usage);
         }
 
         System.out.println("Exit code " + exitCode);
