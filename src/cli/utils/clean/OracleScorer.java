@@ -30,6 +30,18 @@ public class OracleScorer {
         float r5k = Float.parseFloat(loop.getAttribute("score_oracle_5000"));
         float r10k = Float.parseFloat(loop.getAttribute("score_oracle_10000"));
 
+        int dist = LoopTools.dist(loop);
+        if (dist > 50000) {
+            return defaultCheck4(r1k, r2k, r5k, r10k, cutoff);
+        } else if (dist > 25000) {
+            return defaultCheck3(r1k, r2k, r5k, cutoff);
+        } else if (dist > 10000) {
+            return defaultCheck2(r1k, r2k, cutoff);
+        }
+        return false;
+    }
+
+    private static boolean defaultCheck4(float r1k, float r2k, float r5k, float r10k, double cutoff) {
         return (r1k > cutoff) || (r2k > cutoff) ||
                 ((r1k > cutoff) && (r2k > cutoff)) ||
                 ((r2k > cutoff) && (r5k > cutoff)) ||
@@ -37,5 +49,17 @@ public class OracleScorer {
                 ((r1k > cutoff) && (r2k > cutoff) && (r10k > cutoff)) ||
                 ((r1k > cutoff) && (r5k > cutoff) && (r10k > cutoff)) ||
                 ((r2k > cutoff) && (r5k > cutoff) && (r10k > cutoff));
+    }
+
+    private static boolean defaultCheck3(float r1k, float r2k, float r5k, double cutoff) {
+        return (r1k > cutoff) || (r2k > cutoff) ||
+                ((r1k > cutoff) && (r2k > cutoff)) ||
+                ((r2k > cutoff) && (r5k > cutoff)) ||
+                ((r1k > cutoff) && (r2k > cutoff) && (r5k > cutoff));
+    }
+
+    private static boolean defaultCheck2(float r1k, float r2k, double cutoff) {
+        return (r1k > cutoff) || (r2k > cutoff) ||
+                ((r1k > cutoff) && (r2k > cutoff));
     }
 }

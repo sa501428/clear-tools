@@ -37,8 +37,8 @@ public class LoopTools {
         return (int) Math.max(loop.getWidth1(), loop.getWidth2());
     }
 
-    public static long dist(Feature2D loop) {
-        return Math.min(Math.abs(loop.getEnd1() - loop.getStart2()),
+    public static int dist(Feature2D loop) {
+        return (int) Math.min(Math.abs(loop.getEnd1() - loop.getStart2()),
                 Math.abs(loop.getMidPt1() - loop.getMidPt2()));
     }
 
