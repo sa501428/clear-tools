@@ -32,6 +32,7 @@ public class Cleaner {
             Main.printGeneralUsageAndExit(5);
         }
 
+        double threshold = parser.getThresholdOption(0.5);
         Dataset dataset = null;
         ChromosomeHandler handler;
         if (args[1].endsWith(".hic")) {
@@ -41,19 +42,24 @@ public class Cleaner {
             handler = ChromosomeTools.loadChromosomes(args[1]);
         }
 
-        String bedpeFile = args[2];
-        String outFile = args[3];
-        Feature2DList loopList = LoopTools.loadFilteredBedpe(bedpeFile, handler, true);
-        System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
+        String[] bedpeFiles = args[2].split(",");
+        String[] outFiles = args[3].split(",");
 
-        Feature2DList cleanList;
-        if (dataset != null) {
-            cleanList = cleanupLoops(dataset, loopList, handler);
-        } else {
-            double threshold = parser.getThresholdOption(0.5);
-            cleanList = OracleScorer.filter(loopList, threshold);
+        if (bedpeFiles.length != outFiles.length) {
+            System.err.println("Number of input and output entries don't match");
+            System.exit(92);
         }
-        cleanList.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
+
+        for (int z = 0; z < bedpeFiles.length; z++) {
+            Feature2DList loopList = LoopTools.loadFilteredBedpe(bedpeFiles[z], handler, true);
+            Feature2DList cleanList;
+            if (dataset != null) {
+                cleanList = cleanupLoops(dataset, loopList, handler);
+            } else {
+                cleanList = OracleScorer.filter(loopList, threshold);
+            }
+            cleanList.exportFeatureList(new File(outFiles[z]), false, Feature2DList.ListFormat.NA);
+        }
     }
 
     private static Feature2DList cleanupLoops(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler) {
