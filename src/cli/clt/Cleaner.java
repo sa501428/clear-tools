@@ -1,7 +1,7 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.clean.LoopSizeFilter;
+import cli.utils.clean.LoopTools;
 import cli.utils.clean.OracleScorer;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
@@ -43,7 +43,7 @@ public class Cleaner {
 
         String bedpeFile = args[2];
         String outFile = args[3];
-        Feature2DList loopList = LoopSizeFilter.loadFilteredBedpe(bedpeFile, handler, true);
+        Feature2DList loopList = LoopTools.loadFilteredBedpe(bedpeFile, handler, true);
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
         Feature2DList cleanList;

@@ -2,7 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.FeatureStats;
-import cli.utils.clean.LoopSizeFilter;
+import cli.utils.clean.LoopTools;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
 import cli.utils.general.FusionTools;
@@ -51,7 +51,7 @@ public class Sieve {
 
         Dataset ds = HiCFileTools.extractDatasetForCLT(filepath, false, false, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();
-        Feature2DList loopList = LoopSizeFilter.loadFilteredBedpe(loopListPath, handler, true);
+        Feature2DList loopList = LoopTools.loadFilteredBedpe(loopListPath, handler, true);
 
         String possibleNorm = parser.getNormalizationStringOption();
         if (possibleNorm != null && possibleNorm.length() > 0) {

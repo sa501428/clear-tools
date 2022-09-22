@@ -1,7 +1,7 @@
 package cli.utils.general;
 
 import cli.utils.FeatureStats;
-import cli.utils.clean.LoopSizeFilter;
+import cli.utils.clean.LoopTools;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -152,7 +152,7 @@ public class FusionTools {
 
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
         for (String path : fileNames) {
-            Feature2DList loopList = LoopSizeFilter.loadFilteredBedpe(path, handler, false);
+            Feature2DList loopList = LoopTools.loadFilteredBedpe(path, handler, false);
             loopList.processLists(combinedLoops::addByKey);
         }
 

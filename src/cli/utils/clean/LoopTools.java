@@ -9,9 +9,7 @@ import javastraw.reader.basics.ChromosomeHandler;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LoopSizeFilter {
-
-    private static final int MIN_LOOP_SIZE = 30000;
+public class LoopTools {
 
     public static Feature2DList loadFilteredBedpe(String bedpeFile, ChromosomeHandler handler,
                                                   boolean loadAttributes) {
@@ -32,10 +30,14 @@ public class LoopSizeFilter {
     }
 
     public static boolean passesMinLoopSize(Feature2D loop) {
-        return floorDist(loop) > MIN_LOOP_SIZE;
+        return dist(loop) / getResolutionLoopWasCalledAt(loop) > 5;
     }
 
-    public static long floorDist(Feature2D loop) {
+    public static int getResolutionLoopWasCalledAt(Feature2D loop) {
+        return (int) Math.max(loop.getWidth1(), loop.getWidth2());
+    }
+
+    public static long dist(Feature2D loop) {
         return Math.min(Math.abs(loop.getEnd1() - loop.getStart2()),
                 Math.abs(loop.getMidPt1() - loop.getMidPt2()));
     }
