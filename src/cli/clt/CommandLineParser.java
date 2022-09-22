@@ -47,25 +47,14 @@ public class CommandLineParser extends CmdLineParser {
     private final Option seedOption = addIntegerOption("seed");
     private final Option normalizationTypeOption = addStringOption('k', "norm");
     private final Option cutoffOption = addIntegerOption("cutoff");
-    private final Option minOption = addDoubleOption("min");
-    private final Option maxOption = addDoubleOption("max");
-    private final Option threadsOption = addIntegerOption("threads");
     private final Option percentileOption = addIntegerOption("percentile");
     private final Option windowOption = addIntegerOption("window");
     private final Option minDisValOption = addIntegerOption("min-dist");
     private final Option maxDistValOption = addIntegerOption("max-dist");
-    private final Option cornerRegionDimensionsOption = addIntegerOption("corner-width");
     private final Option interChromosomalOption = addBooleanOption("include-inter");
-    private final Option useBinaryOption = addBooleanOption("binary");
     private final Option aggregateNormalization = addBooleanOption("ag-norm");
     private final Option isLoopAnalysis = addBooleanOption("loop");
-
-    public CommandLineParser() {
-    }
-
-    /*
-     * convert Options to Objects or Primitives
-     */
+    private final Option thresholdOption = addDoubleOption("threshold");
 
     private boolean optionToBoolean(Option option) {
         Object opt = getOptionValue(option);
@@ -86,10 +75,6 @@ public class CommandLineParser extends CmdLineParser {
         Object opt = getOptionValue(option);
         return opt == null ? null : opt.toString();
     }
-
-    /*
-     * Actual parameters
-     */
 
     public boolean getHelpOption() {
         return optionToBoolean(helpOption);
@@ -115,12 +100,8 @@ public class CommandLineParser extends CmdLineParser {
         return optionToInteger(cutoffOption, Main.DEFAULT_CUTOFF);
     }
 
-    public double getMinOption(double defaultVal) {
-        return optionToDouble(minOption, defaultVal);
-    }
-
-    public double getMaxOption(double defaultVal) {
-        return optionToDouble(maxOption, defaultVal);
+    public double getThresholdOption(double defaultVal) {
+        return optionToDouble(thresholdOption, defaultVal);
     }
 
     public int getResolutionOption(int defaultVal) {
@@ -138,7 +119,6 @@ public class CommandLineParser extends CmdLineParser {
     public String getNormalizationStringOption() {
         return optionToString(normalizationTypeOption);
     }
-
 
     public boolean getAggregateNormalization() {
         return optionToBoolean(aggregateNormalization);
@@ -162,14 +142,6 @@ public class CommandLineParser extends CmdLineParser {
 
     public boolean getIncludeInterChromosomal() {
         return optionToBoolean(interChromosomalOption);
-    }
-
-    public int getCornerRegionDimensionOption(int val) {
-        return optionToInteger(cornerRegionDimensionsOption, val);
-    }
-
-    public int getNumThreads(int val) {
-        return optionToInteger(threadsOption, val);
     }
 
     public int getPercentileOption(int val) {

@@ -25,10 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Cleaner {
 
     public static String usage = "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
-            "clean <genomeID> <loops.bedpe> <output.bedpe>";
-    private static boolean doOracleCleaning = false;
+            "clean [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>";
 
-    public static void run(String[] args) {
+    public static void run(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(5);
         }
@@ -39,7 +38,6 @@ public class Cleaner {
             dataset = HiCFileTools.extractDatasetForCLT(args[1], false, true, true);
             handler = dataset.getChromosomeHandler();
         } else {
-            doOracleCleaning = true;
             handler = ChromosomeTools.loadChromosomes(args[1]);
         }
 
@@ -52,7 +50,8 @@ public class Cleaner {
         if (dataset != null) {
             cleanList = cleanupLoops(dataset, loopList, handler);
         } else {
-            cleanList = OracleScorer.filter(loopList, 0.5);
+            double threshold = parser.getThresholdOption(0.5);
+            cleanList = OracleScorer.filter(loopList, threshold);
         }
         cleanList.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
     }
