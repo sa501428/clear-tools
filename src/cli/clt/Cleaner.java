@@ -2,6 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.clean.LoopSizeFilter;
+import cli.utils.clean.OracleScorer;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.VectorCleaner;
@@ -44,15 +45,16 @@ public class Cleaner {
 
         String bedpeFile = args[2];
         String outFile = args[3];
-
         Feature2DList loopList = LoopSizeFilter.loadFilteredBedpe(bedpeFile, handler, true);
-
         System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
 
+        Feature2DList cleanList;
         if (dataset != null) {
-            Feature2DList cleanList = cleanupLoops(dataset, loopList, handler);
-            cleanList.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.FINAL);
+            cleanList = cleanupLoops(dataset, loopList, handler);
+        } else {
+            cleanList = OracleScorer.filter(loopList, 0.5);
         }
+        cleanList.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
     }
 
     private static Feature2DList cleanupLoops(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler) {
