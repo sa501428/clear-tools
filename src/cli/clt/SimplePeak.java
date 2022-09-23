@@ -17,7 +17,6 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
-import java.awt.*;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -87,7 +86,7 @@ public class SimplePeak {
                                         int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + buffer + 1);
                                         float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, NONE);
                                         for (Feature2D loop : group) {
-                                            getTheMaxPixel(regionMatrix, loop, resolution, currentLoops, minR, minC, nv, 2);
+                                            SimpleMax.getTheMaxPixel(regionMatrix, loop, resolution, currentLoops, minR, minC, nv, 2);
                                         }
                                         regionMatrix = null;
                                     }
@@ -121,57 +120,5 @@ public class SimplePeak {
         });
 
         return finalLoopList;
-    }
-
-    private static void getTheMaxPixel(float[][] regionMatrix, Feature2D loop, int resolution,
-                                       Set<Feature2D> newLoops, int minR, int minC, double[] nv,
-                                       int window) {
-
-        int r0 = (int) ((loop.getStart1() / resolution) - window - minR);
-        int c0 = (int) ((loop.getStart2() / resolution) - window - minC);
-        int rF = (int) ((loop.getEnd1() / resolution) + window + 1 - minR);
-        int cF = (int) ((loop.getEnd2() / resolution) + window + 1 - minC);
-
-        int[] binCoords;
-        if (resolution > 10) { // or median 1
-            binCoords = getMaxPixelInBox(regionMatrix, r0, rF, c0, cF, nv, minR, minC);
-        } else {
-            binCoords = null; // TODO getCentroidInBox(regionMatrix, r0, rF, c0, cF, nv, minR, minC);
-        }
-
-        if (binCoords != null) {
-            long startX = (long) (binCoords[0] + minR) * resolution;
-            long endX = startX + resolution;
-            long startY = (long) (binCoords[1] + minC) * resolution;
-            long endY = startY + resolution;
-            Feature2D feature = new Feature2D(loop.getFeatureType(), loop.getChr1(), startX, endX,
-                    loop.getChr2(), startY, endY, Color.BLACK, loop.getAttributes());
-            newLoops.add(feature);
-        }
-    }
-
-    private static int[] getMaxPixelInBox(float[][] matrix, int r0, int rF, int c0, int cF,
-                                          double[] nv, int minR, int minC) {
-        float maxCounts = 0;
-        int[] coordinates = new int[]{-1, -1};
-        for (int r = r0; r < rF; r++) {
-            for (int c = c0; c < cF; c++) {
-                if (matrix[r][c] > 0) {
-                    float norm = (float) Math.sqrt(nv[minR + r] * nv[minC + c]);
-                    if (norm > 1) {
-                        float realVal = matrix[r][c] / norm;
-                        if (realVal > maxCounts) {
-                            maxCounts = realVal;
-                            coordinates[0] = r;
-                            coordinates[1] = c;
-                        }
-                    }
-                }
-            }
-        }
-        if (maxCounts > 0) {
-            return coordinates;
-        }
-        return null;
     }
 }

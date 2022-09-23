@@ -27,7 +27,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SimpleMax {
 
     private static final NormalizationType VC = NormalizationHandler.VC;
+    private static final NormalizationType NONE = NormalizationHandler.NONE;
     public static String usage = "simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>";
+    private static final int buffer = 5;
 
     public static void printUsageAndExit() {
         System.out.println("simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>");
@@ -96,13 +98,13 @@ public class SimpleMax {
                                 Collection<LinkedList<Feature2D>> loopGroups = FusionTools.groupNearbyRecords(
                                         new HashSet<>(loops), 500000).values();
                                 for (LinkedList<Feature2D> group : loopGroups) {
-                                    int minR = (int) ((FeatureStats.minStart1(group) / resolution) - 1);
-                                    int minC = (int) ((FeatureStats.minStart2(group) / resolution) - 1);
-                                    int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + 1);
-                                    int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + 1);
-                                    float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, norm);
+                                    int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
+                                    int minC = (int) ((FeatureStats.minStart2(group) / resolution) - buffer);
+                                    int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + buffer + 1);
+                                    int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + buffer + 1);
+                                    float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, NONE);
                                     for (Feature2D loop : group) {
-                                        getTheMaxPixel(regionMatrix, loop, resolution, newLoops, minR, minC, nv);
+                                        getTheMaxPixel(regionMatrix, loop, resolution, newLoops, minR, minC, nv, 2);
                                     }
                                     regionMatrix = null;
                                 }
@@ -127,15 +129,21 @@ public class SimpleMax {
         return finalLoopList;
     }
 
-    private static void getTheMaxPixel(float[][] regionMatrix, Feature2D loop, int resolution,
-                                       Set<Feature2D> newLoops, int minR, int minC, double[] nv) {
+    public static void getTheMaxPixel(float[][] regionMatrix, Feature2D loop, int resolution,
+                                      Set<Feature2D> newLoops, int minR, int minC, double[] nv,
+                                      int window) {
 
-        int r0 = (int) ((loop.getStart1() / resolution) - minR);
-        int c0 = (int) ((loop.getStart2() / resolution) - minC);
-        int rF = (int) ((loop.getEnd1() / resolution) + 1 - minR);
-        int cF = (int) ((loop.getEnd2() / resolution) + 1 - minC);
+        int r0 = (int) ((loop.getStart1() / resolution) - window - minR);
+        int c0 = (int) ((loop.getStart2() / resolution) - window - minC);
+        int rF = (int) ((loop.getEnd1() / resolution) + window + 1 - minR);
+        int cF = (int) ((loop.getEnd2() / resolution) + window + 1 - minC);
 
-        int[] binCoords = getMaxPixelInBox(regionMatrix, r0, rF, c0, cF, nv, minR, minC);
+        int[] binCoords;
+        if (resolution > 10) { // or median 1
+            binCoords = getMaxPixelInBox(regionMatrix, r0, rF, c0, cF, nv, minR, minC);
+        } else {
+            binCoords = null; // TODO getCentroidInBox(regionMatrix, r0, rF, c0, cF, nv, minR, minC);
+        }
 
         if (binCoords != null) {
             long startX = (long) (binCoords[0] + minR) * resolution;
@@ -148,16 +156,22 @@ public class SimpleMax {
         }
     }
 
-    private static int[] getMaxPixelInBox(float[][] matrix, int r0, int rF, int c0, int cF,
-                                          double[] nv, int minR, int minC) {
+    public static int[] getMaxPixelInBox(float[][] matrix, int r0, int rF, int c0, int cF,
+                                         double[] nv, int minR, int minC) {
         float maxCounts = 0;
         int[] coordinates = new int[]{-1, -1};
         for (int r = r0; r < rF; r++) {
             for (int c = c0; c < cF; c++) {
-                if (matrix[r][c] > maxCounts && nv[minR + r] > 1 && nv[minC + c] > 1) { // will skip NaNs
-                    maxCounts = matrix[r][c];
-                    coordinates[0] = r;
-                    coordinates[1] = c;
+                if (matrix[r][c] > 0) {
+                    float norm = (float) Math.sqrt(nv[minR + r] * nv[minC + c]);
+                    if (norm > 0) {
+                        float realVal = matrix[r][c] / norm;
+                        if (realVal > maxCounts) {
+                            maxCounts = realVal;
+                            coordinates[0] = r;
+                            coordinates[1] = c;
+                        }
+                    }
                 }
             }
         }
