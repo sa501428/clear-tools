@@ -10,9 +10,9 @@ public class VectorCleaner {
             }
         }
 
-        //double logThreshold = getLogLowerBound(vec);
-        //double lowerBound = Math.min(1, Math.exp(logThreshold));
-        double lowerBound = Math.min(1, getPercentile(vec, 16));
+        double logThreshold = getLogLowerBound(vec);
+        double lowerBound = Math.min(1, Math.exp(logThreshold));
+        //double lowerBound = Math.min(1, getPercentile(vec, 16));
         for (int k = 0; k < vec.length; k++) {
             if (vec[k] > 0 && vec[k] < lowerBound) {
                 vec[k] = Double.NaN;
