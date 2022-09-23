@@ -31,24 +31,40 @@ public class OracleScorer {
         float r10k = Float.parseFloat(loop.getAttribute("score_oracle_10000"));
 
         int dist = LoopTools.dist(loop);
+        if (dist > 1000000) {
+            if (r5k > 0.9 && r10k > 0.9) {
+                return true;
+            }
+        }
+
+        return (r1k > 0.2) || (r2k > 0.2);
+
+        /*
         if (dist > 50000) {
-            return defaultCheck4(r1k, r2k, r5k, r10k, cutoff);
+            return defaultCheck4(r1k, r2k, r5k, r10k, cutoff, dist);
         } else if (dist > 25000) {
             return defaultCheck3(r1k, r2k, r5k, cutoff);
         } else if (dist > 10000) {
             return defaultCheck2(r1k, r2k, cutoff);
         }
         return false;
+        */
     }
 
-    private static boolean defaultCheck4(float r1k, float r2k, float r5k, float r10k, double cutoff) {
-        return (r1k > cutoff) || (r2k > cutoff) ||
-                ((r1k > cutoff) && (r2k > cutoff)) ||
-                ((r2k > cutoff) && (r5k > cutoff)) ||
-                ((r1k > cutoff) && (r2k > cutoff) && (r5k > cutoff)) ||
-                ((r1k > cutoff) && (r2k > cutoff) && (r10k > cutoff)) ||
-                ((r1k > cutoff) && (r5k > cutoff) && (r10k > cutoff)) ||
-                ((r2k > cutoff) && (r5k > cutoff) && (r10k > cutoff));
+    private static boolean defaultCheck4(float r1k, float r2k, float r5k, float r10k, double cutoff, int dist) {
+        boolean lowResCheck = false;
+        if (dist > 1000000) {
+            lowResCheck = ((r5k > cutoff) && (r10k > cutoff));
+        }
+
+        return (r1k > cutoff) || (r2k > cutoff);//||
+        //((r1k > cutoff) && (r2k > cutoff)) ||
+        //((r2k > cutoff) && (r5k > cutoff)) ||
+        //lowResCheck ||
+        //((r1k > cutoff) && (r2k > cutoff) && (r5k > cutoff)) ||
+        //((r1k > cutoff) && (r2k > cutoff) && (r10k > cutoff)) ||
+        //((r1k > cutoff) && (r5k > cutoff) && (r10k > cutoff)) ||
+        //((r2k > cutoff) && (r5k > cutoff) && (r10k > cutoff));
     }
 
     private static boolean defaultCheck3(float r1k, float r2k, float r5k, double cutoff) {
