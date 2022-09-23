@@ -10,13 +10,24 @@ public class VectorCleaner {
             }
         }
 
-        double logThreshold = getLogLowerBound(vec);
-        double lowerBound = Math.min(1, Math.exp(logThreshold));
+        //double logThreshold = getLogLowerBound(vec);
+        //double lowerBound = Math.min(1, Math.exp(logThreshold));
+        double lowerBound = Math.min(1, getPercentile(vec, 16));
         for (int k = 0; k < vec.length; k++) {
             if (vec[k] > 0 && vec[k] < lowerBound) {
                 vec[k] = Double.NaN;
             }
         }
+    }
+
+    private static double getPercentile(double[] vec, int percentile) {
+        DescriptiveStatistics stats = new DescriptiveStatistics();
+        for (double v : vec) {
+            if (v > 0) {
+                stats.addValue(v);
+            }
+        }
+        return stats.getPercentile(percentile);
     }
 
     private static double getLogLowerBound(double[] vec) {

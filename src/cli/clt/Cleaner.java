@@ -144,6 +144,7 @@ public class Cleaner {
 
     private static boolean normIsOk(long pos, int resolution, Map<Integer, double[]> vMap) {
         double[] vector = vMap.get(resolution);
-        return vector[(int) (pos / resolution)] > 0;
+        int x = (int) (pos / resolution);
+        return vector[x - 1] > 0 && vector[x] > 0 && vector[x + 1] > 0; // verify neighbors also ok
     }
 }
