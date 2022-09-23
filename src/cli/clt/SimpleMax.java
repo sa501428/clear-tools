@@ -94,20 +94,7 @@ public class SimpleMax {
                         if (zd != null) { // if it's not empty
                             try {
                                 double[] nv = ds.getNormalizationVector(chrom1.getIndex(), zoom, VC).getData().getValues().get(0);
-                                Set<Feature2D> newLoops = new HashSet<>();
-                                Collection<LinkedList<Feature2D>> loopGroups = FusionTools.groupNearbyRecords(
-                                        new HashSet<>(loops), 500000).values();
-                                for (LinkedList<Feature2D> group : loopGroups) {
-                                    int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
-                                    int minC = (int) ((FeatureStats.minStart2(group) / resolution) - buffer);
-                                    int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + buffer + 1);
-                                    int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + buffer + 1);
-                                    float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, NONE);
-                                    for (Feature2D loop : group) {
-                                        getTheMaxPixel(regionMatrix, loop, resolution, newLoops, minR, minC, nv, 2);
-                                    }
-                                    regionMatrix = null;
-                                }
+                                Set<Feature2D> newLoops = getMaximaForRegions(new HashSet<>(loops), resolution, buffer, zd, nv);
 
                                 synchronized (finalLoopList) {
                                     finalLoopList.addByKey(Feature2DList.getKey(chrom1, chrom1), new ArrayList<>(newLoops));
@@ -127,6 +114,24 @@ public class SimpleMax {
         });
 
         return finalLoopList;
+    }
+
+    public static Set<Feature2D> getMaximaForRegions(Set<Feature2D> loops, int resolution, int buffer, MatrixZoomData zd, double[] nv) {
+        Set<Feature2D> newLoops = new HashSet<>();
+        Collection<LinkedList<Feature2D>> loopGroups = FusionTools.groupNearbyRecords(
+                loops, resolution * 200).values();
+        for (LinkedList<Feature2D> group : loopGroups) {
+            int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
+            int minC = (int) ((FeatureStats.minStart2(group) / resolution) - buffer);
+            int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + buffer + 1);
+            int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + buffer + 1);
+            float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, NONE);
+            for (Feature2D loop : group) {
+                getTheMaxPixel(regionMatrix, loop, resolution, newLoops, minR, minC, nv, 2);
+            }
+            regionMatrix = null;
+        }
+        return newLoops;
     }
 
     public static void getTheMaxPixel(float[][] regionMatrix, Feature2D loop, int resolution,

@@ -1,8 +1,5 @@
 package cli.clt;
 
-import cli.utils.FeatureStats;
-import cli.utils.flags.Utils;
-import cli.utils.general.FusionTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -18,7 +15,9 @@ import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SimplePeak {
@@ -76,20 +75,7 @@ public class SimplePeak {
                             if (zd != null) { // if it's not empty
                                 try {
                                     double[] nv = ds.getNormalizationVector(chrom1.getIndex(), zoom, VC).getData().getValues().get(0);
-                                    Set<Feature2D> currentLoops = new HashSet<>();
-                                    Collection<LinkedList<Feature2D>> loopGroups = FusionTools.groupNearbyRecords(
-                                            retainedLoops, resolution * 200).values();
-                                    for (LinkedList<Feature2D> group : loopGroups) {
-                                        int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
-                                        int minC = (int) ((FeatureStats.minStart2(group) / resolution) - buffer);
-                                        int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + buffer + 1);
-                                        int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + buffer + 1);
-                                        float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, NONE);
-                                        for (Feature2D loop : group) {
-                                            SimpleMax.getTheMaxPixel(regionMatrix, loop, resolution, currentLoops, minR, minC, nv, 2);
-                                        }
-                                        regionMatrix = null;
-                                    }
+                                    Set<Feature2D> currentLoops = SimpleMax.getMaximaForRegions(retainedLoops, resolution, buffer, zd, nv);
 
                                     retainedLoops.clear();
                                     if (resolution == 10) {
