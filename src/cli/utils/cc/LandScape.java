@@ -46,7 +46,7 @@ public class LandScape {
         if (normEnrichedPixels.size() == 0) return;
 
         List<Pixel> maxima = twoPassCoalesceAndRetainMaxima(normEnrichedPixels,
-                enrichedPixels, (int) (50 / resolution) + 1);
+                enrichedPixels, (int) (100 / resolution) + 1);
 
         enrichedPixels.clear();
         normEnrichedPixels.clear();
@@ -122,7 +122,7 @@ public class LandScape {
 
     private static List<Pixel> getAllEnrichedPixels(float[][] image) {
         Zscore zscore = getZscore(image, 1);
-        double threshold = zscore.getValForZscore(2);
+        double threshold = zscore.getValForZscore(3);
         List<Pixel> pixels = new ArrayList<>();
         for (int i = 0; i < image.length; i++) {
             for (int j = 0; j < image[i].length; j++) {
