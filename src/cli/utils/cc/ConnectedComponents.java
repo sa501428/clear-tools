@@ -25,6 +25,7 @@
 package cli.utils.cc;
 
 import cli.utils.pinpoint.ArrayTools;
+import cli.utils.pinpoint.LocalNorms;
 import javastraw.feature2D.Feature2D;
 import javastraw.tools.MatrixTools;
 
@@ -46,6 +47,9 @@ public class ConnectedComponents {
     public static void extractMaxima(float[][] kde, int binXStart, int binYStart, long resolution,
                                      List<Feature2D> pinpointedLoops, Feature2D loop, String saveString,
                                      boolean onlyGetOne) {
+
+        LocalNorms.normalizeLocally(kde);
+
         if (onlyGetOne) {
             Pixel max = getMax(kde, (int) Math.max(100 / resolution, 3));
             if (max != null) {

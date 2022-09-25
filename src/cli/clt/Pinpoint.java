@@ -6,7 +6,6 @@ import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
 import cli.utils.pinpoint.ConvolutionTools;
-import cli.utils.pinpoint.LocalNorms;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -136,7 +135,6 @@ public class Pinpoint {
 
                                     float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
                                     output = null; // clear output
-                                    LocalNorms.normalizeLocally(kde);
                                     ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
                                             pinpointedLoops, loop, saveString, onlyGetOne);
                                     kde = null;
