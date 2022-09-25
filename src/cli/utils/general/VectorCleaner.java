@@ -25,7 +25,7 @@ public class VectorCleaner {
 
     private static double getLogLowerZscoreBound(double[] vec, float z) {
         Zscore stats = createLogZscore(vec);
-        return stats.getZscore(z);
+        return stats.getValForZscore(z);
     }
 
     private static double getPercentile(double[] vec, int percentile) {
