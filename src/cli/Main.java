@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.42.2";
+    public static final String VERSION_NUM = "0.43.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode) {
@@ -17,7 +17,7 @@ public class Main {
         System.out.println("Commands:");
         for (String usage : new String[]{Flags.usage, Pinpoint.usage, Cleaner.usage, APA.usage, ATA.usage, Recap.usage,
                 Sieve.usage, HotSpot.usage, Fusion.usage, Sift.usage, NormHack.usage, SimplePeak.usage, SimpleMax.usage,
-                GenerateBedpe.usage}) {
+                GenerateBedpe.usage, Split.usage}) {
             System.out.println("\t" + usage);
         }
 
@@ -60,16 +60,16 @@ public class Main {
             ata.run();
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
-        } else if (command.startsWith("split") || command.startsWith("join")) {
-            new SplitOrJoin(command, args);
         } else if (command.startsWith("sieve")) {
             new Sieve(args, parser, command);
         } else if (command.startsWith("hotspot")) {
             HotSpot.run(args, parser);
         } else if (command.startsWith("sift")) {
             new Sift(args, parser);
-        } else if (command.startsWith("fuse") || command.startsWith("fusion")) {
+        } else if (command.startsWith("fuse") || command.startsWith("fusion") || command.startsWith("join") || command.startsWith("union")) {
             Fusion.run(args, command);
+        } else if (command.startsWith("split")) {
+            Split.run(args, command);
         } else if (command.startsWith("seer")) {
             Seer.run(args, parser);
         } else if (command.startsWith("hack")) {
