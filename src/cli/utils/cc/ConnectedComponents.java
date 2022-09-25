@@ -144,18 +144,6 @@ public class ConnectedComponents {
         return null;
     }
 
-    private static double getMaxInMatrix(float[][] image) {
-        float maxVal = 0;
-        for (float[] row : image) {
-            for (float val : row) {
-                if (val > maxVal) {
-                    maxVal = val;
-                }
-            }
-        }
-        return maxVal;
-    }
-
     public static Pixel pickBestCentroid(LinkedList<Pixel> regions, int dist) {
         List<PixelSet> pixelSets = new ArrayList<>();
         while (regions.size() > 0) {

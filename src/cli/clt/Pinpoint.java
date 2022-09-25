@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Pinpoint {
-    private static final boolean ONLY_GET_ONE = true;
     private static final NormalizationType NONE = NormalizationHandler.NONE;
     public static String usage = "pinpoint [--res int] <input.hic> <loops.bedpe> <output.bedpe>";
 
@@ -44,6 +43,8 @@ public class Pinpoint {
 
         ChromosomeHandler handler = dataset.getChromosomeHandler();
 
+        boolean onlyGetOne = parser.getOnlyOneOption();
+
         Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
                 true, null, false);
 
@@ -54,7 +55,7 @@ public class Pinpoint {
             resolution = HiCUtils.getHighestResolution(dataset.getBpZooms()).getBinSize();
         }
 
-        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution);
+        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution, onlyGetOne);
 
         String originalLoops = outFile.replace(".bedpe", "");
         originalLoops += "_with_original.bedpe";
@@ -66,7 +67,7 @@ public class Pinpoint {
     }
 
     private static Feature2DList localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
-                                          int resolution) {
+                                          int resolution, boolean onlyGetOne) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
@@ -137,7 +138,7 @@ public class Pinpoint {
                                     output = null; // clear output
                                     LocalNorms.normalizeLocally(kde);
                                     ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
-                                            pinpointedLoops, loop, saveString, ONLY_GET_ONE);
+                                            pinpointedLoops, loop, saveString, onlyGetOne);
                                     kde = null;
 
                                     if (currNumLoops.incrementAndGet() % 100 == 0) {
