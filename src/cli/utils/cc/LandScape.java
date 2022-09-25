@@ -38,17 +38,17 @@ public class LandScape {
                                      List<Feature2D> pinpointedLoops, Feature2D loop, String saveString,
                                      boolean onlyGetOne) {
 
-        List<Pixel> enrichedPixels = getAllEnrichedPixels(kde);
-        if (enrichedPixels.size() == 0) return;
+        List<Pixel> preNormEnrichments = getAllEnrichedPixels(kde);
+        if (preNormEnrichments.size() == 0) return;
 
         LocalNorms.normalizeLocally(kde);
         List<Pixel> normEnrichedPixels = getAllEnrichedPixels(kde);
         if (normEnrichedPixels.size() == 0) return;
 
         List<Pixel> maxima = twoPassCoalesceAndRetainMaxima(normEnrichedPixels,
-                enrichedPixels, (int) (100 / resolution) + 1);
+                preNormEnrichments, (int) (200 / resolution) + 1);
 
-        enrichedPixels.clear();
+        preNormEnrichments.clear();
         normEnrichedPixels.clear();
 
         for (int i = 0; i < maxima.size(); i++) {
@@ -71,7 +71,8 @@ public class LandScape {
         maxima.clear();
     }
 
-    public static List<Pixel> twoPassCoalesceAndRetainMaxima(List<Pixel> pixels, List<Pixel> enrichments, int radius) {
+    public static List<Pixel> twoPassCoalesceAndRetainMaxima(List<Pixel> pixels,
+                                                             List<Pixel> preNormPixels, int radius) {
         List<Pixel> sortedPixels = new ArrayList<>(pixels);
         sortedPixels.sort((o1, o2) -> Float.compare(o1.value, o2.value));
         Collections.reverse(sortedPixels);
@@ -80,6 +81,7 @@ public class LandScape {
         while (!sortedPixels.isEmpty()) {
             Pixel pixel = sortedPixels.get(0);
             if (pixel != null) {
+                int numNormCollapsed = 0;
                 int minR = pixel.row - radius;
                 int minC = pixel.col - radius;
                 int maxR = pixel.row + radius + 1;
@@ -90,6 +92,7 @@ public class LandScape {
 
                 while (toRemove.size() > 0) {
                     sortedPixels.removeAll(toRemove);
+                    numNormCollapsed += toRemove.size();
                     toRemove.clear();
 
                     for (Pixel px : sortedPixels) {
@@ -104,16 +107,18 @@ public class LandScape {
                     }
                 }
 
-                for (Pixel px : enrichments) {
+                for (Pixel px : preNormPixels) {
                     if (Pixel.contains(px, minR, maxR, minC, maxC)) {
                         toRemove.add(px);
                     }
                 }
 
                 if (toRemove.size() > 0) {
+                    if (toRemove.size() > 4 && numNormCollapsed > 4) {
+                        coalesced.add(pixel);
+                    }
                     // has enrichments in the vicinity of the region
-                    enrichments.removeAll(toRemove);
-                    coalesced.add(pixel);
+                    preNormPixels.removeAll(toRemove);
                 }
             }
         }

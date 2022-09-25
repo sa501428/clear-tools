@@ -55,12 +55,6 @@ public class Pinpoint {
         }
 
         Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution, onlyGetOne);
-
-        String originalLoops = outFile.replace(".bedpe", "");
-        originalLoops += "_with_original.bedpe";
-
-        loopList.exportFeatureList(new File(originalLoops), false, Feature2DList.ListFormat.NA);
-
         refinedLoops.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
         System.out.println("pinpoint complete");
     }
