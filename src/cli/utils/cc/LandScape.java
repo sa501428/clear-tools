@@ -24,10 +24,12 @@
 
 package cli.utils.cc;
 
+import cli.Main;
 import cli.utils.pinpoint.LocalNorms;
 import javastraw.expected.Welford;
 import javastraw.expected.Zscore;
 import javastraw.feature2D.Feature2D;
+import javastraw.tools.MatrixTools;
 
 import java.awt.*;
 import java.util.List;
@@ -42,7 +44,17 @@ public class LandScape {
         List<Pixel> preNormEnrichments = getAllEnrichedPixels(kde);
         if (preNormEnrichments.size() == 0) return;
 
+        if (Main.printVerboseComments) {
+            MatrixTools.saveMatrixTextNumpy(saveString + ".raw.npy", kde);
+        }
+
         LocalNorms.normalizeLocally(kde);
+
+        if (Main.printVerboseComments) {
+            MatrixTools.saveMatrixTextNumpy(saveString + ".normed.npy", kde);
+        }
+
+
         List<Pixel> normEnrichedPixels = getAllEnrichedPixels(kde);
         if (normEnrichedPixels.size() == 0) return;
 
