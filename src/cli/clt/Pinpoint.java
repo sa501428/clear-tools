@@ -1,7 +1,7 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.cc.ConnectedComponents;
+import cli.utils.cc.LandScape;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
@@ -135,7 +135,7 @@ public class Pinpoint {
 
                                     float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
                                     output = null; // clear output
-                                    ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
+                                    LandScape.extractMaxima(kde, binXStart, binYStart, resolution,
                                             pinpointedLoops, loop, saveString, onlyGetOne);
                                     kde = null;
 
