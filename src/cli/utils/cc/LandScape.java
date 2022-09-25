@@ -35,7 +35,8 @@ import java.util.*;
 
 public class LandScape {
     public static void extractMaxima(float[][] kde, int binXStart, int binYStart, long resolution,
-                                     List<Feature2D> pinpointedLoops, Feature2D loop, String saveString,
+                                     List<Feature2D> pinpointedLoopsNoNorm, List<Feature2D> pinpointedLoopsWithNorm,
+                                     Feature2D loop, String saveString,
                                      boolean onlyGetOne) {
 
         List<Pixel> preNormEnrichments = getAllEnrichedPixels(kde);
@@ -45,12 +46,26 @@ public class LandScape {
         List<Pixel> normEnrichedPixels = getAllEnrichedPixels(kde);
         if (normEnrichedPixels.size() == 0) return;
 
-        List<Pixel> maxima = twoPassCoalesceAndRetainMaxima(normEnrichedPixels,
-                preNormEnrichments, (int) (200 / resolution) + 1);
+        List<Pixel> raw = new ArrayList<>();
+        List<Pixel> corrected = new ArrayList<>();
+
+        twoPassCoalesceAndRetainMaxima(normEnrichedPixels,
+                preNormEnrichments, (int) (200 / resolution) + 1,
+                raw, corrected);
 
         preNormEnrichments.clear();
         normEnrichedPixels.clear();
 
+        saveMaximaToBedpe(raw, pinpointedLoopsNoNorm, onlyGetOne, resolution, binXStart, binYStart, loop);
+        saveMaximaToBedpe(corrected, pinpointedLoopsWithNorm, onlyGetOne, resolution, binXStart, binYStart, loop);
+
+        raw.clear();
+        corrected.clear();
+    }
+
+    private static void saveMaximaToBedpe(List<Pixel> maxima, List<Feature2D> pinpointedLoops,
+                                          boolean onlyGetOne, long resolution,
+                                          int binXStart, int binYStart, Feature2D loop) {
         for (int i = 0; i < maxima.size(); i++) {
             if (onlyGetOne && i > 0) return;
 
@@ -68,16 +83,15 @@ public class LandScape {
                     loop.getChr2(), start2, end2, Color.BLACK, attributes);
             pinpointedLoops.add(feature);
         }
-        maxima.clear();
     }
 
-    public static List<Pixel> twoPassCoalesceAndRetainMaxima(List<Pixel> pixels,
-                                                             List<Pixel> preNormPixels, int radius) {
+    public static void twoPassCoalesceAndRetainMaxima(List<Pixel> pixels,
+                                                      List<Pixel> preNormPixels, int radius,
+                                                      List<Pixel> raw, List<Pixel> corrected) {
         List<Pixel> sortedPixels = new ArrayList<>(pixels);
         sortedPixels.sort((o1, o2) -> Float.compare(o1.value, o2.value));
         Collections.reverse(sortedPixels);
 
-        List<Pixel> coalesced = new ArrayList<>();
         while (!sortedPixels.isEmpty()) {
             Pixel pixel = sortedPixels.get(0);
             if (pixel != null) {
@@ -115,14 +129,21 @@ public class LandScape {
 
                 if (toRemove.size() > 0) {
                     if (toRemove.size() > 4 && numNormCollapsed > 4) {
-                        coalesced.add(pixel);
+
+                        List<Pixel> temp = new ArrayList<>(toRemove);
+                        temp.sort((o1, o2) -> Float.compare(o1.value, o2.value));
+                        Collections.reverse(temp);
+
+                        raw.add(temp.get(0));
+                        corrected.add(pixel);
+
+                        temp.clear();
                     }
                     // has enrichments in the vicinity of the region
                     preNormPixels.removeAll(toRemove);
                 }
             }
         }
-        return coalesced;
     }
 
     private static List<Pixel> getAllEnrichedPixels(float[][] image) {
