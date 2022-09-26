@@ -40,7 +40,7 @@ public class LandScape {
     private static final int MIN_ENRICHED_PIXELS = 4;
 
     public static void extractMaxima(List<ContactRecord> records, int originalBinXStart, int originalBinYStart, long resolution,
-                                     List<Feature2D> pinpointedLoopsNoNorm,
+                                     List<Feature2D> pinpointedLoops, List<Feature2D> pinpointedBounds,
                                      Feature2D loop, String saveString,
                                      boolean onlyGetOne, int matrixWidth, float[][] kernel, float[][] compressedKernel) {
 
@@ -68,10 +68,11 @@ public class LandScape {
             List<Pixel> preNormEnrichments = ArrayTools.getAllEnrichedPixels(kde, threshold, zscore);
 
             if (preNormEnrichments.size() > MIN_ENRICHED_PIXELS) {
-                LocalMaxima maxima = coalesceAndRetainMaximum(preNormEnrichments, 1);
+                LocalMaxima maxima = coalesceAndRetainMaximum(preNormEnrichments, 1, pinpointedBounds);
                 preNormEnrichments.clear();
                 if (maxima != null) {
-                    saveMaximaToBedpe(maxima, pinpointedLoopsNoNorm, resolution, newBinXStart, newBinYStart, loop);
+                    pinpointedBounds.add(featureFromBounds(maxima, resolution, newBinXStart, newBinYStart, loop));
+                    pinpointedLoops.add(peakFromMaxima(maxima, resolution, newBinXStart, newBinYStart, loop));
                 }
             }
 
@@ -79,27 +80,8 @@ public class LandScape {
         }
     }
 
-    private static void saveMaximaToBedpe(LocalMaxima maxima, List<Feature2D> pinpointedLoops, long resolution,
-                                          int binXStart, int binYStart, Feature2D loop) {
-        Pixel max = maxima.maxCoordinate;
-        Map<String, String> attributes = new HashMap<>(loop.getAttributes());
-        attributes.put("pinpoint_zscore", "" + max.zScore);
-        attributes.put("pinpoint_value", "" + max.value);
-        attributes.put("pinpoint_area", "" + maxima.area);
-
-
-        long start1 = resolution * (binXStart + max.row);
-        long start2 = resolution * (binYStart + max.col);
-        long end1 = start1 + resolution;
-        long end2 = start2 + resolution;
-
-        Feature2D feature = new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
-                loop.getChr2(), start2, end2, Color.BLACK, attributes);
-        pinpointedLoops.add(feature);
-    }
-
-
-    public static LocalMaxima coalesceAndRetainMaximum(List<Pixel> pixels, int radius) {
+    public static LocalMaxima coalesceAndRetainMaximum(List<Pixel> pixels, int radius,
+                                                       List<Feature2D> pinpointedBounds) {
 
         Pixel pixel = Pixel.getMax(pixels);
         int numCollapsed = 0;
@@ -129,9 +111,50 @@ public class LandScape {
         }
 
         if (numCollapsed > MIN_ENRICHED_PIXELS) {
-            return new LocalMaxima(pixel, numCollapsed);
+            return new LocalMaxima(pixel, numCollapsed, minR, minC, maxR, maxC);
         }
         return null;
+    }
+
+
+    private static Feature2D peakFromMaxima(LocalMaxima maxima, long resolution,
+                                            int binXStart, int binYStart, Feature2D loop) {
+        Pixel max = maxima.maxCoordinate;
+        Map<String, String> attributes = new HashMap<>(loop.getAttributes());
+        attributes.put("pinpoint_zscore", "" + max.zScore);
+        attributes.put("pinpoint_value", "" + max.value);
+        attributes.put("pinpoint_area", "" + maxima.area);
+        attributes.put("pinpoint_start_1", "" + resolution * (binXStart + maxima.minR));
+        attributes.put("pinpoint_start_2", "" + resolution * (binYStart + maxima.minC));
+        attributes.put("pinpoint_end_1", "" + resolution * (binXStart + maxima.maxR));
+        attributes.put("pinpoint_end_2", "" + resolution * (binYStart + maxima.maxC));
+
+        long start1 = resolution * (binXStart + max.row);
+        long start2 = resolution * (binYStart + max.col);
+        long end1 = start1 + resolution;
+        long end2 = start2 + resolution;
+
+        return new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
+                loop.getChr2(), start2, end2, Color.BLACK, attributes);
+    }
+
+    private static Feature2D featureFromBounds(LocalMaxima maxima, long resolution,
+                                               int binXStart, int binYStart, Feature2D loop) {
+        Pixel max = maxima.maxCoordinate;
+        Map<String, String> attributes = new HashMap<>(loop.getAttributes());
+        attributes.put("pinpoint_zscore", "" + max.zScore);
+        attributes.put("pinpoint_value", "" + max.value);
+        attributes.put("pinpoint_area", "" + maxima.area);
+        attributes.put("pinpoint_center_x", "" + resolution * (binXStart + max.row));
+        attributes.put("pinpoint_center_y", "" + resolution * (binYStart + max.col));
+
+        long start1 = resolution * (binXStart + maxima.minR);
+        long start2 = resolution * (binYStart + maxima.minC);
+        long end1 = resolution * (binXStart + maxima.maxR);
+        long end2 = resolution * (binYStart + maxima.maxC);
+
+        return new Feature2D(Feature2D.FeatureType.PEAK, loop.getChr1(), start1, end1,
+                loop.getChr2(), start2, end2, Color.BLACK, attributes);
     }
 
 }

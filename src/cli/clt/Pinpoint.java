@@ -56,15 +56,17 @@ public class Pinpoint {
         }
 
         final Feature2DList pinpointLoopsNoNorm = new Feature2DList();
+        final Feature2DList pinpointBounds = new Feature2DList();
 
-        localize(dataset, loopList, handler, resolution, onlyGetOne, pinpointLoopsNoNorm);
+        localize(dataset, loopList, handler, resolution, onlyGetOne, pinpointLoopsNoNorm, pinpointBounds);
         pinpointLoopsNoNorm.exportFeatureList(new File(outFile + "_raw.bedpe"), false, Feature2DList.ListFormat.NA);
+        pinpointBounds.exportFeatureList(new File(outFile + "_bounds.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("pinpoint complete");
     }
 
     private static void localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
                                  int resolution, boolean onlyGetOne,
-                                 Feature2DList pinpointNoNorm) {
+                                 Feature2DList finalLoops, Feature2DList finalBounds) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
@@ -118,7 +120,8 @@ public class Pinpoint {
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
                             try {
-                                List<Feature2D> pinpointedLoopsNoNorm = new ArrayList<>();
+                                List<Feature2D> pinpointedLoops = new ArrayList<>();
+                                List<Feature2D> pinpointedBounds = new ArrayList<>();
                                 for (Feature2D loop : loops) {
 
                                     String saveString = generateLoopInfo(loop);
@@ -129,7 +132,7 @@ public class Pinpoint {
                                     List<ContactRecord> records = Utils.getRecords(zd, binXStart, binYStart, matrixWidth, NONE);
 
                                     LandScape.extractMaxima(records, binXStart, binYStart, resolution,
-                                            pinpointedLoopsNoNorm, loop, saveString,
+                                            pinpointedLoops, pinpointedBounds, loop, saveString,
                                             onlyGetOne, matrixWidth, kernel, compressedKernel);
 
                                     if (currNumLoops.incrementAndGet() % 100 == 0) {
@@ -138,8 +141,8 @@ public class Pinpoint {
                                 }
 
                                 synchronized (key) {
-                                    pinpointNoNorm.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoopsNoNorm);
-                                    //pinpointWithNorm.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoopsWithNorm);
+                                    finalLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
+                                    finalBounds.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedBounds);
                                 }
 
                                 System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
