@@ -25,10 +25,12 @@
 package cli.utils.cc;
 
 import cli.Main;
-import cli.utils.pinpoint.LocalNorms;
+import cli.utils.general.Utils;
+import cli.utils.pinpoint.ConvolutionTools;
 import javastraw.expected.Welford;
 import javastraw.expected.Zscore;
 import javastraw.feature2D.Feature2D;
+import javastraw.reader.block.ContactRecord;
 import javastraw.tools.MatrixTools;
 
 import java.awt.*;
@@ -36,43 +38,79 @@ import java.util.List;
 import java.util.*;
 
 public class LandScape {
-    public static void extractMaxima(float[][] kde, int binXStart, int binYStart, long resolution,
+    public static void extractMaxima(List<ContactRecord> records, int binXStart, int binYStart, long resolution,
                                      List<Feature2D> pinpointedLoopsNoNorm, List<Feature2D> pinpointedLoopsWithNorm,
                                      Feature2D loop, String saveString,
-                                     boolean onlyGetOne) {
+                                     boolean onlyGetOne, int matrixWidth, float[][] kernel, float[][] compressedKernel) {
 
-        List<Pixel> preNormEnrichments = getAllEnrichedPixels(kde);
-        if (preNormEnrichments.size() == 0) return;
+        List<int[]> bounds = BoundingBoxes.getEnrichedRegions(records, binXStart, binYStart, matrixWidth, 20,
+                saveString, compressedKernel);
 
-        if (Main.printVerboseComments) {
-            MatrixTools.saveMatrixTextNumpy(saveString + ".kde.npy", kde);
+
+        int counter = 0;
+        for (int[] bound : bounds) {
+            // minR*scalar, minC*scalar, maxR*scalar, maxC*scalar
+            int newBinXStart = binXStart + bound[0];
+            int newBinYStart = binYStart + bound[1];
+            int newMatrixWidth = Math.max(bound[2] - bound[0], bound[3] - bound[1]);
+            System.out.println(//binXStart+" -> " +newBinXStart +" ; "+binYStart+" -> " +newBinYStart+
+                    Arrays.toString(bound) +
+                            "\n" + matrixWidth + " - " + newMatrixWidth + " - " + saveString + "\n\n");
+
+            float[][] output = new float[newMatrixWidth][newMatrixWidth];
+            Utils.fillInMatrixFromRecords(output, records, newBinXStart, newBinYStart);
+
+            if (Main.printVerboseComments) {
+                MatrixTools.saveMatrixTextNumpy(saveString + ".raw.c" + counter + ".npy", output);
+            }
+
+            float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
+            output = null; // clear output
+
+            Zscore zscore = getZscore(kde, 1);
+            double threshold = zscore.getValForZscore(3);
+            List<Pixel> preNormEnrichments = getAllEnrichedPixels(kde, threshold, zscore);
+
+            if (Main.printVerboseComments) {
+                MatrixTools.saveMatrixTextNumpy(saveString + ".kde.c" + counter + ".npy", kde);
+            }
+
+            if (preNormEnrichments.size() > 0) {
+
+            /*
+            LocalNorms.normalizeLocally(kde);
+
+            if (Main.printVerboseComments) {
+                MatrixTools.saveMatrixTextNumpy(saveString + ".kde.normed.npy", kde);
+            }
+            */
+                counter++;
+
+
+                //List<Pixel> normEnrichedPixels = getAllEnrichedPixels(kde, );
+                //if (normEnrichedPixels.size() == 0) return;
+                kde = null;
+
+                List<Pixel> raw = new ArrayList<>();
+                List<Pixel> corrected = new ArrayList<>();
+
+            /*
+            twoPassCoalesceAndRetainMaxima(normEnrichedPixels,
+                    preNormEnrichments, (int) (200 / resolution) + 1,
+                    raw, corrected);
+             */
+
+                preNormEnrichments.clear();
+                //normEnrichedPixels.clear();
+
+                saveMaximaToBedpe(raw, pinpointedLoopsNoNorm, onlyGetOne, resolution, binXStart, binYStart, loop);
+                //saveMaximaToBedpe(corrected, pinpointedLoopsWithNorm, onlyGetOne, resolution, binXStart, binYStart, loop);
+
+                raw.clear();
+                corrected.clear();
+            }
         }
 
-        LocalNorms.normalizeLocally(kde);
-
-        if (Main.printVerboseComments) {
-            MatrixTools.saveMatrixTextNumpy(saveString + ".kde.normed.npy", kde);
-        }
-
-
-        List<Pixel> normEnrichedPixels = getAllEnrichedPixels(kde);
-        if (normEnrichedPixels.size() == 0) return;
-
-        List<Pixel> raw = new ArrayList<>();
-        List<Pixel> corrected = new ArrayList<>();
-
-        twoPassCoalesceAndRetainMaxima(normEnrichedPixels,
-                preNormEnrichments, (int) (200 / resolution) + 1,
-                raw, corrected);
-
-        preNormEnrichments.clear();
-        normEnrichedPixels.clear();
-
-        saveMaximaToBedpe(raw, pinpointedLoopsNoNorm, onlyGetOne, resolution, binXStart, binYStart, loop);
-        saveMaximaToBedpe(corrected, pinpointedLoopsWithNorm, onlyGetOne, resolution, binXStart, binYStart, loop);
-
-        raw.clear();
-        corrected.clear();
     }
 
     private static void saveMaximaToBedpe(List<Pixel> maxima, List<Feature2D> pinpointedLoops,
@@ -96,6 +134,7 @@ public class LandScape {
             pinpointedLoops.add(feature);
         }
     }
+
 
     public static void twoPassCoalesceAndRetainMaxima(List<Pixel> pixels,
                                                       List<Pixel> preNormPixels, int radius,
@@ -158,9 +197,8 @@ public class LandScape {
         }
     }
 
-    private static List<Pixel> getAllEnrichedPixels(float[][] image) {
-        Zscore zscore = getZscore(image, 1);
-        double threshold = zscore.getValForZscore(3);
+    public static List<Pixel> getAllEnrichedPixels(float[][] image, double threshold,
+                                                   Zscore zscore) {
         List<Pixel> pixels = new ArrayList<>();
         for (int i = 0; i < image.length; i++) {
             for (int j = 0; j < image[i].length; j++) {
@@ -172,7 +210,19 @@ public class LandScape {
         return pixels;
     }
 
-    private static Zscore getZscore(float[][] image, int minVal) {
+    public static List<Pixel> getAllEnrichedPixels(float[][] image, double threshold) {
+        List<Pixel> pixels = new ArrayList<>();
+        for (int i = 0; i < image.length; i++) {
+            for (int j = 0; j < image[i].length; j++) {
+                if (image[i][j] > threshold) {
+                    pixels.add(new Pixel(i, j, image[i][j], 0));
+                }
+            }
+        }
+        return pixels;
+    }
+
+    public static Zscore getZscore(float[][] image, int minVal) {
         Welford welford = new Welford();
         for (int i = 0; i < image.length; i++) {
             for (int j = 0; j < image[i].length; j++) {

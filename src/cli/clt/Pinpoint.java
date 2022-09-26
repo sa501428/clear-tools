@@ -6,7 +6,6 @@ import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.Utils;
 import cli.utils.pinpoint.ConvolutionTools;
-import cli.utils.pinpoint.LocalNorms;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -20,7 +19,6 @@ import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
-import javastraw.tools.MatrixTools;
 import javastraw.tools.ParallelizationTools;
 
 import java.io.File;
@@ -74,7 +72,8 @@ public class Pinpoint {
             System.out.println("Pinpointing location for loops");
         }
 
-        int kernelSize = Math.max(10, 200 / resolution);
+        int compressedKernelSize = Math.max((400 / resolution) + 1, 3); // effectively multiplied by 20 later
+        int kernelSize = Math.max((2000 / resolution) + 1, 3);
 
         final int[] globalMaxWidth = new int[1];
         loopList.processLists((s, list) -> {
@@ -86,13 +85,12 @@ public class Pinpoint {
             globalMaxWidth[0] = Math.max(globalMaxWidth[0], maxWidth);
         });
 
-        int window = Math.max(globalMaxWidth[0], 10);
-        int matrixWidth = 3 * window + 1;
+        int halfMatrixWidth = (int) (1.5 * Math.max(globalMaxWidth[0], 10)) + 1;
+        int matrixWidth = 2 * halfMatrixWidth + 1;
 
         //GPUController gpuController = Circe.buildGPUController(kernelSize, matrixWidth, kernelSize / 2 + 1);
-
         final float[][] kernel = ConvolutionTools.getManhattanKernel(kernelSize);
-        //float maxK = ArrayTools.getMax(kernel);
+        final float[][] compressedKernel = ConvolutionTools.getManhattanKernel(compressedKernelSize);
 
         HiCZoom zoom = new HiCZoom(resolution);
 
@@ -128,37 +126,14 @@ public class Pinpoint {
 
                                     String saveString = generateLoopInfo(loop);
 
-                                    int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
-                                    int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
+                                    int binXStart = (int) ((loop.getMidPt1() / resolution) - halfMatrixWidth);
+                                    int binYStart = (int) ((loop.getMidPt2() / resolution) - halfMatrixWidth);
 
                                     List<ContactRecord> records = Utils.getRecords(zd, binXStart, binYStart, matrixWidth, NONE);
 
-
-                                    if (Main.printVerboseComments) {
-                                        float[][] outputD10 = new float[matrixWidth / 10][matrixWidth / 10];
-                                        Utils.fillInMatrixFromRecords(outputD10, records, binXStart, binYStart, 10);
-
-                                        MatrixTools.saveMatrixTextNumpy(saveString + ".raw.S10.npy", outputD10);
-
-                                        float[][] kde = ConvolutionTools.sparseConvolution(outputD10, kernel);
-                                        MatrixTools.saveMatrixTextNumpy(saveString + ".kde.S10.npy", outputD10);
-                                        LocalNorms.normalizeLocally(kde);
-                                        MatrixTools.saveMatrixTextNumpy(saveString + ".kde.S10.normed.npy", kde);
-                                    }
-
-
-                                    float[][] output = new float[matrixWidth][matrixWidth];
-                                    Utils.fillInMatrixFromRecords(output, records, binXStart, binYStart);
-
-                                    if (Main.printVerboseComments) {
-                                        MatrixTools.saveMatrixTextNumpy(saveString + ".raw.npy", output);
-                                    }
-
-                                    float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
-                                    output = null; // clear output
-                                    LandScape.extractMaxima(kde, binXStart, binYStart, resolution,
-                                            pinpointedLoopsNoNorm, pinpointedLoopsWithNorm, loop, saveString, onlyGetOne);
-                                    kde = null;
+                                    LandScape.extractMaxima(records, binXStart, binYStart, resolution,
+                                            pinpointedLoopsNoNorm, pinpointedLoopsWithNorm, loop, saveString,
+                                            onlyGetOne, matrixWidth, kernel, compressedKernel);
 
                                     if (currNumLoops.incrementAndGet() % 100 == 0) {
                                         System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
