@@ -26,26 +26,19 @@ package cli.utils.flags;
 
 
 import javastraw.expected.ExpectedModel;
-import javastraw.feature2D.Feature2D;
 import javastraw.reader.block.Block;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.expected.ExpectedValueFunction;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationType;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
  * Created by Muhammad Shamim on 1/21/15.
  */
 public class Utils {
-
-    public static void addLocalizedData(float[][] matrix, MatrixZoomData zd, Feature2D loop,
-                                        int matrixWidth, int resolution, int window, NormalizationType norm) {
-        long binXStart = (loop.getMidPt1() / resolution) - window;
-        long binYStart = (loop.getMidPt2() / resolution) - window;
-        addLocalBoundedRegion(matrix, zd, binXStart, binYStart, matrixWidth, norm);
-    }
 
     public static void addLocalBoundedRegion(float[][] matrix, MatrixZoomData zd, long binXStart, long binYStart,
                                              int matrixWidth, NormalizationType norm) {
@@ -127,12 +120,9 @@ public class Utils {
         }
     }
 
-    public static void fillInExpectedMatrix(float[][] matrix, Feature2D loop,
+    public static void fillInExpectedMatrix(float[][] matrix,
                                             int matrixWidth, ExpectedModel expectedVector,
-                                            int resolution, int window) {
-
-        long binXStart = (loop.getMidPt1() / resolution) - window;
-        long binYStart = (loop.getMidPt2() / resolution) - window;
+                                            long binXStart, long binYStart) {
 
         for (int relativeX = 0; relativeX < matrixWidth; relativeX++) {
             for (int relativeY = 0; relativeY < matrixWidth; relativeY++) {
@@ -143,5 +133,24 @@ public class Utils {
                 matrix[relativeX][relativeY] = (float) expected;
             }
         }
+    }
+
+    public static List<ContactRecord> getRecords(MatrixZoomData zd, int binXStart, int binYStart, int matrixWidth,
+                                                 NormalizationType norm) {
+        long binXEnd = binXStart + (matrixWidth + 1);
+        long binYEnd = binYStart + (matrixWidth + 1);
+        List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
+                binXEnd, binYEnd, norm, false);
+
+        List<ContactRecord> records = new LinkedList<>();
+        for (Block block : blocks) {
+            for (ContactRecord record : block.getContactRecords()) {
+                if (record.getCounts() > 0) {
+                    records.add(record);
+                }
+            }
+        }
+
+        return records;
     }
 }

@@ -52,7 +52,8 @@ public class RecapTools {
     public static Map<String, String> getStats(float[][] obsMatrix,
                                                int window, float pseudoCount,
                                                boolean isDeepLoopAnalysis, ExpectedModel polynomial,
-                                               Feature2D loop, int resolution) {
+                                               Feature2D loop, int resolution,
+                                               long binXStart, long binYStart) {
 
         Map<String, String> attributes = new HashMap<>();
 
@@ -62,7 +63,7 @@ public class RecapTools {
             addRegressionStats(manhattanDecay, attributes, "OBS_");
 
             float[][] eMatrix = new float[obsMatrix.length][obsMatrix.length];
-            Utils.fillInExpectedMatrix(eMatrix, loop, obsMatrix.length, polynomial, resolution, window);
+            Utils.fillInExpectedMatrix(eMatrix, obsMatrix.length, polynomial, binXStart, binYStart);
 
             float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
             addMatrixSums(oeMatrix, attributes, "OE_");

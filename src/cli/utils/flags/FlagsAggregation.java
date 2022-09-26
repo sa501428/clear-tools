@@ -159,8 +159,10 @@ public class FlagsAggregation {
                     float[][] output = new float[matrixWidth][matrixWidth];
                     for (int li = 0; li < loops.size(); li += linc) {
                         Feature2D loop = loops.get(li);
+                        long binXStart = (loop.getMidPt1() / resolution) - window;
+                        long binYStart = (loop.getMidPt2() / resolution) - window;
                         try {
-                            Utils.addLocalizedData(output, zd, loop, matrixWidth, resolution, window, norm);
+                            Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm);
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
                             System.err.println("Unable to find data for loop: " + loop);

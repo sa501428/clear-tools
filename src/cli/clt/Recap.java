@@ -156,13 +156,17 @@ public class Recap {
 
                         try {
                             for (Feature2D loop : loops) {
+
+                                long binXStart = (loop.getMidPt1() / resolution) - window;
+                                long binYStart = (loop.getMidPt2() / resolution) - window;
+
                                 float[][] obsMatrix = new float[matrixWidth][matrixWidth];
-                                Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm);
+                                Utils.addLocalBoundedRegion(obsMatrix, zd, binXStart, binYStart, matrixWidth, norm);
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
                                 Map<String, String> attributes = RecapTools.getStats(obsMatrix,
                                         window, pseudoCount, isDeepLoopAnalysis, poly,
-                                        loop, resolution);
+                                        loop, resolution, binXStart, binYStart);
                                 for (String akey : attributes.keySet()) {
                                     loop.addStringAttribute(prefix + akey, attributes.get(akey));
                                 }

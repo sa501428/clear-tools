@@ -12,6 +12,7 @@ import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
@@ -123,10 +124,13 @@ public class Pinpoint {
                                 List<Feature2D> pinpointedLoopsWithNorm = new ArrayList<>();
                                 for (Feature2D loop : loops) {
 
-                                    int binXStart = (int) ((loop.getStart1() / resolution) - window);
-                                    int binYStart = (int) ((loop.getStart2() / resolution) - window);
+                                    int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
+                                    int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
 
                                     float[][] output = new float[matrixWidth][matrixWidth];
+
+                                    List<ContactRecord> records = Utils.getRecords(zd, binXStart, binYStart, matrixWidth, NONE);
+
                                     Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, NONE);
 
                                     String saveString = loop.simpleString();

@@ -199,10 +199,10 @@ public class APA {
                             try {
                                 for (Feature2D loop : loops) {
 
-                                    Utils.addLocalizedData(output, zd, loop, matrixWidthL, resolution, window, norm);
+                                    int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
+                                    int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
+                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidthL, norm);
                                     if (useAgNorm) {
-                                        int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
-                                        int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
                                         APAUtils.addLocalRowSums(rowSum, vector1, binXStart);
                                         APAUtils.addLocalRowSums(colSum, vector2, binYStart);
                                     }
