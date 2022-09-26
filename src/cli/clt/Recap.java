@@ -2,8 +2,8 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.flags.RegionConfiguration;
-import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.Utils;
 import cli.utils.recap.RecapTools;
 import javastraw.expected.ExpectedModel;
 import javastraw.expected.LogExpectedSpline;
@@ -156,13 +156,17 @@ public class Recap {
 
                         try {
                             for (Feature2D loop : loops) {
+
+                                int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
+                                int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
+
                                 float[][] obsMatrix = new float[matrixWidth][matrixWidth];
-                                Utils.addLocalizedData(obsMatrix, zd, loop, matrixWidth, resolution, window, norm);
+                                Utils.addLocalBoundedRegion(obsMatrix, zd, binXStart, binYStart, matrixWidth, norm);
                                 // MatrixTools.saveMatrixTextNumpy((new File(outFolder, saveString + "_raw.npy")).getAbsolutePath(), output);
 
                                 Map<String, String> attributes = RecapTools.getStats(obsMatrix,
                                         window, pseudoCount, isDeepLoopAnalysis, poly,
-                                        loop, resolution);
+                                        loop, resolution, binXStart, binYStart);
                                 for (String akey : attributes.keySet()) {
                                     loop.addStringAttribute(prefix + akey, attributes.get(akey));
                                 }

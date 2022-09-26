@@ -1,18 +1,18 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.cc.ConnectedComponents;
 import cli.utils.flags.RegionConfiguration;
-import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.Utils;
 import cli.utils.pinpoint.ConvolutionTools;
-import cli.utils.pinpoint.LocalNorms;
+import cli.utils.pinpoint.LandScape;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
@@ -29,9 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Pinpoint {
-    private static final boolean ONLY_GET_ONE = true;
     private static final NormalizationType NONE = NormalizationHandler.NONE;
-    public static String usage = "pinpoint [--res int] <input.hic> <loops.bedpe> <output.bedpe>";
+    public static String usage = "pinpoint [--res int] <input.hic> <loops.bedpe> <output>";
 
     public static void run(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
@@ -44,6 +43,8 @@ public class Pinpoint {
 
         ChromosomeHandler handler = dataset.getChromosomeHandler();
 
+        boolean onlyGetOne = parser.getOnlyOneOption();
+
         Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
                 true, null, false);
 
@@ -54,25 +55,25 @@ public class Pinpoint {
             resolution = HiCUtils.getHighestResolution(dataset.getBpZooms()).getBinSize();
         }
 
-        Feature2DList refinedLoops = localize(dataset, loopList, handler, resolution);
+        final Feature2DList pinpointLoopsNoNorm = new Feature2DList();
+        final Feature2DList pinpointBounds = new Feature2DList();
 
-        String originalLoops = outFile.replace(".bedpe", "");
-        originalLoops += "_with_original.bedpe";
-
-        loopList.exportFeatureList(new File(originalLoops), false, Feature2DList.ListFormat.NA);
-
-        refinedLoops.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
+        localize(dataset, loopList, handler, resolution, onlyGetOne, pinpointLoopsNoNorm, pinpointBounds);
+        pinpointLoopsNoNorm.exportFeatureList(new File(outFile + "_raw.bedpe"), false, Feature2DList.ListFormat.NA);
+        pinpointBounds.exportFeatureList(new File(outFile + "_bounds.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("pinpoint complete");
     }
 
-    private static Feature2DList localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
-                                          int resolution) {
+    private static void localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
+                                 int resolution, boolean onlyGetOne,
+                                 Feature2DList finalLoops, Feature2DList finalBounds) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
         }
 
-        int kernelSize = Math.max(10, 200 / resolution);
+        int compressedKernelSize = Math.max((400 / resolution) + 1, 3); // effectively multiplied by 20 later
+        int kernelSize = Math.max((2000 / resolution) + 1, 3);
 
         final int[] globalMaxWidth = new int[1];
         loopList.processLists((s, list) -> {
@@ -84,13 +85,12 @@ public class Pinpoint {
             globalMaxWidth[0] = Math.max(globalMaxWidth[0], maxWidth);
         });
 
-        int window = Math.max(globalMaxWidth[0], 10);
-        int matrixWidth = 3 * window + 1;
+        int halfMatrixWidth = (int) (1.5 * Math.max(globalMaxWidth[0], 10)) + 1;
+        int matrixWidth = 2 * halfMatrixWidth + 1;
 
         //GPUController gpuController = Circe.buildGPUController(kernelSize, matrixWidth, kernelSize / 2 + 1);
-
         final float[][] kernel = ConvolutionTools.getManhattanKernel(kernelSize);
-        //float maxK = ArrayTools.getMax(kernel);
+        final float[][] compressedKernel = ConvolutionTools.getManhattanKernel(compressedKernelSize);
 
         HiCZoom zoom = new HiCZoom(resolution);
 
@@ -103,7 +103,7 @@ public class Pinpoint {
         final AtomicInteger currNumLoops = new AtomicInteger(0);
 
         final Object key = new Object();
-        final Feature2DList refinedLoops = new Feature2DList();
+
 
         ParallelizationTools.launchParallelizedCode(() -> {
 
@@ -121,24 +121,19 @@ public class Pinpoint {
                         if (zd != null) {
                             try {
                                 List<Feature2D> pinpointedLoops = new ArrayList<>();
+                                List<Feature2D> pinpointedBounds = new ArrayList<>();
                                 for (Feature2D loop : loops) {
 
-                                    int binXStart = (int) ((loop.getStart1() / resolution) - window);
-                                    int binYStart = (int) ((loop.getStart2() / resolution) - window);
+                                    String saveString = generateLoopInfo(loop);
 
-                                    float[][] output = new float[matrixWidth][matrixWidth];
-                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, NONE);
+                                    int binXStart = (int) ((loop.getMidPt1() / resolution) - halfMatrixWidth);
+                                    int binYStart = (int) ((loop.getMidPt2() / resolution) - halfMatrixWidth);
 
-                                    String saveString = loop.simpleString();
-                                    String[] saveStrings = saveString.split("\\s+");
-                                    saveString = String.join("_", saveStrings);
+                                    List<ContactRecord> records = Utils.getRecords(zd, binXStart, binYStart, matrixWidth, NONE);
 
-                                    float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
-                                    output = null; // clear output
-                                    LocalNorms.normalizeLocally(kde);
-                                    ConnectedComponents.extractMaxima(kde, binXStart, binYStart, resolution,
-                                            pinpointedLoops, loop, saveString, ONLY_GET_ONE);
-                                    kde = null;
+                                    LandScape.extractMaxima(records, binXStart, binYStart, resolution,
+                                            pinpointedLoops, pinpointedBounds, loop, saveString,
+                                            onlyGetOne, matrixWidth, kernel, compressedKernel);
 
                                     if (currNumLoops.incrementAndGet() % 100 == 0) {
                                         System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
@@ -146,7 +141,8 @@ public class Pinpoint {
                                 }
 
                                 synchronized (key) {
-                                    refinedLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
+                                    finalLoops.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoops);
+                                    finalBounds.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedBounds);
                                 }
 
                                 System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
@@ -161,6 +157,12 @@ public class Pinpoint {
                 threadPair = currChromPair.getAndIncrement();
             }
         });
-        return refinedLoops;
+    }
+
+    private static String generateLoopInfo(Feature2D loop) {
+        String info = loop.simpleString();
+        String[] saveStrings = info.split("\\s+");
+        info = String.join("_", saveStrings);
+        return info;
     }
 }

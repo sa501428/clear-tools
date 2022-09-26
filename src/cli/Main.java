@@ -5,9 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.35.2";
-    public static final int DEFAULT_RESOLUTION = 5000;
-    public static final int DEFAULT_CUTOFF = 500;
+    public static final String VERSION_NUM = "0.50.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode) {
@@ -19,8 +17,8 @@ public class Main {
         System.out.println("Commands:");
         for (String usage : new String[]{Flags.usage, Pinpoint.usage, Cleaner.usage, APA.usage, ATA.usage, Recap.usage,
                 Sieve.usage, HotSpot.usage, Fusion.usage, Sift.usage, NormHack.usage, SimplePeak.usage, SimpleMax.usage,
-                GenerateBedpe.usage}) {
-            System.out.println(usage);
+                GenerateBedpe.usage, Split.usage}) {
+            System.out.println("\t" + usage);
         }
 
         System.out.println("Exit code " + exitCode);
@@ -45,15 +43,15 @@ public class Main {
 
         String command = args[0].toLowerCase();
         if(command.equals("flags")){
-            Flags.run(args, parser.getResolutionOption(Main.DEFAULT_RESOLUTION), parser.getCutoffOption(), parser.getNormalizationStringOption());
+            Flags.run(args, parser);
         } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")) {
-            Enhance.run(args, parser.getResolutionOption(Main.DEFAULT_RESOLUTION), parser.getNpyOption());
+            Enhance.run(args, parser);
         } else if (command.equals("pinpoint")) {
             Pinpoint.run(args, parser);
         } else if (command.startsWith("clean")) {
-            Cleaner.run(args);
+            Cleaner.run(args, parser);
         } else if (command.startsWith("prob")) {
-            Probability.run(args, parser.getResolutionOption(Main.DEFAULT_RESOLUTION), parser.getLogOption());
+            Probability.run(args, parser);
         } else if (command.startsWith("apa")) {
             APA apa = new APA(args, parser);
             apa.run();
@@ -62,16 +60,16 @@ public class Main {
             ata.run();
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
-        } else if (command.startsWith("split") || command.startsWith("join")) {
-            new SplitOrJoin(command, args);
         } else if (command.startsWith("sieve")) {
             new Sieve(args, parser, command);
         } else if (command.startsWith("hotspot")) {
             HotSpot.run(args, parser);
         } else if (command.startsWith("sift")) {
             new Sift(args, parser);
-        } else if (command.startsWith("fuse") || command.startsWith("fusion")) {
-            new Fusion(args, command);
+        } else if (command.startsWith("fuse") || command.startsWith("fusion") || command.startsWith("join") || command.startsWith("union")) {
+            Fusion.run(args, command);
+        } else if (command.startsWith("split")) {
+            Split.run(args, command);
         } else if (command.startsWith("seer")) {
             Seer.run(args, parser);
         } else if (command.startsWith("hack")) {

@@ -27,8 +27,8 @@ package cli.clt;
 import cli.utils.apa.APADataExporter;
 import cli.utils.apa.APAUtils;
 import cli.utils.flags.RegionConfiguration;
-import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.Utils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -89,18 +89,22 @@ public class APA {
         loopListPath = args[2];
         outputDirectory = HiCFileTools.createValidDirectory(args[3]);
 
-        useAgNorm = parser.getAggregateNormalization();
+        String possibleNorm = parser.getNormalizationStringOption();
+        useAgNorm = parser.getAggregateNormalization() || isAgNorm(possibleNorm);
         if (useAgNorm) {
             norm = NormalizationHandler.NONE;
         } else {
-            String possibleNorm = parser.getNormalizationStringOption();
             try {
                 norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
             } catch (Exception e) {
                 norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
             }
         }
+
         System.out.println("Using normalization: " + norm.getLabel());
+        if (useAgNorm) {
+            System.out.println("Will apply aggregate normalization.");
+        }
         window = parser.getWindowSizeOption(10);
         minPeakDist = parser.getMinDistVal(2 * window);
         maxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
@@ -116,6 +120,11 @@ public class APA {
             globalRowSum = null;
             globalColSum = null;
         }
+    }
+
+    private boolean isAgNorm(String norm) {
+        String normLower = norm.toLowerCase();
+        return normLower.contains("ag") && normLower.contains("norm");
     }
 
     private void printUsageAndExit() {
@@ -190,10 +199,10 @@ public class APA {
                             try {
                                 for (Feature2D loop : loops) {
 
-                                    Utils.addLocalizedData(output, zd, loop, matrixWidthL, resolution, window, norm);
+                                    int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
+                                    int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
+                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidthL, norm);
                                     if (useAgNorm) {
-                                        int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
-                                        int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
                                         APAUtils.addLocalRowSums(rowSum, vector1, binXStart);
                                         APAUtils.addLocalRowSums(colSum, vector2, binYStart);
                                     }

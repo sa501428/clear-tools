@@ -1,15 +1,17 @@
 package cli.clt;
 
 import cli.Main;
+import cli.utils.clean.LoopTools;
+import cli.utils.clean.OracleScorer;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.VectorCleaner;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
-import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.basics.ChromosomeTools;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
@@ -22,33 +24,47 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Cleaner {
 
-    private static final int MIN_LOOP_SIZE = 25000;
-    public static String usage = "clean <input.hic> <loops.bedpe> <output.bedpe>";
+    public static String usage = "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
+            "clean [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>";
 
-    public static void run(String[] args) {
+    public static void run(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(5);
         }
 
-        Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, true, true);
-        String bedpeFile = args[2];
-        String outFile = args[3];
+        double threshold = parser.getThresholdOption(0.5);
+        Dataset dataset = null;
+        ChromosomeHandler handler;
+        if (args[1].endsWith(".hic")) {
+            dataset = HiCFileTools.extractDatasetForCLT(args[1], false, true, true);
+            handler = dataset.getChromosomeHandler();
+        } else {
+            handler = ChromosomeTools.loadChromosomes(args[1]);
+        }
 
-        ChromosomeHandler handler = dataset.getChromosomeHandler();
-        Feature2DList loopList = Feature2DParser.loadFeatures(bedpeFile, handler,
-                true, null, false);
+        String[] bedpeFiles = args[2].split(",");
+        String[] outFiles = args[3].split(",");
 
-        System.out.println("Number of loops: " + loopList.getNumTotalFeatures());
+        if (bedpeFiles.length != outFiles.length) {
+            System.err.println("Number of input and output entries don't match");
+            System.exit(92);
+        }
 
-        Feature2DList cleanList = cleanupLoops(dataset, loopList, handler);
-        cleanList.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.FINAL);
+        for (int z = 0; z < bedpeFiles.length; z++) {
+            Feature2DList loopList = LoopTools.loadFilteredBedpe(bedpeFiles[z], handler, true);
+            Feature2DList cleanList;
+            if (dataset != null) {
+                cleanList = cleanupLoops(dataset, loopList, handler);
+            } else {
+                cleanList = OracleScorer.filter(loopList, threshold);
+            }
+            cleanList.exportFeatureList(new File(outFiles[z]), false, Feature2DList.ListFormat.NA);
+        }
     }
 
     private static Feature2DList cleanupLoops(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler) {
 
-        int resolution = 1000;
-        HiCZoom zoom = new HiCZoom(resolution);
-
+        Set<HiCZoom> resolutions = getResolutions(loopList);
         NormalizationType vcNorm = dataset.getNormalizationHandler().getNormTypeFromString("VC");
 
         Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
@@ -71,22 +87,12 @@ public class Cleaner {
                 if (loops != null && loops.size() > 0) {
                     Set<Feature2D> goodLoops = new HashSet<>();
 
-                    double[] vector1b = dataset.getNormalizationVector(chr1.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-                    VectorCleaner.inPlaceClean(vector1b);
-
-                    double[] vector2b = vector1b;
-                    if (chr1.getIndex() != chr2.getIndex()) {
-                        vector2b = dataset.getNormalizationVector(chr2.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-                        VectorCleaner.inPlaceClean(vector2b);
-                    }
-
+                    Map<Integer, double[]> vectorMap = loadVectors(dataset, chr1, vcNorm, resolutions);
                     try {
                         for (Feature2D loop : loops) {
-                            if (passesMinLoopSize(loop)) {
-                                if (normHasHighValPixel(loop.getStart1(), loop.getEnd1(), resolution, vector1b)
-                                        && normHasHighValPixel(loop.getStart2(), loop.getEnd2(), resolution, vector2b)) {
-                                    goodLoops.add(loop);
-                                }
+                            if (normIsOk(loop.getMidPt1(), (int) loop.getWidth1(), vectorMap)
+                                    && normIsOk(loop.getMidPt2(), (int) loop.getWidth2(), vectorMap)) {
+                                goodLoops.add(loop);
                             }
                         }
                     } catch (Exception e) {
@@ -97,7 +103,6 @@ public class Cleaner {
                         goodLoopsList.addByKey(Feature2DList.getKey(chr1, chr2), new ArrayList<>(goodLoops));
                     }
                 }
-                //System.out.print(((int) Math.floor((100.0 * currentProgressStatus.incrementAndGet()) / maxProgressStatus.get())) + "% ");
                 threadPair = currChromPair.getAndIncrement();
             }
         });
@@ -105,26 +110,41 @@ public class Cleaner {
         return goodLoopsList;
     }
 
-    public static boolean passesMinLoopSize(Feature2D loop) {
-        return dist(loop) > MIN_LOOP_SIZE;
-    }
-
-    public static long dist(Feature2D loop) {
-        return (Math.min(Math.abs(loop.getEnd1() - loop.getStart2()),
-                Math.abs(loop.getMidPt1() - loop.getMidPt2())) / MIN_LOOP_SIZE) * MIN_LOOP_SIZE;
-    }
-
-    private static boolean normHasHighValPixel(long start, long end, int resolution, double[] vector) {
-
-        int x0 = (int) (start / resolution);
-        int xF = (int) (end / resolution) + 1;
-
-        for (int k = x0; k < xF + 1; k++) {
-            if (vector[k] > 1 && vector[k] >= vector[k - 1] && vector[k] >= vector[k + 1]) {
-                return true;
-            }
+    private static Map<Integer, double[]> loadVectors(Dataset dataset, Chromosome chrom, NormalizationType vcNorm,
+                                                      Set<HiCZoom> zooms) {
+        Map<Integer, double[]> vectorMap = new HashMap<>();
+        for (HiCZoom zoom : zooms) {
+            double[] vector = dataset.getNormalizationVector(chrom.getIndex(), zoom,
+                    vcNorm).getData().getValues().get(0);
+            VectorCleaner.inPlaceClean(vector);
+            vectorMap.put(zoom.getBinSize(), vector);
         }
+        return vectorMap;
+    }
 
-        return false;
+    private static Set<HiCZoom> getResolutions(Feature2DList loopList) {
+        Set<HiCZoom> zooms = new HashSet<>();
+        Set<Integer> resolutions = getResolutionSet(loopList);
+        for (Integer res : resolutions) {
+            zooms.add(new HiCZoom(res));
+        }
+        return zooms;
+    }
+
+    private static Set<Integer> getResolutionSet(Feature2DList loopList) {
+        Set<Integer> resolutions = new HashSet<>();
+        loopList.processLists((s, list) -> {
+            for (Feature2D feature2D : list) {
+                resolutions.add((int) feature2D.getWidth1());
+                resolutions.add((int) feature2D.getWidth2());
+            }
+        });
+        return resolutions;
+    }
+
+    private static boolean normIsOk(long pos, int resolution, Map<Integer, double[]> vMap) {
+        double[] vector = vMap.get(resolution);
+        int x = (int) (pos / resolution);
+        return vector[x - 1] > 0 && vector[x] > 0 && vector[x + 1] > 0; // verify neighbors also ok
     }
 }

@@ -2,8 +2,8 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.flags.RegionConfiguration;
-import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.Utils;
 import cli.utils.general.WritingTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -36,7 +36,7 @@ public class Enhance {
 
     // "enhance [--res int] [--norm string] <out_folder> <loops.bedpe> <hic_files>\n" +
 
-    public static void run(String[] args, int resolution, boolean exportNPY) {
+    public static void run(String[] args, CommandLineParser parser) {
         if (args.length < 4) {
             Main.printGeneralUsageAndExit(5);
         }
@@ -46,9 +46,12 @@ public class Enhance {
         String[] hicFiles = new String[args.length - 3];
         System.arraycopy(args, 3, hicFiles, 0, hicFiles.length);
 
+        int resolution = parser.getResolutionOption(1000);
+        boolean exportNPY = parser.getNpyOption();
+
         final Object[] keys = new Object[hicFiles.length];
         Dataset[] datasets = new Dataset[hicFiles.length];
-        for(int q = 0; q < hicFiles.length; q++){
+        for (int q = 0; q < hicFiles.length; q++) {
             datasets[q] = HiCFileTools.extractDatasetForCLT(hicFiles[q], false, true, true);
             keys[q] = new Object();
         }

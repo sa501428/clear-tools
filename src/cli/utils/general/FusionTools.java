@@ -1,136 +1,145 @@
 package cli.utils.general;
 
-import cli.clt.Cleaner;
 import cli.utils.FeatureStats;
+import cli.utils.clean.LoopTools;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
-import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
-import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import javastraw.tools.ParallelizationTools;
 
 import java.awt.*;
 import java.io.File;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class FusionTools {
 
-    public static void coalesceFeatures(String[] fileNames, String genomeID, String outFile, boolean useNMS) {
-        Feature2DList list = combineAll(fileNames, genomeID);
-        list.filterLists((chr, feature2DList) -> removeOverlappingPixels(feature2DList, useNMS));
+    public static void coalesceFeatures(String[] fileNames, String genomeID, String outFile,
+                                        boolean useNMS, boolean noAttributes, boolean useExact) {
+        Feature2DList list = combineAll(fileNames, genomeID, noAttributes);
+        list.filterLists((chr, feature2DList) -> removeOverlappingPixels(feature2DList, useNMS, useExact));
         list.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
     }
 
-    private static List<Feature2D> removeOverlappingPixels(List<Feature2D> features, boolean useNMS) {
-        Map<SimpleLocation, LinkedList<Feature2D>> map = groupNearbyRecords(simpleFilter(features), 1000000);
-        Set<Feature2D> coalesced = new HashSet<>();
+    private static List<Feature2D> removeOverlappingPixels(List<Feature2D> features, boolean useNMS, boolean useExact) {
+        Map<SimpleLocation, LinkedList<Feature2D>> map = groupNearbyRecords(new HashSet<>(features), 5000000);
+        Set<Feature2D> allCoalesced = new HashSet<>();
 
-        for (LinkedList<Feature2D> featureLL : map.values()) {
-            featureLL.sort((o1, o2) -> {
-                int val = Long.compare(o1.getWidth1(), o2.getWidth1());
-                if (val == 0) {
-                    return Long.compare(o1.getWidth2(), o2.getWidth2());
-                }
-                return val;
-            });
+        List<LinkedList<Feature2D>> featureLists = new ArrayList<>(map.values());
 
-            while (!featureLL.isEmpty()) {
+        AtomicInteger index = new AtomicInteger(0);
+        ParallelizationTools.launchParallelizedCode(() -> {
 
-                Feature2D pixel = featureLL.pollFirst();
-                if (pixel != null) {
-                    featureLL.remove(pixel);
-                    int buffer;
-                    if (useNMS) {
-                        buffer = 0;
-                    } else {
-                        buffer = (int) Math.max(pixel.getWidth1(), pixel.getWidth2());
-                    }
-
-                    Set<Feature2D> pixelList = new HashSet<>();
-                    pixelList.add(pixel);
-                    for (Feature2D px : featureLL) {
-                        if (hasOverlap(px, pixel, buffer)) {
-                            pixelList.add(px);
-                        }
-                    }
-
-                    featureLL.removeAll(pixelList);
-                    pixel.addStringAttribute("NumCollapsed", String.valueOf(pixelList.size()));
-
-                    if (useNMS) {
-                        coalesced.add(pixel);
-                    } else {
-                        long start1 = FeatureStats.minStart1(pixelList);
-                        long start2 = FeatureStats.minStart2(pixelList);
-                        long end1 = FeatureStats.maxEnd1(pixelList);
-                        long end2 = FeatureStats.maxEnd2(pixelList);
-                        coalesced.add(new Feature2D(Feature2D.FeatureType.PEAK, pixel.getChr1(), start1, end1,
-                                pixel.getChr2(), start2, end2, Color.BLACK, pixel.getAttributes()));
-                    }
-                    pixelList.clear();
-                }
+            Set<Feature2D> coalesced = new HashSet<>();
+            int i = index.getAndIncrement();
+            while (i < featureLists.size()) {
+                LinkedList<Feature2D> featureLL = featureLists.get(i);
+                processFeatures(coalesced, featureLL, useNMS, useExact);
+                i = index.getAndIncrement();
             }
-        }
+
+            synchronized (allCoalesced) {
+                allCoalesced.addAll(coalesced);
+            }
+
+        });
+
         map.clear();
 
-        return new ArrayList<>(coalesced);
+        return new ArrayList<>(allCoalesced);
     }
 
-    private static Set<Feature2D> simpleFilter(List<Feature2D> features) {
-        Set<Feature2D> featureSet = new HashSet<>();
-        for (Feature2D feature : features) {
-            if (Cleaner.passesMinLoopSize(feature)) {
-                featureSet.add(feature);
+    private static void processFeatures(Set<Feature2D> coalesced, LinkedList<Feature2D> featureLL, boolean useNMS, boolean useExact) {
+        sort(featureLL);
+
+        while (!featureLL.isEmpty()) {
+            Feature2D pixel = featureLL.pollFirst();
+            if (pixel != null) {
+                featureLL.remove(pixel);
+                int buffer = getBuffer(useNMS, pixel);
+
+                Set<Feature2D> pixelList;
+                if (useExact) {
+                    pixelList = getExactMatches(pixel, featureLL);
+                } else {
+                    pixelList = getMatchesWithOverlap(pixel, featureLL, buffer);
+                }
+
+                featureLL.removeAll(pixelList);
+                pixel.addStringAttribute("NumCollapsed", String.valueOf(pixelList.size()));
+
+                if (useNMS || useExact) {
+                    coalesced.add(pixel);
+                } else {
+                    coalesced.add(getFeatureFromBounds(pixelList, pixel));
+                }
+                pixelList.clear();
             }
         }
-        return featureSet;
     }
 
-    private static long getHalfWidth(Set<Feature2D> pixelList) {
-        long width = 0;
-        for (Feature2D px2 : pixelList) {
-            width = Math.max(width, px2.getWidth1());
-            width = Math.max(width, px2.getWidth2());
-        }
-        return width / 2;
+    private static Feature2D getFeatureFromBounds(Set<Feature2D> pixelList, Feature2D pixel) {
+        long start1 = FeatureStats.minStart1(pixelList);
+        long start2 = FeatureStats.minStart2(pixelList);
+        long end1 = FeatureStats.maxEnd1(pixelList);
+        long end2 = FeatureStats.maxEnd2(pixelList);
+        return new Feature2D(Feature2D.FeatureType.PEAK, pixel.getChr1(), start1, end1,
+                pixel.getChr2(), start2, end2, Color.BLACK, pixel.getAttributes());
     }
 
-    private static long getClusterWidth(List<Feature2D> pixelList) {
-        long width = 0;
-        for (Feature2D px2 : pixelList) {
-            width = Math.max(width, px2.getWidth1());
-            width = Math.max(width, px2.getWidth2());
-        }
-        return (long) (width * 1.5);
-    }
-
-    private static long getRadius(Set<Feature2D> pixelList, long pixelListMid1, long pixelListMid2) {
-        long r = 0;
-        for (Feature2D px2 : pixelList) {
-            long dist = distance(pixelListMid1 - px2.getMidPt1(), pixelListMid2 - px2.getMidPt2());
-            r = Math.max(r, dist);
-        }
-        return r;
-    }
-
-    private static DescriptiveStatistics getStats(Set<Feature2D> pixelList, boolean is1) {
-        DescriptiveStatistics stats = new DescriptiveStatistics();
-        for (Feature2D px : pixelList) {
-            if (is1) {
-                stats.addValue(px.getMidPt1());
-            } else {
-                stats.addValue(px.getMidPt2());
+    private static Set<Feature2D> getMatchesWithOverlap(Feature2D pixel, LinkedList<Feature2D> featureLL, int buffer) {
+        Set<Feature2D> pixelList = new HashSet<>();
+        pixelList.add(pixel);
+        for (Feature2D px : featureLL) {
+            if (hasOverlap(px, pixel, buffer)) {
+                pixelList.add(px);
             }
         }
-        return stats;
+        return pixelList;
+    }
+
+    private static Set<Feature2D> getExactMatches(Feature2D pixel, LinkedList<Feature2D> featureLL) {
+        Set<Feature2D> pixelList = new HashSet<>();
+        pixelList.add(pixel);
+        for (Feature2D px : featureLL) {
+            if (isExact(px, pixel)) {
+                pixelList.add(px);
+            }
+        }
+        return pixelList;
+    }
+
+    private static int getBuffer(boolean useNMS, Feature2D pixel) {
+        if (useNMS) {
+            return 0;
+        } else {
+            return (int) Math.max(pixel.getWidth1(), pixel.getWidth2());
+        }
+    }
+
+    private static void sort(LinkedList<Feature2D> featureLL) {
+        Collections.sort(featureLL, (o1, o2) -> {
+            int val = Long.compare(o1.getWidth1(), o2.getWidth1());
+            if (val == 0) {
+                return Long.compare(o1.getWidth2(), o2.getWidth2());
+            }
+            return val;
+        });
     }
 
     public static long distance(long x, long y) {
         return (long) Math.sqrt(x * x + y * y);
     }
 
+    private static boolean isExact(Feature2D px, Feature2D px2) {
+        return px.getStart1() == px2.getStart1()
+                && px.getStart2() == px2.getStart2()
+                && px.getEnd1() == px2.getEnd1()
+                && px.getEnd2() == px2.getEnd2();
+    }
 
     private static boolean hasOverlap(Feature2D px1, Feature2D original, int buffer) {
         return getWidth(px1.getStart1(), px1.getEnd1(), original.getStart1() - buffer, original.getEnd1() + buffer) *
@@ -158,13 +167,12 @@ public class FusionTools {
         return locationMap;
     }
 
-    public static Feature2DList combineAll(String[] fileNames, String genomeID) {
+    public static Feature2DList combineAll(String[] fileNames, String genomeID, boolean noAttributes) {
         final Feature2DList combinedLoops = new Feature2DList();
 
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
         for (String path : fileNames) {
-            Feature2DList loopList = Feature2DParser.loadFeatures(path, handler,
-                    false, null, false);
+            Feature2DList loopList = LoopTools.loadFilteredBedpe(path, handler, !noAttributes);
             loopList.processLists(combinedLoops::addByKey);
         }
 

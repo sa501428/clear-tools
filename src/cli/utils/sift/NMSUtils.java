@@ -68,10 +68,4 @@ public class NMSUtils {
         }
         return maxVal;
     }
-
-    public static boolean inRegions(ContactRecord cr, Set<SimpleLocation> regions, int scalar) {
-        SimpleLocation region = new SimpleLocation(cr.getBinX() / scalar, cr.getBinY() / scalar);
-        return regions.contains(region);
-    }
-
 }

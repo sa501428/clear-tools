@@ -14,7 +14,7 @@ import javastraw.tools.HiCFileTools;
 public class Flags {
     public static String usage = "flags [--cutoff int] [--res int] [--norm string] <input.hic> <loops.bedpe> <out_folder>";
 
-    public static void run(String[] args, int resolution, int cutoff, String normString) {
+    public static void run(String[] args, CommandLineParser parser) {
 
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(4);
@@ -23,6 +23,10 @@ public class Flags {
         String hicFile = args[1];
         String bedFile = args[2];
         String outFolder = args[3];
+
+        int resolution = parser.getResolutionOption(5000);
+        int cutoff = parser.getCutoffOption(500);
+        String normString = parser.getNormalizationStringOption();
 
         Dataset ds = HiCFileTools.extractDatasetForCLT(hicFile, false, true, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();

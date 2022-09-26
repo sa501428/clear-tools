@@ -2,16 +2,16 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.FeatureStats;
+import cli.utils.clean.LoopTools;
 import cli.utils.flags.RegionConfiguration;
-import cli.utils.flags.Utils;
 import cli.utils.general.FusionTools;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.Utils;
 import javastraw.expected.ExpectedModel;
 import javastraw.expected.Welford;
 import javastraw.expected.Zscore;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
-import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
@@ -51,8 +51,7 @@ public class Sieve {
 
         Dataset ds = HiCFileTools.extractDatasetForCLT(filepath, false, false, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();
-        Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
-                true, null, false);
+        Feature2DList loopList = LoopTools.loadFilteredBedpe(loopListPath, handler, true);
 
         String possibleNorm = parser.getNormalizationStringOption();
         if (possibleNorm != null && possibleNorm.length() > 0) {
@@ -186,11 +185,9 @@ public class Sieve {
     private static Set<Feature2D> filterByAccessibility(Set<Feature2D> loops, double[] nv, int resolution) {
         Set<Feature2D> goodLoops = new HashSet<>();
         for (Feature2D loop : loops) {
-            if (Cleaner.passesMinLoopSize(loop)) {
-                if (isAccessible(loop.getMidPt1(), resolution, nv)
-                        && isAccessible(loop.getMidPt2(), resolution, nv)) {
-                    goodLoops.add(loop);
-                }
+            if (isAccessible(loop.getMidPt1(), resolution, nv)
+                    && isAccessible(loop.getMidPt2(), resolution, nv)) {
+                goodLoops.add(loop);
             }
         }
         return goodLoops;
