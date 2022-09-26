@@ -1,6 +1,6 @@
 package cli.utils.sift;
 
-import cli.utils.flags.Utils;
+import cli.utils.general.Utils;
 import javastraw.reader.block.ContactRecord;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.NormalizationType;

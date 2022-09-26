@@ -3,8 +3,8 @@ package cli.clt;
 import cli.Main;
 import cli.utils.cc.LandScape;
 import cli.utils.flags.RegionConfiguration;
-import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.Utils;
 import cli.utils.pinpoint.ConvolutionTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -127,11 +127,10 @@ public class Pinpoint {
                                     int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
                                     int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
 
-                                    float[][] output = new float[matrixWidth][matrixWidth];
-
                                     List<ContactRecord> records = Utils.getRecords(zd, binXStart, binYStart, matrixWidth, NONE);
 
-                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, NONE);
+                                    float[][] output = new float[matrixWidth][matrixWidth];
+                                    Utils.fillInMatrixFromRecords(output, records, binXStart, binYStart);
 
                                     String saveString = loop.simpleString();
                                     String[] saveStrings = saveString.split("\\s+");

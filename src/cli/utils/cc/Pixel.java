@@ -1,5 +1,7 @@
 package cli.utils.cc;
 
+import cli.utils.general.Utils;
+
 public class Pixel {
     public final int row;
     public final int col;
@@ -14,10 +16,6 @@ public class Pixel {
     }
 
     public static boolean contains(Pixel px, int minR, int maxR, int minC, int maxC) {
-        return inBounds(px.row, minR, maxR) && inBounds(px.col, minC, maxC);
-    }
-
-    private static boolean inBounds(int pos, int min, int max) {
-        return pos >= min && pos < max;
+        return Utils.inBounds(px.row, minR, maxR) && Utils.inBounds(px.col, minC, maxC);
     }
 }

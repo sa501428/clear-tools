@@ -26,6 +26,7 @@ package cli.utils.flags;
 
 import cli.Main;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.Utils;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.Dataset;
@@ -159,8 +160,8 @@ public class FlagsAggregation {
                     float[][] output = new float[matrixWidth][matrixWidth];
                     for (int li = 0; li < loops.size(); li += linc) {
                         Feature2D loop = loops.get(li);
-                        long binXStart = (loop.getMidPt1() / resolution) - window;
-                        long binYStart = (loop.getMidPt2() / resolution) - window;
+                        int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
+                        int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
                         try {
                             Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidth, norm);
                         } catch (Exception e) {

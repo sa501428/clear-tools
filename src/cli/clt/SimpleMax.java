@@ -1,8 +1,8 @@
 package cli.clt;
 
 import cli.utils.FeatureStats;
-import cli.utils.flags.Utils;
 import cli.utils.general.FusionTools;
+import cli.utils.general.Utils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;

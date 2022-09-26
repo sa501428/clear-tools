@@ -1,6 +1,6 @@
 package cli.utils.recap;
 
-import cli.utils.flags.Utils;
+import cli.utils.general.Utils;
 import javastraw.expected.ExpectedModel;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;

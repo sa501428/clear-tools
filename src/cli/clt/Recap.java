@@ -2,8 +2,8 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.flags.RegionConfiguration;
-import cli.utils.flags.Utils;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.Utils;
 import cli.utils.recap.RecapTools;
 import javastraw.expected.ExpectedModel;
 import javastraw.expected.LogExpectedSpline;
@@ -157,8 +157,8 @@ public class Recap {
                         try {
                             for (Feature2D loop : loops) {
 
-                                long binXStart = (loop.getMidPt1() / resolution) - window;
-                                long binYStart = (loop.getMidPt2() / resolution) - window;
+                                int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
+                                int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
 
                                 float[][] obsMatrix = new float[matrixWidth][matrixWidth];
                                 Utils.addLocalBoundedRegion(obsMatrix, zd, binXStart, binYStart, matrixWidth, norm);

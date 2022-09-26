@@ -22,7 +22,7 @@
  *  THE SOFTWARE.
  */
 
-package cli.utils.flags;
+package cli.utils.general;
 
 
 import javastraw.expected.ExpectedModel;
@@ -40,11 +40,11 @@ import java.util.List;
  */
 public class Utils {
 
-    public static void addLocalBoundedRegion(float[][] matrix, MatrixZoomData zd, long binXStart, long binYStart,
+    public static void addLocalBoundedRegion(float[][] matrix, MatrixZoomData zd, int binXStart, int binYStart,
                                              int matrixWidth, NormalizationType norm) {
 
-        long binXEnd = binXStart + (matrixWidth + 1);
-        long binYEnd = binYStart + (matrixWidth + 1);
+        int binXEnd = binXStart + (matrixWidth + 1);
+        int binYEnd = binYStart + (matrixWidth + 1);
         List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
                 binXEnd, binYEnd, norm, false);
 
@@ -53,7 +53,7 @@ public class Utils {
         blocks = null;
     }
 
-    public static float[][] getRegion(MatrixZoomData zd, long binXStart, long binYStart,
+    public static float[][] getRegion(MatrixZoomData zd, int binXStart, int binYStart,
                                       long binXEnd, long binYEnd, NormalizationType norm) {
         int numRows = (int) (binXEnd - binXStart);
         int numCols = (int) (binYEnd - binYStart);
@@ -66,7 +66,7 @@ public class Utils {
         return matrix;
     }
 
-    public static void fillInMatrixFromBlocks(float[][] matrix, List<Block> blocks, long binXStart, long binYStart) {
+    public static void fillInMatrixFromBlocks(float[][] matrix, List<Block> blocks, int binXStart, int binYStart) {
         int numRows = matrix.length;
         int numCols = matrix[0].length;
 
@@ -74,17 +74,32 @@ public class Utils {
             for (Block b : blocks) {
                 if (b != null) {
                     for (ContactRecord rec : b.getContactRecords()) {
-                        if (rec.getCounts() > 0) {
-                            // only called for small regions - should not exceed int
-                            int relativeX = (int) (rec.getBinX() - binXStart);
-                            int relativeY = (int) (rec.getBinY() - binYStart);
-                            if (relativeX >= 0 && relativeX < numRows) {
-                                if (relativeY >= 0 && relativeY < numCols) {
-                                    matrix[relativeX][relativeY] += rec.getCounts();
-                                }
-                            }
-                        }
+                        populateMatrix(matrix, numRows, numCols, rec,
+                                rec.getBinX(), rec.getBinY(), binXStart, binYStart);
                     }
+                }
+            }
+        }
+    }
+
+    public static void fillInMatrixFromRecords(float[][] matrix, List<ContactRecord> records,
+                                               int binXStart, int binYStart) {
+        int numRows = matrix.length;
+        int numCols = matrix[0].length;
+        for (ContactRecord rec : records) {
+            populateMatrix(matrix, numRows, numCols, rec,
+                    rec.getBinX(), rec.getBinY(), binXStart, binYStart);
+        }
+    }
+
+    static void populateMatrix(float[][] matrix, int numRows, int numCols, ContactRecord rec,
+                               int x, int y, int binXStart, int binYStart) {
+        if (rec.getCounts() > 0) {
+            int relativeX = x - binXStart;
+            int relativeY = y - binYStart;
+            if (relativeX >= 0 && relativeX < numRows) {
+                if (relativeY >= 0 && relativeY < numCols) {
+                    matrix[relativeX][relativeY] += rec.getCounts();
                 }
             }
         }
@@ -137,20 +152,30 @@ public class Utils {
 
     public static List<ContactRecord> getRecords(MatrixZoomData zd, int binXStart, int binYStart, int matrixWidth,
                                                  NormalizationType norm) {
-        long binXEnd = binXStart + (matrixWidth + 1);
-        long binYEnd = binYStart + (matrixWidth + 1);
+        int binXEnd = binXStart + (matrixWidth + 1);
+        int binYEnd = binYStart + (matrixWidth + 1);
         List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
                 binXEnd, binYEnd, norm, false);
 
         List<ContactRecord> records = new LinkedList<>();
         for (Block block : blocks) {
-            for (ContactRecord record : block.getContactRecords()) {
-                if (record.getCounts() > 0) {
-                    records.add(record);
+            if (block != null) {
+                for (ContactRecord record : block.getContactRecords()) {
+                    if (record.getCounts() > 0) {
+                        if (inBounds(record.getBinX(), binXStart, binXEnd)) {
+                            if (inBounds(record.getBinY(), binYStart, binYEnd)) {
+                                records.add(record);
+                            }
+                        }
+                    }
                 }
             }
         }
 
         return records;
+    }
+
+    public static boolean inBounds(int pos, int min, int max) {
+        return pos >= min && pos < max;
     }
 }
