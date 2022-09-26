@@ -74,7 +74,7 @@ public class Utils {
             for (Block b : blocks) {
                 if (b != null) {
                     for (ContactRecord rec : b.getContactRecords()) {
-                        populateMatrix(matrix, numRows, numCols, rec,
+                        populateMatrix(matrix, numRows, numCols, rec.getCounts(),
                                 rec.getBinX(), rec.getBinY(), binXStart, binYStart);
                     }
                 }
@@ -87,19 +87,30 @@ public class Utils {
         int numRows = matrix.length;
         int numCols = matrix[0].length;
         for (ContactRecord rec : records) {
-            populateMatrix(matrix, numRows, numCols, rec,
+            populateMatrix(matrix, numRows, numCols, rec.getCounts(),
                     rec.getBinX(), rec.getBinY(), binXStart, binYStart);
         }
     }
 
-    static void populateMatrix(float[][] matrix, int numRows, int numCols, ContactRecord rec,
+    public static void fillInMatrixFromRecords(float[][] matrix, List<ContactRecord> records,
+                                               int binXStart, int binYStart, int scalar) {
+        int numRows = matrix.length;
+        int numCols = matrix[0].length;
+        for (ContactRecord rec : records) {
+            populateMatrix(matrix, numRows, numCols, rec.getCounts(),
+                    rec.getBinX() / scalar, rec.getBinY() / scalar,
+                    binXStart / scalar, binYStart / scalar);
+        }
+    }
+
+    static void populateMatrix(float[][] matrix, int numRows, int numCols, float counts,
                                int x, int y, int binXStart, int binYStart) {
-        if (rec.getCounts() > 0) {
+        if (counts > 0) {
             int relativeX = x - binXStart;
             int relativeY = y - binYStart;
             if (relativeX >= 0 && relativeX < numRows) {
                 if (relativeY >= 0 && relativeY < numCols) {
-                    matrix[relativeX][relativeY] += rec.getCounts();
+                    matrix[relativeX][relativeY] += counts;
                 }
             }
         }

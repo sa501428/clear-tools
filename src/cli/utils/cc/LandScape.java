@@ -45,13 +45,13 @@ public class LandScape {
         if (preNormEnrichments.size() == 0) return;
 
         if (Main.printVerboseComments) {
-            MatrixTools.saveMatrixTextNumpy(saveString + ".raw.npy", kde);
+            MatrixTools.saveMatrixTextNumpy(saveString + ".kde.npy", kde);
         }
 
         LocalNorms.normalizeLocally(kde);
 
         if (Main.printVerboseComments) {
-            MatrixTools.saveMatrixTextNumpy(saveString + ".normed.npy", kde);
+            MatrixTools.saveMatrixTextNumpy(saveString + ".kde.normed.npy", kde);
         }
 
 

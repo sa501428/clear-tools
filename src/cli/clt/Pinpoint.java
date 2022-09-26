@@ -6,6 +6,7 @@ import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.Utils;
 import cli.utils.pinpoint.ConvolutionTools;
+import cli.utils.pinpoint.LocalNorms;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -19,6 +20,7 @@ import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
+import javastraw.tools.MatrixTools;
 import javastraw.tools.ParallelizationTools;
 
 import java.io.File;
@@ -124,17 +126,33 @@ public class Pinpoint {
                                 List<Feature2D> pinpointedLoopsWithNorm = new ArrayList<>();
                                 for (Feature2D loop : loops) {
 
+                                    String saveString = generateLoopInfo(loop);
+
                                     int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
                                     int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
 
                                     List<ContactRecord> records = Utils.getRecords(zd, binXStart, binYStart, matrixWidth, NONE);
 
+
+                                    if (Main.printVerboseComments) {
+                                        float[][] outputD10 = new float[matrixWidth / 10][matrixWidth / 10];
+                                        Utils.fillInMatrixFromRecords(outputD10, records, binXStart, binYStart, 10);
+
+                                        MatrixTools.saveMatrixTextNumpy(saveString + ".raw.S10.npy", outputD10);
+
+                                        float[][] kde = ConvolutionTools.sparseConvolution(outputD10, kernel);
+                                        MatrixTools.saveMatrixTextNumpy(saveString + ".kde.S10.npy", outputD10);
+                                        LocalNorms.normalizeLocally(kde);
+                                        MatrixTools.saveMatrixTextNumpy(saveString + ".kde.S10.normed.npy", kde);
+                                    }
+
+
                                     float[][] output = new float[matrixWidth][matrixWidth];
                                     Utils.fillInMatrixFromRecords(output, records, binXStart, binYStart);
 
-                                    String saveString = loop.simpleString();
-                                    String[] saveStrings = saveString.split("\\s+");
-                                    saveString = String.join("_", saveStrings);
+                                    if (Main.printVerboseComments) {
+                                        MatrixTools.saveMatrixTextNumpy(saveString + ".raw.npy", output);
+                                    }
 
                                     float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
                                     output = null; // clear output
@@ -164,5 +182,12 @@ public class Pinpoint {
                 threadPair = currChromPair.getAndIncrement();
             }
         });
+    }
+
+    private static String generateLoopInfo(Feature2D loop) {
+        String info = loop.simpleString();
+        String[] saveStrings = info.split("\\s+");
+        info = String.join("_", saveStrings);
+        return info;
     }
 }
