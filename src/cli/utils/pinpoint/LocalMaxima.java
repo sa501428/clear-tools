@@ -1,13 +1,13 @@
-package cli.utils.cc;
+package cli.utils.pinpoint;
+
+import cli.utils.general.Pixel;
 
 public class LocalMaxima {
     final Pixel maxCoordinate;
-    final float maxVal;
     final int area;
 
-    public LocalMaxima(Pixel maxCoordinate, float maxVal, int area) {
+    public LocalMaxima(Pixel maxCoordinate, int area) {
         this.maxCoordinate = maxCoordinate;
-        this.maxVal = maxVal;
         this.area = area;
     }
 }

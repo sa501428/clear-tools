@@ -1,11 +1,10 @@
-package cli.utils.cc;
+package cli.utils.pinpoint;
 
-import cli.Main;
+import cli.utils.general.ArrayTools;
+import cli.utils.general.Pixel;
 import cli.utils.general.Utils;
-import cli.utils.pinpoint.ArrayTools;
-import cli.utils.pinpoint.ConvolutionTools;
+import javastraw.expected.Zscore;
 import javastraw.reader.block.ContactRecord;
-import javastraw.tools.MatrixTools;
 
 import java.util.*;
 
@@ -15,18 +14,20 @@ public class BoundingBoxes {
                                                  int matrixWidth, int scalar, String saveString, float[][] kernel) {
         float[][] outputD10 = new float[matrixWidth / scalar][matrixWidth / scalar];
         Utils.fillInMatrixFromRecords(outputD10, records, binXStart, binYStart, scalar);
-        if (Main.printVerboseComments) {
-            MatrixTools.saveMatrixTextNumpy(saveString + ".raw.S10.npy", outputD10);
-        }
+        ArrayTools.saveIfVerbose(saveString + ".raw.S10.npy", outputD10);
+
         float[][] kde = ConvolutionTools.sparseConvolution(outputD10, kernel);
+        ArrayTools.saveIfVerbose(saveString + ".kde.S10.npy", kde);
         outputD10 = null;
-        if (Main.printVerboseComments) {
-            MatrixTools.saveMatrixTextNumpy(saveString + ".kde.S10.npy", kde);
-        }
+
         float threshold = 0.8f * ArrayTools.getMax(kde);
-        //Zscore zscore = LandScape.getZscore(kde, 1);
-        List<Pixel> enrichedPixels = LandScape.getAllEnrichedPixels(kde, threshold); //zscore);
-        return getBoundingBoxes(enrichedPixels, 2, scalar, kde.length, kde[0].length);
+        Zscore zscore = ArrayTools.getZscore(kde, 1);
+        threshold = (float) Math.max(threshold, zscore.getValForZscore(3));
+
+        List<Pixel> enrichedPixels = ArrayTools.getAllEnrichedPixels(kde, threshold, zscore);
+        List<int[]> bounds = getBoundingBoxes(enrichedPixels, 2, scalar, kde.length, kde[0].length);
+        kde = null;
+        return bounds;
     }
 
     public static List<int[]> getBoundingBoxes(List<Pixel> enrichedPixels, int radius, int scalar,

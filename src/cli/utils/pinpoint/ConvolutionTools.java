@@ -1,5 +1,7 @@
 package cli.utils.pinpoint;
 
+import cli.utils.general.ArrayTools;
+
 public class ConvolutionTools {
 
     public static float[][] sparseConvolution(float[][] image, float[][] kernel) {

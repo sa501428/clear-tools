@@ -1,11 +1,11 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.cc.LandScape;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.Utils;
 import cli.utils.pinpoint.ConvolutionTools;
+import cli.utils.pinpoint.LandScape;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -55,18 +55,16 @@ public class Pinpoint {
             resolution = HiCUtils.getHighestResolution(dataset.getBpZooms()).getBinSize();
         }
 
-        final Feature2DList pinpointLoopsWithNorm = new Feature2DList();
         final Feature2DList pinpointLoopsNoNorm = new Feature2DList();
 
-        localize(dataset, loopList, handler, resolution, onlyGetOne, pinpointLoopsNoNorm, pinpointLoopsWithNorm);
-        pinpointLoopsWithNorm.exportFeatureList(new File(outFile + "_corrected.bedpe"), false, Feature2DList.ListFormat.NA);
+        localize(dataset, loopList, handler, resolution, onlyGetOne, pinpointLoopsNoNorm);
         pinpointLoopsNoNorm.exportFeatureList(new File(outFile + "_raw.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("pinpoint complete");
     }
 
     private static void localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
                                  int resolution, boolean onlyGetOne,
-                                 Feature2DList pinpointNoNorm, Feature2DList pinpointWithNorm) {
+                                 Feature2DList pinpointNoNorm) {
 
         if (Main.printVerboseComments) {
             System.out.println("Pinpointing location for loops");
@@ -121,7 +119,6 @@ public class Pinpoint {
                         if (zd != null) {
                             try {
                                 List<Feature2D> pinpointedLoopsNoNorm = new ArrayList<>();
-                                List<Feature2D> pinpointedLoopsWithNorm = new ArrayList<>();
                                 for (Feature2D loop : loops) {
 
                                     String saveString = generateLoopInfo(loop);
@@ -132,7 +129,7 @@ public class Pinpoint {
                                     List<ContactRecord> records = Utils.getRecords(zd, binXStart, binYStart, matrixWidth, NONE);
 
                                     LandScape.extractMaxima(records, binXStart, binYStart, resolution,
-                                            pinpointedLoopsNoNorm, pinpointedLoopsWithNorm, loop, saveString,
+                                            pinpointedLoopsNoNorm, loop, saveString,
                                             onlyGetOne, matrixWidth, kernel, compressedKernel);
 
                                     if (currNumLoops.incrementAndGet() % 100 == 0) {
@@ -142,7 +139,7 @@ public class Pinpoint {
 
                                 synchronized (key) {
                                     pinpointNoNorm.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoopsNoNorm);
-                                    pinpointWithNorm.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoopsWithNorm);
+                                    //pinpointWithNorm.addByKey(Feature2DList.getKey(chr1, chr2), pinpointedLoopsWithNorm);
                                 }
 
                                 System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
