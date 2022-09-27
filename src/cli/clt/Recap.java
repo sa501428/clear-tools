@@ -51,22 +51,17 @@ public class Recap {
         // names = [name1, name2, ...]
         String[] filepaths = args[3].split(",");
         String[] names = args[4].split(",");
-        
+
         Dataset ds = HiCFileTools.extractDatasetForCLT(filepaths[0], false, false, true);
 
         ChromosomeHandler handler = ds.getChromosomeHandler();
         Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler,
                 false, null, false);
 
+        norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "KR", "VC"});
         String possibleNorm = parser.getNormalizationStringOption();
-        try {
-            if (possibleNorm != null && possibleNorm.length() > 0) {
-                norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
-            } else {
-                norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "KR"});
-            }
-        } catch (Exception e) {
-            norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{"SCALE", "KR", "VC_SQRT", "VC"});
+        if (possibleNorm != null && possibleNorm.length() > 0) {
+            norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
         }
         System.out.println("Using normalization: " + norm.getLabel());
 
@@ -91,10 +86,12 @@ public class Recap {
                 window = 1;
             }
         }
-        
+
         Feature2DList refinedLoops = recapStats(filepaths, names, loopList, handler, resolution, window, norm, isDeepLoopAnalysis);
         refinedLoops.exportFeatureList(new File(outFolder, "recap.bedpe"), false, Feature2DList.ListFormat.NA);
-        RecapTools.exportAllMatrices(handler.getChromosomeArrayWithoutAllByAll(), refinedLoops, names, outFolder, isDeepLoopAnalysis, window);
+        if (Main.printVerboseComments) {
+            RecapTools.exportAllMatrices(handler.getChromosomeArrayWithoutAllByAll(), refinedLoops, names, outFolder, isDeepLoopAnalysis, window);
+        }
         System.out.println("recap complete");
     }
 
