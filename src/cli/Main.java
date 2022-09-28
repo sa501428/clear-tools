@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.50.0";
+    public static final String VERSION_NUM = "0.51.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode) {
@@ -17,7 +17,7 @@ public class Main {
         System.out.println("Commands:");
         for (String usage : new String[]{Flags.usage, Pinpoint.usage, Cleaner.usage, APA.usage, ATA.usage, Recap.usage,
                 Sieve.usage, HotSpot.usage, Fusion.usage, Sift.usage, NormHack.usage, SimplePeak.usage, SimpleMax.usage,
-                GenerateBedpe.usage, Split.usage}) {
+                GenerateBedpe.usage, Split.usage, IntersectBedpe.usage}) {
             System.out.println("\t" + usage);
         }
 

@@ -63,9 +63,9 @@ public class FusionTools {
 
                 Set<Feature2D> pixelList;
                 if (useExact) {
-                    pixelList = getExactMatches(pixel, featureLL);
+                    pixelList = OverlapTools.getExactMatches(pixel, featureLL);
                 } else {
-                    pixelList = getMatchesWithOverlap(pixel, featureLL, buffer);
+                    pixelList = OverlapTools.getMatchesWithOverlap(pixel, featureLL, buffer);
                 }
 
                 featureLL.removeAll(pixelList);
@@ -90,28 +90,6 @@ public class FusionTools {
                 pixel.getChr2(), start2, end2, Color.BLACK, pixel.getAttributes());
     }
 
-    private static Set<Feature2D> getMatchesWithOverlap(Feature2D pixel, List<Feature2D> featureLL, int buffer) {
-        Set<Feature2D> pixelList = new HashSet<>();
-        pixelList.add(pixel);
-        for (Feature2D px : featureLL) {
-            if (hasOverlap(px, pixel, buffer)) {
-                pixelList.add(px);
-            }
-        }
-        return pixelList;
-    }
-
-    private static Set<Feature2D> getExactMatches(Feature2D pixel, List<Feature2D> featureLL) {
-        Set<Feature2D> pixelList = new HashSet<>();
-        pixelList.add(pixel);
-        for (Feature2D px : featureLL) {
-            if (isExact(px, pixel)) {
-                pixelList.add(px);
-            }
-        }
-        return pixelList;
-    }
-
     private static int getBuffer(boolean useNMS, Feature2D pixel) {
         if (useNMS) {
             return 0;
@@ -132,24 +110,6 @@ public class FusionTools {
 
     public static long distance(long x, long y) {
         return (long) Math.sqrt(x * x + y * y);
-    }
-
-    private static boolean isExact(Feature2D px, Feature2D px2) {
-        return px.getStart1() == px2.getStart1()
-                && px.getStart2() == px2.getStart2()
-                && px.getEnd1() == px2.getEnd1()
-                && px.getEnd2() == px2.getEnd2();
-    }
-
-    private static boolean hasOverlap(Feature2D px1, Feature2D original, int buffer) {
-        return getWidth(px1.getStart1(), px1.getEnd1(), original.getStart1() - buffer, original.getEnd1() + buffer) *
-                getWidth(px1.getStart2(), px1.getEnd2(), original.getStart2() - buffer, original.getEnd2() + buffer) > 0;
-    }
-
-    private static int getWidth(long p1, long p2, long g1, long g2) {
-        long start = Math.max(p1, g1);
-        long end = Math.min(p2, g2);
-        return (int) Math.max(0, end - start);
     }
 
     public static Feature2DList combineAll(String[] fileNames, String genomeID, boolean noAttributes,

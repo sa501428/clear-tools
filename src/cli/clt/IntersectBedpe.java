@@ -2,6 +2,7 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.clean.LoopTools;
+import cli.utils.general.OverlapTools;
 import cli.utils.general.QuickGrouping;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
@@ -17,13 +18,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class IntersectBedpe {
 
+    // overlap can be adjusted; exact means exact indices; default will use any overlap
+    // clean means don't save attributes
     public static String usage = "intersect[-subtract][-clean][-exact] [-w window] <genomeID> <fileA.bedpe> <fileB.bedpe> <output.bedpe>";
 
     public static void run(String[] args, String command, CommandLineParser parser) {
 
         // subtract will keep things in A that don't overlap with B
         // otherwise retain things in A that have overlap with B
-
         boolean doSubtraction = checkForSubtraction(command);
         boolean useExactMatch = checkForExact(command);
 
@@ -32,31 +34,18 @@ public class IntersectBedpe {
             System.out.println("Features will be expanded by " + window);
         }
 
-        // overlap can be adjusted
-        // exact means exact
-        // default will use any overlap
-
-        // clean means don't save attributes
-
         if (args.length != 5) {
             Main.printGeneralUsageAndExit(15);
         }
         // intersect <genomeID> <fileA.bedpe> <fileB.bedpe> <output.bedpe>
-        String genomeID = args[1];
-        String inputA = args[2];
-        String inputB = args[3];
-        String outFile = args[4];
-
         boolean noAttributes = command.contains("clean");
-
-        ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
-        Feature2DList featuresA = LoopTools.loadFilteredBedpe(inputA, handler, !noAttributes);
-        Feature2DList featuresB = LoopTools.loadFilteredBedpe(inputB, handler, !noAttributes);
-
+        ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
+        Feature2DList featuresA = LoopTools.loadFilteredBedpe(args[2], handler, !noAttributes);
+        Feature2DList featuresB = LoopTools.loadFilteredBedpe(args[3], handler, !noAttributes);
 
         Feature2DList output = coalesceFeatures(featuresA, featuresB, handler,
                 doSubtraction, useExactMatch, window);
-        output.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
+        output.exportFeatureList(new File(args[4]), false, Feature2DList.ListFormat.NA);
         System.out.println("fusion complete");
 
     }
@@ -115,9 +104,22 @@ public class IntersectBedpe {
         return new ArrayList<>(allCoalesced);
     }
 
-    private static void processFeatures(Set<Feature2D> coalesced, List<Feature2D> featuresA, List<Feature2D> featuresB, boolean doSubtraction, boolean useExactMatch, int window) {
+    private static void processFeatures(Set<Feature2D> coalesced, List<Feature2D> featuresA, List<Feature2D> featuresB,
+                                        boolean doSubtraction, boolean useExactMatch, int window) {
+        for (Feature2D pixelA : featuresA) {
+            Set<Feature2D> pixelList;
+            if (useExactMatch) {
+                pixelList = OverlapTools.getExactMatches(pixelA, featuresB);
+            } else {
+                pixelList = OverlapTools.getMatchesWithOverlap(pixelA, featuresB, window);
+            }
 
-        // todo
+            if (pixelList.isEmpty()) {
+                if (doSubtraction) coalesced.add(pixelA);
+            } else {
+                if (!doSubtraction) coalesced.add(pixelA);
+            }
+        }
     }
 
     private static boolean checkForSubtraction(String command) {
