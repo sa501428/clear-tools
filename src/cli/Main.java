@@ -68,6 +68,8 @@ public class Main {
             new Sift(args, parser);
         } else if (command.startsWith("fuse") || command.startsWith("fusion") || command.startsWith("join") || command.startsWith("union")) {
             Fusion.run(args, command);
+        } else if (command.startsWith("subtract") || command.startsWith("intersect")) {
+            IntersectBedpe.run(args, command, parser);
         } else if (command.startsWith("split")) {
             Split.run(args, command);
         } else if (command.startsWith("seer")) {

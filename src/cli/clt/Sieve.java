@@ -4,8 +4,8 @@ import cli.Main;
 import cli.utils.FeatureStats;
 import cli.utils.clean.LoopTools;
 import cli.utils.flags.RegionConfiguration;
-import cli.utils.general.FusionTools;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.QuickGrouping;
 import cli.utils.general.Utils;
 import javastraw.expected.ExpectedModel;
 import javastraw.expected.Welford;
@@ -109,10 +109,10 @@ public class Sieve {
                             Set<Feature2D> loopsToAssessThisRound = filterByAccessibility(loopsToAssessGlobal, nv, resolution);
 
                             if (loopsToAssessThisRound.size() > 0) {
-                                Collection<LinkedList<Feature2D>> loopGroups = FusionTools.groupNearbyRecords(
+                                Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
                                         loopsToAssessThisRound, 200 * resolution).values();
 
-                                for (LinkedList<Feature2D> group : loopGroups) {
+                                for (List<Feature2D> group : loopGroups) {
                                     int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
                                     int minC = (int) ((FeatureStats.minStart2(group) / resolution) - buffer);
                                     int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + buffer);

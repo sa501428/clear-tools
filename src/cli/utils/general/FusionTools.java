@@ -18,17 +18,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FusionTools {
 
     public static void coalesceFeatures(String[] fileNames, String genomeID, String outFile,
-                                        boolean useNMS, boolean noAttributes, boolean useExact) {
-        Feature2DList list = combineAll(fileNames, genomeID, noAttributes);
+                                        boolean useNMS, boolean noAttributes, boolean useExact, boolean addIDs) {
+        Feature2DList list = combineAll(fileNames, genomeID, noAttributes, addIDs);
         list.filterLists((chr, feature2DList) -> removeOverlappingPixels(feature2DList, useNMS, useExact));
         list.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
     }
 
     private static List<Feature2D> removeOverlappingPixels(List<Feature2D> features, boolean useNMS, boolean useExact) {
-        Map<SimpleLocation, LinkedList<Feature2D>> map = groupNearbyRecords(new HashSet<>(features), 5000000);
+        Map<SimpleLocation, List<Feature2D>> map = QuickGrouping.groupNearbyRecords(features, 5000000);
         Set<Feature2D> allCoalesced = new HashSet<>();
 
-        List<LinkedList<Feature2D>> featureLists = new ArrayList<>(map.values());
+        List<List<Feature2D>> featureLists = new ArrayList<>(map.values());
 
         AtomicInteger index = new AtomicInteger(0);
         ParallelizationTools.launchParallelizedCode(() -> {
@@ -36,7 +36,7 @@ public class FusionTools {
             Set<Feature2D> coalesced = new HashSet<>();
             int i = index.getAndIncrement();
             while (i < featureLists.size()) {
-                LinkedList<Feature2D> featureLL = featureLists.get(i);
+                List<Feature2D> featureLL = featureLists.get(i);
                 processFeatures(coalesced, featureLL, useNMS, useExact);
                 i = index.getAndIncrement();
             }
@@ -52,11 +52,11 @@ public class FusionTools {
         return new ArrayList<>(allCoalesced);
     }
 
-    private static void processFeatures(Set<Feature2D> coalesced, LinkedList<Feature2D> featureLL, boolean useNMS, boolean useExact) {
+    private static void processFeatures(Set<Feature2D> coalesced, List<Feature2D> featureLL, boolean useNMS, boolean useExact) {
         sort(featureLL);
 
         while (!featureLL.isEmpty()) {
-            Feature2D pixel = featureLL.pollFirst();
+            Feature2D pixel = featureLL.get(0);
             if (pixel != null) {
                 featureLL.remove(pixel);
                 int buffer = getBuffer(useNMS, pixel);
@@ -90,7 +90,7 @@ public class FusionTools {
                 pixel.getChr2(), start2, end2, Color.BLACK, pixel.getAttributes());
     }
 
-    private static Set<Feature2D> getMatchesWithOverlap(Feature2D pixel, LinkedList<Feature2D> featureLL, int buffer) {
+    private static Set<Feature2D> getMatchesWithOverlap(Feature2D pixel, List<Feature2D> featureLL, int buffer) {
         Set<Feature2D> pixelList = new HashSet<>();
         pixelList.add(pixel);
         for (Feature2D px : featureLL) {
@@ -101,7 +101,7 @@ public class FusionTools {
         return pixelList;
     }
 
-    private static Set<Feature2D> getExactMatches(Feature2D pixel, LinkedList<Feature2D> featureLL) {
+    private static Set<Feature2D> getExactMatches(Feature2D pixel, List<Feature2D> featureLL) {
         Set<Feature2D> pixelList = new HashSet<>();
         pixelList.add(pixel);
         for (Feature2D px : featureLL) {
@@ -120,7 +120,7 @@ public class FusionTools {
         }
     }
 
-    private static void sort(LinkedList<Feature2D> featureLL) {
+    private static void sort(List<Feature2D> featureLL) {
         Collections.sort(featureLL, (o1, o2) -> {
             int val = Long.compare(o1.getWidth1(), o2.getWidth1());
             if (val == 0) {
@@ -152,30 +152,29 @@ public class FusionTools {
         return (int) Math.max(0, end - start);
     }
 
-    public static Map<SimpleLocation, LinkedList<Feature2D>> groupNearbyRecords(Set<Feature2D> initialPoints, int scalar) {
-        Map<SimpleLocation, LinkedList<Feature2D>> locationMap = new HashMap<>();
-        for (Feature2D feature : initialPoints) {
-            SimpleLocation region = new SimpleLocation((int) (feature.getMidPt1() / scalar), (int) (feature.getMidPt2() / scalar));
-            if (locationMap.containsKey(region)) {
-                locationMap.get(region).add(feature);
-            } else {
-                LinkedList<Feature2D> values = new LinkedList<>();
-                values.add(feature);
-                locationMap.put(region, values);
-            }
-        }
-        return locationMap;
-    }
-
-    public static Feature2DList combineAll(String[] fileNames, String genomeID, boolean noAttributes) {
+    public static Feature2DList combineAll(String[] fileNames, String genomeID, boolean noAttributes,
+                                           boolean addIDs) {
         final Feature2DList combinedLoops = new Feature2DList();
 
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
+        int counter = 0;
         for (String path : fileNames) {
             Feature2DList loopList = LoopTools.loadFilteredBedpe(path, handler, !noAttributes);
+            if (addIDs) {
+                addIDToAllLoops(loopList, counter, "LIST_UID");
+                counter++;
+            }
             loopList.processLists(combinedLoops::addByKey);
         }
 
         return combinedLoops;
+    }
+
+    private static void addIDToAllLoops(Feature2DList loopList, int id, String attribute) {
+        loopList.processLists((s, list) -> {
+            for (Feature2D feature : list) {
+                feature.addIntAttribute(attribute, id);
+            }
+        });
     }
 }

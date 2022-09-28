@@ -4,7 +4,7 @@ import cli.Main;
 import cli.utils.general.FusionTools;
 
 public class Fusion {
-    public static String usage = "fuse[-nms][-clean][-exact] <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]";
+    public static String usage = "fuse[-nms][-clean][-exact][-file-id] <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]";
 
     public static void run(String[] args, String command) {
         if (args.length < 5) {
@@ -16,7 +16,8 @@ public class Fusion {
         String[] bedpeFiles = new String[args.length - 3];
         System.arraycopy(args, 3, bedpeFiles, 0, bedpeFiles.length);
         FusionTools.coalesceFeatures(bedpeFiles, genomeID, outFile,
-                command.contains("nms"), command.contains("clean"), command.contains("exact"));
+                command.contains("nms"), command.contains("clean"), command.contains("exact"),
+                command.contains("file-id"));
         System.out.println("fusion complete");
     }
 }

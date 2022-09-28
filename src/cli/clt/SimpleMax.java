@@ -1,7 +1,7 @@
 package cli.clt;
 
 import cli.utils.FeatureStats;
-import cli.utils.general.FusionTools;
+import cli.utils.general.QuickGrouping;
 import cli.utils.general.Utils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -118,9 +118,9 @@ public class SimpleMax {
 
     public static Set<Feature2D> getMaximaForRegions(Set<Feature2D> loops, int resolution, int buffer, MatrixZoomData zd, double[] nv) {
         Set<Feature2D> newLoops = new HashSet<>();
-        Collection<LinkedList<Feature2D>> loopGroups = FusionTools.groupNearbyRecords(
+        Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
                 loops, resolution * 200).values();
-        for (LinkedList<Feature2D> group : loopGroups) {
+        for (List<Feature2D> group : loopGroups) {
             int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
             int minC = (int) ((FeatureStats.minStart2(group) / resolution) - buffer);
             int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + buffer + 1);
