@@ -46,8 +46,13 @@ public class IGVTools {
         List<Chromosome> chrList = new ArrayList<>(Arrays.asList(handler.getChromosomeArray()));
         List<org.broad.igv.feature.Chromosome> igvChrList = new ArrayList<>();
         for (Chromosome chrom : chrList) {
-            igvChrList.add(chrom.toIGVChromosome());
+            igvChrList.add(toIGVChromosome(chrom));
         }
         return new Genome(handler.getGenomeID(), igvChrList);
+    }
+
+    public static org.broad.igv.feature.Chromosome toIGVChromosome(Chromosome chromosome) {
+        return new org.broad.igv.feature.Chromosome(chromosome.getIndex(), chromosome.getName(),
+                (int) chromosome.getLength()); // todo assumed for IGV
     }
 }
