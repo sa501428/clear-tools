@@ -17,7 +17,7 @@ public class Main {
         System.out.println("Commands:");
         for (String usage : new String[]{Flags.usage, Pinpoint.usage, Cleaner.usage, APA.usage, ATA.usage, Recap.usage,
                 Sieve.usage, HotSpot.usage, Fusion.usage, Sift.usage, NormHack.usage, SimplePeak.usage, SimpleMax.usage,
-                GenerateBedpe.usage, Split.usage, IntersectBedpe.usage}) {
+                GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage}) {
             System.out.println("\t" + usage);
         }
 
@@ -68,6 +68,8 @@ public class Main {
             new Sift(args, parser);
         } else if (command.startsWith("fuse") || command.startsWith("fusion") || command.startsWith("join") || command.startsWith("union")) {
             Fusion.run(args, command);
+        } else if (command.startsWith("filter")) {
+            FilterBedpe.run(args, command);
         } else if (command.startsWith("subtract") || command.startsWith("intersect")) {
             IntersectBedpe.run(args, command, parser);
         } else if (command.startsWith("split")) {
