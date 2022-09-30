@@ -24,6 +24,7 @@ public class Split {
         boolean noAttributes = command.contains("clean");
 
         int numberOfSplits = Integer.parseInt(args[2]);
+
         String path = args[3];
         Feature2DList loopList = LoopTools.loadFilteredBedpe(path, handler, !noAttributes);
 
@@ -40,11 +41,30 @@ public class Split {
     }
 
     private static Feature2DList[] split(Feature2DList loopList, int numberOfSplits) {
+        if (numberOfSplits < 2) {
+            return splitListByChromosomes(loopList);
+        } else {
+            return splitRandomly(loopList, numberOfSplits);
+        }
+    }
+
+    private static Feature2DList[] splitListByChromosomes(Feature2DList loopList) {
+        List<Feature2DList> finalLists = new ArrayList<>();
+        loopList.processLists((s, list) -> {
+            Feature2DList newList = new Feature2DList();
+            newList.addByKey(s, list);
+            synchronized (finalLists) {
+                finalLists.add(newList);
+            }
+        });
+        return finalLists.toArray(new Feature2DList[0]);
+    }
+
+    private static Feature2DList[] splitRandomly(Feature2DList loopList, int numberOfSplits) {
         Feature2DList[] lists = new Feature2DList[numberOfSplits];
         for (int z = 0; z < lists.length; z++) {
             lists[z] = new Feature2DList();
         }
-
         loopList.processLists((s, list) -> {
             List<List<Feature2D>> breakups = new ArrayList<>();
             for (int z = 0; z < numberOfSplits; z++) {
@@ -63,7 +83,6 @@ public class Split {
                 }
             }
         });
-
         return lists;
     }
 }

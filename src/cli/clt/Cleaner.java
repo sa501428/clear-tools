@@ -4,6 +4,7 @@ import cli.Main;
 import cli.utils.clean.LoopTools;
 import cli.utils.clean.OracleScorer;
 import cli.utils.flags.RegionConfiguration;
+import cli.utils.general.ArrayTools;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.VectorCleaner;
 import javastraw.feature2D.Feature2D;
@@ -24,13 +25,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Cleaner {
 
-    public static String usage = "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
-            "clean [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>";
+    private static final int ZSCORE_CUTOFF = -2;
 
-    public static void run(String[] args, CommandLineParser parser) {
+    public static String usage = "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
+            "clean[-peek] [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>";
+
+    public static void run(String[] args, CommandLineParser parser, String command) {
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(5);
         }
+
+        boolean justPeek = command.contains("peek");
 
         double threshold = parser.getThresholdOption(0.5);
         Dataset dataset = null;
@@ -54,7 +59,7 @@ public class Cleaner {
             Feature2DList loopList = LoopTools.loadFilteredBedpe(bedpeFiles[z], handler, true);
             Feature2DList cleanList;
             if (dataset != null) {
-                cleanList = cleanupLoops(dataset, loopList, handler);
+                cleanList = cleanupLoops(dataset, loopList, handler, justPeek);
             } else {
                 cleanList = OracleScorer.filter(loopList, threshold);
             }
@@ -62,7 +67,8 @@ public class Cleaner {
         }
     }
 
-    private static Feature2DList cleanupLoops(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler) {
+    private static Feature2DList cleanupLoops(final Dataset dataset, Feature2DList loopList,
+                                              ChromosomeHandler handler, boolean justPeek) {
 
         Set<HiCZoom> resolutions = getResolutions(loopList);
         NormalizationType vcNorm = dataset.getNormalizationHandler().getNormTypeFromString("VC");
@@ -90,9 +96,20 @@ public class Cleaner {
                     Map<Integer, double[]> vectorMap = loadVectors(dataset, chr1, vcNorm, resolutions);
                     try {
                         for (Feature2D loop : loops) {
-                            if (normIsOk(loop.getMidPt1(), (int) loop.getWidth1(), vectorMap)
-                                    && normIsOk(loop.getMidPt2(), (int) loop.getWidth2(), vectorMap)) {
+                            if (justPeek) {
+                                double z1 = getZscore(loop.getMidPt1(), (int) loop.getWidth1(), vectorMap);
+                                double z2 = getZscore(loop.getMidPt2(), (int) loop.getWidth2(), vectorMap);
+
+                                loop.addStringAttribute("VC_zscore1", "" + z1);
+                                loop.addStringAttribute("VC_zscore2", "" + z1);
+                                loop.addStringAttribute("VC_min_zscore", "" + Math.min(z1, z2));
+
                                 goodLoops.add(loop);
+                            } else {
+                                if (normIsOk(loop.getMidPt1(), (int) loop.getWidth1(), vectorMap)
+                                        && normIsOk(loop.getMidPt2(), (int) loop.getWidth2(), vectorMap)) {
+                                    goodLoops.add(loop);
+                                }
                             }
                         }
                     } catch (Exception e) {
@@ -110,13 +127,19 @@ public class Cleaner {
         return goodLoopsList;
     }
 
+    private static double getZscore(long pos, int resolution, Map<Integer, double[]> vectorMap) {
+        double[] vector = vectorMap.get(resolution);
+        int x = (int) (pos / resolution);
+        return vector[x];
+    }
+
     private static Map<Integer, double[]> loadVectors(Dataset dataset, Chromosome chrom, NormalizationType vcNorm,
                                                       Set<HiCZoom> zooms) {
         Map<Integer, double[]> vectorMap = new HashMap<>();
         for (HiCZoom zoom : zooms) {
-            double[] vector = dataset.getNormalizationVector(chrom.getIndex(), zoom,
-                    vcNorm).getData().getValues().get(0);
-            VectorCleaner.inPlaceClean(vector);
+            double[] vector = ArrayTools.copy(dataset.getNormalizationVector(chrom.getIndex(), zoom,
+                    vcNorm).getData().getValues().get(0));
+            VectorCleaner.inPlaceZscore(vector);
             vectorMap.put(zoom.getBinSize(), vector);
         }
         return vectorMap;
@@ -145,6 +168,6 @@ public class Cleaner {
     private static boolean normIsOk(long pos, int resolution, Map<Integer, double[]> vMap) {
         double[] vector = vMap.get(resolution);
         int x = (int) (pos / resolution);
-        return vector[x - 1] > 0 && vector[x] > 0 && vector[x + 1] > 0; // verify neighbors also ok
+        return vector[x - 1] > ZSCORE_CUTOFF && vector[x] > ZSCORE_CUTOFF && vector[x + 1] > ZSCORE_CUTOFF; // verify neighbors also ok
     }
 }

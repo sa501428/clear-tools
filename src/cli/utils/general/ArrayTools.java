@@ -54,4 +54,10 @@ public class ArrayTools {
         }
 
     }
+
+    public static double[] copy(double[] arr) {
+        double[] copy = new double[arr.length];
+        System.arraycopy(arr, 0, copy, 0, arr.length);
+        return copy;
+    }
 }

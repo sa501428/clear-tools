@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.51.0";
+    public static final String VERSION_NUM = "0.52.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode) {
@@ -49,7 +49,7 @@ public class Main {
         } else if (command.equals("pinpoint")) {
             Pinpoint.run(args, parser);
         } else if (command.startsWith("clean")) {
-            Cleaner.run(args, parser);
+            Cleaner.run(args, parser, command);
         } else if (command.startsWith("prob")) {
             Probability.run(args, parser);
         } else if (command.startsWith("apa")) {

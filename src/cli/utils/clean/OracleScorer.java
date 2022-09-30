@@ -32,7 +32,7 @@ public class OracleScorer {
 
         int dist = LoopTools.dist(loop);
         if (dist > 1000000) {
-            if (r5k > 0.9 && r10k > 0.9) {
+            if (r5k > 0.85 || r10k > 0.85) {
                 return true;
             }
         }

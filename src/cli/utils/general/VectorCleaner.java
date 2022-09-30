@@ -5,19 +5,29 @@ import javastraw.expected.Zscore;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 public class VectorCleaner {
-    public static void inPlaceClean(double[] vec) {
+
+    public static void inPlaceZscore(double[] vec) {
+        cleanExtremes(vec);
+        Zscore stats = createLogZscore(vec);
         for (int k = 0; k < vec.length; k++) {
-            if (Double.isInfinite(vec[k]) || vec[k] < 1e-20) {
+            vec[k] = stats.getZscore(Math.log(vec[k]));
+        }
+    }
+
+    public static void inPlaceClean(double[] vec) {
+        cleanExtremes(vec);
+        double logThreshold = getLogLowerZscoreBound(vec, -2);
+        double lowerBound = Math.min(1, Math.exp(logThreshold));
+        for (int k = 0; k < vec.length; k++) {
+            if (vec[k] < lowerBound) {
                 vec[k] = Double.NaN;
             }
         }
+    }
 
-        double logThreshold = getLogLowerZscoreBound(vec, -2);
-        //double logThreshold = getLogLowerBound(vec);
-        double lowerBound = Math.min(1, Math.exp(logThreshold));
-        //double lowerBound = Math.min(1, getPercentile(vec, 16));
+    private static void cleanExtremes(double[] vec) {
         for (int k = 0; k < vec.length; k++) {
-            if (vec[k] < lowerBound) {
+            if (Double.isInfinite(vec[k]) || vec[k] < 1e-20) {
                 vec[k] = Double.NaN;
             }
         }
