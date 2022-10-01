@@ -18,8 +18,7 @@ public class SeerUtils {
     public static void exportRowSumsToBedgraph(Map<Chromosome, int[]> chromToRowSumsMap, String arg, int resolution) throws IOException {
         File outputFileName = new File(arg, "rowSums.bedgraph");
         outputFileName.createNewFile();
-        FileWriter fw = new FileWriter(outputFileName);
-        BufferedWriter bw = new BufferedWriter(fw);
+        BufferedWriter bw = new BufferedWriter(new FileWriter(outputFileName));
         // write for every chromosome
         for (Chromosome chromosome : chromToRowSumsMap.keySet()) {
             int[] sums = chromToRowSumsMap.get(chromosome);

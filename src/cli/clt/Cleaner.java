@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Cleaner {
 
-    private static float ZSCORE_CUTOFF = -1;
+    private static final float ZSCORE_CUTOFF = -1;
 
     public static String usage = "clean[-peek] <input.hic> <loops.bedpe> <output.bedpe>\n" +
             "clean [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>";
@@ -37,7 +37,7 @@ public class Cleaner {
 
         boolean justPeek = command.contains("peek");
 
-        ZSCORE_CUTOFF = (float) parser.getThresholdOption(-1);
+        //ZSCORE_CUTOFF = (float) parser.getThresholdOption(-1);
 
         Dataset dataset = null;
         ChromosomeHandler handler;
@@ -97,20 +97,23 @@ public class Cleaner {
                     Map<Integer, double[]> vectorMap = loadVectors(dataset, chr1, vcNorm, resolutions);
                     try {
                         for (Feature2D loop : loops) {
+                            double z1 = getZscore(loop.getMidPt1(), (int) loop.getWidth1(), vectorMap);
+                            double z2 = getZscore(loop.getMidPt2(), (int) loop.getWidth2(), vectorMap);
                             if (justPeek) {
-                                double z1 = getZscore(loop.getMidPt1(), (int) loop.getWidth1(), vectorMap);
-                                double z2 = getZscore(loop.getMidPt2(), (int) loop.getWidth2(), vectorMap);
-
                                 loop.addStringAttribute("VC_zscore1", "" + z1);
-                                loop.addStringAttribute("VC_zscore2", "" + z1);
+                                loop.addStringAttribute("VC_zscore2", "" + z2);
                                 loop.addStringAttribute("VC_min_zscore", "" + Math.min(z1, z2));
-
                                 goodLoops.add(loop);
                             } else {
+                                if (!((z1 < -1 && z2 < -1) || z1 < -2 || z2 < -2)) {
+                                    goodLoops.add(loop);
+                                }
+                                /*
                                 if (normIsOk(loop.getMidPt1(), (int) loop.getWidth1(), vectorMap)
                                         && normIsOk(loop.getMidPt2(), (int) loop.getWidth2(), vectorMap)) {
                                     goodLoops.add(loop);
                                 }
+                                */
                             }
                         }
                     } catch (Exception e) {
@@ -169,6 +172,7 @@ public class Cleaner {
     private static boolean normIsOk(long pos, int resolution, Map<Integer, double[]> vMap) {
         double[] vector = vMap.get(resolution);
         int x = (int) (pos / resolution);
-        return vector[x - 1] > ZSCORE_CUTOFF && vector[x] > ZSCORE_CUTOFF && vector[x + 1] > ZSCORE_CUTOFF; // verify neighbors also ok
+        return vector[x] > ZSCORE_CUTOFF;
+        //return vector[x - 1] > ZSCORE_CUTOFF && vector[x] > ZSCORE_CUTOFF && vector[x + 1] > ZSCORE_CUTOFF; // verify neighbors also ok
     }
 }
