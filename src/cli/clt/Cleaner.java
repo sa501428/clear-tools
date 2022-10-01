@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Cleaner {
 
-    private static final float ZSCORE_CUTOFF = -1.5f;
+    private static float ZSCORE_CUTOFF = -1;
 
     public static String usage = "clean[-peek] <input.hic> <loops.bedpe> <output.bedpe>\n" +
             "clean [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>";
@@ -37,7 +37,8 @@ public class Cleaner {
 
         boolean justPeek = command.contains("peek");
 
-        double threshold = parser.getThresholdOption(0.5);
+        ZSCORE_CUTOFF = (float) parser.getThresholdOption(-1);
+
         Dataset dataset = null;
         ChromosomeHandler handler;
         if (args[1].endsWith(".hic")) {
@@ -61,7 +62,7 @@ public class Cleaner {
             if (dataset != null) {
                 cleanList = cleanupLoops(dataset, loopList, handler, justPeek);
             } else {
-                cleanList = OracleScorer.filter(loopList, threshold);
+                cleanList = OracleScorer.filter(loopList);
             }
             cleanList.exportFeatureList(new File(outFiles[z]), false, Feature2DList.ListFormat.NA);
         }

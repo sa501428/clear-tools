@@ -9,22 +9,22 @@ import java.util.List;
 import java.util.Set;
 
 public class OracleScorer {
-    public static Feature2DList filter(Feature2DList loopList, double threshold) {
-        loopList.filterLists((chr, feature2DList) -> filterByOracleParams(feature2DList, threshold));
+    public static Feature2DList filter(Feature2DList loopList) {
+        loopList.filterLists((chr, feature2DList) -> filterByOracleParams(feature2DList));
         return loopList;
     }
 
-    private static List<Feature2D> filterByOracleParams(List<Feature2D> loops, double threshold) {
+    private static List<Feature2D> filterByOracleParams(List<Feature2D> loops) {
         Set<Feature2D> goodLoops = new HashSet<>();
         for (Feature2D loop : loops) {
-            if (passesOracleCriteria(loop, threshold)) {
+            if (passesOracleCriteria(loop)) {
                 goodLoops.add(loop);
             }
         }
         return new ArrayList<>(goodLoops);
     }
 
-    private static boolean passesOracleCriteria(Feature2D loop, double cutoff) {
+    private static boolean passesOracleCriteria(Feature2D loop) {
         float r1k = Float.parseFloat(loop.getAttribute("score_oracle_1000"));
         float r2k = Float.parseFloat(loop.getAttribute("score_oracle_2000"));
         float r5k = Float.parseFloat(loop.getAttribute("score_oracle_5000"));
@@ -38,17 +38,6 @@ public class OracleScorer {
         }
 
         return (r1k > 0.2) || (r2k > 0.2);
-
-        /*
-        if (dist > 50000) {
-            return defaultCheck4(r1k, r2k, r5k, r10k, cutoff, dist);
-        } else if (dist > 25000) {
-            return defaultCheck3(r1k, r2k, r5k, cutoff);
-        } else if (dist > 10000) {
-            return defaultCheck2(r1k, r2k, cutoff);
-        }
-        return false;
-        */
     }
 
     private static boolean defaultCheck4(float r1k, float r2k, float r5k, float r10k, double cutoff, int dist) {
