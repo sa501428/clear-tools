@@ -25,10 +25,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Cleaner {
 
-    private static final int ZSCORE_CUTOFF = -2;
+    private static final float ZSCORE_CUTOFF = -1.5f;
 
-    public static String usage = "clean <input.hic> <loops.bedpe> <output.bedpe>\n" +
-            "clean[-peek] [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>";
+    public static String usage = "clean[-peek] <input.hic> <loops.bedpe> <output.bedpe>\n" +
+            "clean [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>";
 
     public static void run(String[] args, CommandLineParser parser, String command) {
         if (args.length != 4) {
