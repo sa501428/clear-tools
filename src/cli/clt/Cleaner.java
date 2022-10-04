@@ -27,8 +27,8 @@ public class Cleaner {
 
     private static final float ZSCORE_CUTOFF = -1;
 
-    public static String usage = "clean[-peek] <input.hic> <loops.bedpe> <output.bedpe>\n" +
-            "clean [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>";
+    public static String usage = "clean[-peek][-strict] <input.hic> <loops.bedpe> <output.bedpe>\n" +
+            "clean[-strict] [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>";
 
     public static void run(String[] args, CommandLineParser parser, String command) {
         if (args.length != 4) {
@@ -36,6 +36,7 @@ public class Cleaner {
         }
 
         boolean justPeek = command.contains("peek");
+        boolean beStrict = command.contains("strict");
 
         //ZSCORE_CUTOFF = (float) parser.getThresholdOption(-1);
 
@@ -60,16 +61,16 @@ public class Cleaner {
             Feature2DList loopList = LoopTools.loadFilteredBedpe(bedpeFiles[z], handler, true);
             Feature2DList cleanList;
             if (dataset != null) {
-                cleanList = cleanupLoops(dataset, loopList, handler, justPeek);
+                cleanList = cleanupLoops(dataset, loopList, handler, justPeek, beStrict);
             } else {
-                cleanList = OracleScorer.filter(loopList);
+                cleanList = OracleScorer.filter(loopList, beStrict);
             }
             cleanList.exportFeatureList(new File(outFiles[z]), false, Feature2DList.ListFormat.NA);
         }
     }
 
     private static Feature2DList cleanupLoops(final Dataset dataset, Feature2DList loopList,
-                                              ChromosomeHandler handler, boolean justPeek) {
+                                              ChromosomeHandler handler, boolean justPeek, boolean beStrict) {
 
         Set<HiCZoom> resolutions = getResolutions(loopList);
         NormalizationType vcNorm = dataset.getNormalizationHandler().getNormTypeFromString("VC");
@@ -106,7 +107,13 @@ public class Cleaner {
                                 goodLoops.add(loop);
                             } else {
                                 if (!((z1 < -1 && z2 < -1) || z1 < -2 || z2 < -2)) {
-                                    goodLoops.add(loop);
+                                    if (beStrict) {
+                                        if (z1 > -1 && z2 > -1) {
+                                            goodLoops.add(loop);
+                                        }
+                                    } else {
+                                        goodLoops.add(loop);
+                                    }
                                 }
                                 /*
                                 if (normIsOk(loop.getMidPt1(), (int) loop.getWidth1(), vectorMap)
