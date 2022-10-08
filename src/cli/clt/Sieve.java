@@ -5,9 +5,9 @@ import cli.utils.FeatureStats;
 import cli.utils.clean.LoopTools;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.ManhattanDecay;
 import cli.utils.general.QuickGrouping;
 import cli.utils.general.Utils;
-import javastraw.expected.ExpectedModel;
 import javastraw.expected.Welford;
 import javastraw.expected.Zscore;
 import javastraw.feature2D.Feature2D;
@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Sieve {
 
     public static String usage = "sieve[-strict] <loops.bedpe> <output.bedpe> <file.hic> <res1,...>";
-    private NormalizationType norm = NormalizationHandler.VC;
 
     /**
      * retain hi-res loops if at a 'loop-y' location per low-res assessment
@@ -54,6 +53,7 @@ public class Sieve {
         Feature2DList loopList = LoopTools.loadFilteredBedpe(loopListPath, handler, true);
 
         String possibleNorm = parser.getNormalizationStringOption();
+        NormalizationType norm = NormalizationHandler.VC;
         if (possibleNorm != null && possibleNorm.length() > 0) {
             norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
         }
@@ -105,8 +105,7 @@ public class Sieve {
                         HiCZoom zoom = new HiCZoom(resolution);
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
-                            double[] nv = ds.getNormalizationVector(chrom1.getIndex(), zoom, norm).getData().getValues().get(0);
-                            Set<Feature2D> loopsToAssessThisRound = filterByAccessibility(loopsToAssessGlobal, nv, resolution);
+                            Set<Feature2D> loopsToAssessThisRound = filterForAppropriateResolution(loopsToAssessGlobal, resolution);
 
                             if (loopsToAssessThisRound.size() > 0) {
                                 Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
@@ -119,8 +118,11 @@ public class Sieve {
                                     int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + buffer);
                                     float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, norm);
                                     for (Feature2D loop : group) {
-                                        double zScore = getLocalZscore(regionMatrix, loop, resolution, minR, minC, window);
-                                        if (zScore > 1) {
+                                        int midX = (int) (loop.getMidPt1() / resolution) - minR;
+                                        int midY = (int) (loop.getMidPt2() / resolution) - minC;
+                                        float[] manhattanDecay = ManhattanDecay.calculateDecay(regionMatrix, midX, midY, window);
+                                        double zScore = getLocalZscore(regionMatrix, minR, minC, window);
+                                        if (zScore > 1 && ManhattanDecay.passesMonotonicDecreasing(manhattanDecay, 2)) {
                                             loop.addStringAttribute("sieve_resolution_passed", "" + resolution);
                                             loop.addStringAttribute("sieve_local_zscore", "" + zScore);
                                             loopsToKeep.add(loop);
@@ -164,52 +166,33 @@ public class Sieve {
         return newLoopList;
     }
 
-    private static double getLocalZscore(float[][] regionMatrix, Feature2D loop, int resolution,
-                                         int minR, int minC, int window) {
-
-        int r = (int) (loop.getMidPt1() / resolution) - minR;
-        int c = (int) (loop.getMidPt2() / resolution) - minC;
-
-        Welford welford = new Welford();
-        for (int i = r - window; i < r + window + 1; i++) {
-            for (int j = c - window; j < c + window + 1; j++) {
-                if (i != r && j != c) {
-                    welford.addValue(regionMatrix[i][j]);
-                }
-            }
-        }
-        Zscore zscore = welford.getZscore();
-        return zscore.getZscore(regionMatrix[r][c]);
-    }
-
-    private static Set<Feature2D> filterByAccessibility(Set<Feature2D> loops, double[] nv, int resolution) {
+    private static Set<Feature2D> filterForAppropriateResolution(Set<Feature2D> loops, int resolution) {
         Set<Feature2D> goodLoops = new HashSet<>();
         for (Feature2D loop : loops) {
-            if (isAccessible(loop.getMidPt1(), resolution, nv)
-                    && isAccessible(loop.getMidPt2(), resolution, nv)) {
+            if (Math.max(loop.getWidth1(), loop.getWidth2()) <= resolution) {
                 goodLoops.add(loop);
             }
         }
         return goodLoops;
     }
 
-    private static boolean isAccessible(long mid, int resolution, double[] nv) {
-        return nv[(int) (mid / resolution)] > 1;
-    }
+    private static double getLocalZscore(float[][] regionMatrix, int midX, int midY, int window) {
 
-    private static int getMaxDistance(List<Feature2D> loops, int resolution, int window) {
-        long maxDist = 0;
-        for (Feature2D loop : loops) {
-            long dist = Math.abs((loop.getStart1() / resolution - window) - (loop.getEnd2() / resolution + window));
-            if (dist > maxDist) {
-                maxDist = dist;
+        int startR = Math.max(midX - window, 0);
+        int endR = midX + window + 1;
+        int startC = Math.max(midY - window, 0);
+        int endC = midY + window + 1;
+
+        Welford welford = new Welford();
+        for (int i = startR; i < endR; i++) {
+            for (int j = startC; j < endC; j++) {
+                if (i != midX && j != midY) {
+                    welford.addValue(regionMatrix[i][j]);
+                }
             }
         }
-        return (int) (maxDist + 4 * window);
-    }
-
-    private static float getMedianExpectedAt(int d0, ExpectedModel expectedVector) {
-        return (float) expectedVector.getExpectedFromUncompressedBin(d0);
+        Zscore zscore = welford.getZscore();
+        return zscore.getZscore(regionMatrix[midX][midY]);
     }
 
     private int[] parseInts(String input) {

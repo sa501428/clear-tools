@@ -27,14 +27,13 @@ public class FilterBedpe {
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
         Feature2DList features = LoopTools.loadFilteredBedpe(args[2], handler, true);
 
-        Feature2DList output = filter(features, handler, doCheckContain);
+        Feature2DList output = filter(features, doCheckContain);
         output.exportFeatureList(new File(args[3]), false, Feature2DList.ListFormat.NA);
         System.out.println("filtering complete");
 
     }
 
-    private static Feature2DList filter(Feature2DList features, ChromosomeHandler handler,
-                                        boolean checkContain) {
+    private static Feature2DList filter(Feature2DList features, boolean checkContain) {
         features.filterLists((s, list) -> filterForContainment(list, checkContain));
 
         return features;

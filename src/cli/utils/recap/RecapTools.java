@@ -1,5 +1,6 @@
 package cli.utils.recap;
 
+import cli.utils.general.ManhattanDecay;
 import cli.utils.general.Utils;
 import javastraw.expected.ExpectedModel;
 import javastraw.feature2D.Feature2D;
@@ -59,7 +60,7 @@ public class RecapTools {
 
         if (isDeepLoopAnalysis) {
             addMatrixSums(obsMatrix, attributes, "OBS_");
-            float[] manhattanDecay = calculateDecay(obsMatrix, window);
+            float[] manhattanDecay = ManhattanDecay.calculateDecay(obsMatrix, window, window, window);
             addRegressionStats(manhattanDecay, attributes, "OBS_");
 
             float[][] eMatrix = new float[obsMatrix.length][obsMatrix.length];
@@ -67,7 +68,7 @@ public class RecapTools {
 
             float[][] oeMatrix = divide(obsMatrix, eMatrix, pseudoCount);
             addMatrixSums(oeMatrix, attributes, "OE_");
-            manhattanDecay = calculateDecay(oeMatrix, window);
+            manhattanDecay = ManhattanDecay.calculateDecay(oeMatrix, window, window, window);
             addRegressionStats(manhattanDecay, attributes, "OE_");
         } else {
             float obs = obsMatrix[window][window];
@@ -203,37 +204,6 @@ public class RecapTools {
             joiner.add("" + val);
         }
         return joiner.toString();
-    }
-
-    private static float[] calculateDecay(float[][] matrix, int window) {
-        float[] values = new float[window + 1];
-        int[] counts = new int[window + 1];
-
-        for (int i = 0; i < matrix.length; i++) {
-            int di = Math.abs(i - window);
-            for (int j = 0; j < matrix[i].length; j++) {
-                int dj = Math.abs(j - window);
-
-                int dist = di + dj;
-                if (dist < values.length) {
-                    values[dist] += matrix[i][j];
-                    counts[dist]++;
-                }
-            }
-        }
-
-        for (int k = 0; k < values.length; k++) {
-            if (counts[k] > 0) {
-                values[k] /= counts[k];
-            }
-        }
-
-        float denom = 0 + values[0];
-        for (int k = 0; k < values.length; k++) {
-            values[k] /= denom;
-        }
-
-        return values;
     }
 
     private static DescriptiveStatistics makeStats(float[][] matrix) {
