@@ -31,7 +31,7 @@ public class Cleaner {
             "\t\tcoverage filtering of input loop list\n" +
             "\t\tpeek adds attributes but does not remove any features\n" +
             "\t\tstrict means use more conservative cutoffs\n" +
-            "\t\t\n" +
+            "\n\n" +
             "\tclean[-strict] [--threshold float] <genomeID> <loops.bedpe> <output.bedpe>\n" +
             "\t\tfilter using ORACLE thresholds\n" +
             "\t\tstrict means use more conservative cutoffs";
