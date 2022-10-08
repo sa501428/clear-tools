@@ -24,7 +24,8 @@ public class SimplePeak {
 
     private static final NormalizationType VC = NormalizationHandler.VC;
     private static final NormalizationType NONE = NormalizationHandler.NONE;
-    public static String usage = "simple [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>";
+    public static String usage = "simple [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>\n" +
+            "\t\tdefault behavior gets a simple localization by iteratively finding the local max";
 
     public static void printUsageAndExit() {
         System.out.println("simple <file.hic> <loops.bedpe> <output.bedpe>");

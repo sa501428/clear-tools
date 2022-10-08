@@ -20,7 +20,10 @@ public class IntersectBedpe {
 
     // overlap can be adjusted; exact means exact indices; default will use any overlap
     // clean means don't save attributes
-    public static String usage = "intersect[-subtract][-clean][-exact] [-w window] <genomeID> <fileA.bedpe> <fileB.bedpe> <output.bedpe>";
+    public static String usage = "intersect[-subtract][-clean][-exact] [-w window] <genomeID> " +
+            "<fileA.bedpe> <fileB.bedpe> <output.bedpe>\n" +
+            "\t\tsubtract retains features in A with no overlap in B, default requires an overlap\n" +
+            "\t\texact requires exact matches, default is any overlap";
 
     public static void run(String[] args, String command, CommandLineParser parser) {
 

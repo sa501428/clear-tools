@@ -6,6 +6,8 @@ Chromatin Landscape Exploration, Analysis, and Research Tools
 
 Peak Intensity (or Identification) Near Points Of INTeraction
 
+## FILTER
+
 ## FLAGS
 
 Focal Loop Aggregation via Grid Search

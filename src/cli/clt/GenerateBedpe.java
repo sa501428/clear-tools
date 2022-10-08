@@ -21,7 +21,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class GenerateBedpe {
 
     public static String usage = "generate <forward.bed> <reverse.bed> " +
-            "<min_genome_dist> <max_genome_dist> <genomeID> <output.bedpe>";
+            "<min_genome_dist> <max_genome_dist> <genomeID> <output.bedpe>\n" +
+            "\t\tcreate potential loop locations using the anchors";
 
     public static void run(String[] args, CommandLineParser parser) {
 

@@ -14,8 +14,10 @@ import java.util.List;
 public class FilterBedpe {
 
     // overlap can be adjusted; exact means exact indices; default will use any overlap
-    // clean means don't save attributes
-    public static String usage = "filter[-contain][-clean] <genomeID> <input.bedpe> <output.bedpe>";
+    //
+    public static String usage = "filter-contain[-clean] <genomeID> <input.bedpe> <output.bedpe>\n" +
+            "\t\tcontain checks if localX and localY are within the bounds of the feature\n" +
+            "\t\tclean means don't save attributes";
 
     public static void run(String[] args, String command) {
 
@@ -25,7 +27,8 @@ public class FilterBedpe {
             Main.printGeneralUsageAndExit(15);
         }
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
-        Feature2DList features = LoopTools.loadFilteredBedpe(args[2], handler, true);
+        boolean noAttributes = command.contains("clean");
+        Feature2DList features = LoopTools.loadFilteredBedpe(args[2], handler, !noAttributes);
 
         Feature2DList output = filter(features, doCheckContain);
         output.exportFeatureList(new File(args[3]), false, Feature2DList.ListFormat.NA);

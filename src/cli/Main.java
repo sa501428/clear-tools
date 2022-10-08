@@ -15,10 +15,12 @@ public class Main {
         System.out.println("\t" + "-v, --verbose verbose mode");
         System.out.println("\t" + "-V, --version print version");
         System.out.println("Commands:");
-        for (String usage : new String[]{Flags.usage, Pinpoint.usage, Cleaner.usage, APA.usage, ATA.usage, Recap.usage,
-                Sieve.usage, HotSpot.usage, Fusion.usage, Sift.usage, NormHack.usage, SimplePeak.usage, SimpleMax.usage,
+        for (String usage : new String[]{Flags.usage, Pinpoint.usage, Cleaner.usage,
+                APA.usage, ATA.usage, Recap.usage,
+                Sieve.usage, HotSpot.usage, Fusion.usage,
+                Sift.usage, NormHack.usage, SimplePeak.usage, SimpleMax.usage,
                 GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage}) {
-            System.out.println("\t" + usage);
+            System.out.println("\t" + usage + "\n\n");
         }
 
         System.out.println("Exit code " + exitCode);

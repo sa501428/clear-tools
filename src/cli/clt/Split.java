@@ -12,7 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Split {
-    public static String usage = "split[-clean] <genomeID> <number> <input.bedpe> <output_>";
+    public static String usage = "split[-clean] <genomeID> <number> <input.bedpe> <output_>\n" +
+            "\t\tsplit up the bedpe into multiple lists; number < 2 splits by chromosome";
 
     public static void run(String[] args, String command) {
         if (args.length < 5) {

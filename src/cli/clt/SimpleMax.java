@@ -28,7 +28,8 @@ public class SimpleMax {
 
     private static final NormalizationType VC = NormalizationHandler.VC;
     private static final NormalizationType NONE = NormalizationHandler.NONE;
-    public static String usage = "simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>";
+    public static String usage = "simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>\n" +
+            "\t\tget the maximum pixel within the feature inside the bounds";
     private static final int buffer = 5;
 
     public static void printUsageAndExit() {
