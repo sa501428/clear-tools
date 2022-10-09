@@ -17,7 +17,7 @@ public class Main {
         System.out.println("Commands:");
         for (String usage : new String[]{APA.usage, ATA.usage, Cleaner.usage, Fusion.usage,
                 GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage,
-                Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage,
+                Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage, UnWrap.usage,
                 Flags.usage, Sift.usage, NormHack.usage, Recap.usage, HotSpot.usage}) {
             System.out.println("\t" + usage + "\n\n");
         }
@@ -53,6 +53,8 @@ public class Main {
             Cleaner.run(args, parser, command);
         } else if (command.startsWith("prob")) {
             Probability.run(args, parser);
+        } else if (command.startsWith("unwrap")) {
+            UnWrap.run(args, parser, command);
         } else if (command.startsWith("apa")) {
             APA apa = new APA(args, parser);
             apa.run();
