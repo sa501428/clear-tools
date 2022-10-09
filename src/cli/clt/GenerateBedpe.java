@@ -62,7 +62,7 @@ public class GenerateBedpe {
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
         Feature2DList domains = LoopTools.loadFilteredBedpe(args[2], handler, false);
         String outStem = args[3];
-        Feature2DList[] output = DomainTools.createLoops(handler, domains);
+        Feature2DList[] output = DomainTools.createLoops(domains);
         output[0].exportFeatureList(new File(outStem + ".corners.bedpe"), false, Feature2DList.ListFormat.NA);
         output[1].exportFeatureList(new File(outStem + ".centers.bedpe"), false, Feature2DList.ListFormat.NA);
     }
@@ -78,7 +78,7 @@ public class GenerateBedpe {
         boolean addOffset = args[4].contains("+");
         boolean subtractOffset = args[4].contains("-");
         int offset = Integer.parseInt(args[4].replaceAll("\\+", "").replaceAll("-", ""));
-        Feature2DList output = OffsetTools.createLoops(handler, loops, offset, addOffset, subtractOffset);
+        Feature2DList output = OffsetTools.createLoops(loops, offset, addOffset, subtractOffset);
         output.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
     }
 }
