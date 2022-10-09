@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.55.0";
+    public static final String VERSION_NUM = "0.55.1";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode) {
@@ -84,7 +84,7 @@ public class Main {
         } else if (command.startsWith("random")) {
             RandomLoops.run(args, parser);
         } else if (command.startsWith("generate")) {
-            GenerateBedpe.run(args, parser);
+            GenerateBedpe.run(args, parser, command);
         } else if (command.startsWith("simple")) {
             if (command.contains("max")) {
                 SimpleMax.run(args, parser);
