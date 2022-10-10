@@ -11,8 +11,8 @@ import java.util.List;
 
 public class LoopTools {
 
-    public static Feature2DList loadFilteredBedpe(String bedpeFile, ChromosomeHandler handler,
-                                                  boolean loadAttributes) {
+    public static Feature2DList loadNearDiagonalFilteredBedpe(String bedpeFile, ChromosomeHandler handler,
+                                                              boolean loadAttributes) {
         return Feature2DParser.loadFeatures(bedpeFile, handler,
                 loadAttributes, getNearDiagonalFilter(), false);
     }

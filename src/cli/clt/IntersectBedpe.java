@@ -1,12 +1,12 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.clean.LoopTools;
 import cli.utils.general.OverlapTools;
 import cli.utils.general.QuickGrouping;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
+import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
@@ -43,8 +43,8 @@ public class IntersectBedpe {
         // intersect <genomeID> <fileA.bedpe> <fileB.bedpe> <output.bedpe>
         boolean noAttributes = command.contains("clean");
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
-        Feature2DList featuresA = LoopTools.loadFilteredBedpe(args[2], handler, !noAttributes);
-        Feature2DList featuresB = LoopTools.loadFilteredBedpe(args[3], handler, !noAttributes);
+        Feature2DList featuresA = Feature2DParser.loadFeatures(args[2], handler, !noAttributes, null, false);
+        Feature2DList featuresB = Feature2DParser.loadFeatures(args[3], handler, !noAttributes, null, false);
 
         Feature2DList output = coalesceFeatures(featuresA, featuresB, handler,
                 doSubtraction, useExactMatch, window);

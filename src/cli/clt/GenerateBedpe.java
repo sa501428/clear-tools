@@ -1,7 +1,6 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.clean.LoopTools;
 import cli.utils.flags.Anchor;
 import cli.utils.general.BedFileParser;
 import cli.utils.loops.AnchorTools;
@@ -9,6 +8,7 @@ import cli.utils.loops.DomainTools;
 import cli.utils.loops.OffsetTools;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.feature2D.Feature2DList;
+import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 
@@ -60,7 +60,7 @@ public class GenerateBedpe {
             Main.printGeneralUsageAndExit(4);
         }
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
-        Feature2DList domains = LoopTools.loadFilteredBedpe(args[2], handler, false);
+        Feature2DList domains = Feature2DParser.loadFeatures(args[2], handler, false, null, false);
         String outStem = args[3];
         Feature2DList[] output = DomainTools.createLoops(domains);
         output[0].exportFeatureList(new File(outStem + ".corners.bedpe"), false, Feature2DList.ListFormat.NA);
@@ -73,7 +73,7 @@ public class GenerateBedpe {
             Main.printGeneralUsageAndExit(4);
         }
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
-        Feature2DList loops = LoopTools.loadFilteredBedpe(args[2], handler, false);
+        Feature2DList loops = Feature2DParser.loadFeatures(args[2], handler, false, null, false);
         String outFile = args[3];
         boolean addOffset = args[4].contains("+");
         boolean subtractOffset = args[4].contains("-");

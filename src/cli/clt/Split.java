@@ -1,9 +1,9 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.clean.LoopTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
+import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 
@@ -27,7 +27,7 @@ public class Split {
         int numberOfSplits = Integer.parseInt(args[2]);
 
         String path = args[3];
-        Feature2DList loopList = LoopTools.loadFilteredBedpe(path, handler, !noAttributes);
+        Feature2DList loopList = Feature2DParser.loadFeatures(path, handler, !noAttributes, null, false);
 
         String outStem = args[4];
 

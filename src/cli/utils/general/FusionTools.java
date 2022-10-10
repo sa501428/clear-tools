@@ -1,10 +1,10 @@
 package cli.utils.general;
 
 import cli.utils.FeatureStats;
-import cli.utils.clean.LoopTools;
 import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
+import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 import javastraw.tools.ParallelizationTools;
@@ -119,7 +119,7 @@ public class FusionTools {
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
         int counter = 0;
         for (String path : fileNames) {
-            Feature2DList loopList = LoopTools.loadFilteredBedpe(path, handler, !noAttributes);
+            Feature2DList loopList = Feature2DParser.loadFeatures(path, handler, !noAttributes, null, false);
             if (addIDs) {
                 addIDToAllLoops(loopList, counter, "LIST_UID");
                 counter++;

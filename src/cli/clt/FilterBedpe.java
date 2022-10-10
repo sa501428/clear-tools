@@ -1,9 +1,9 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.clean.LoopTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
+import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 
@@ -28,7 +28,7 @@ public class FilterBedpe {
         }
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
         boolean noAttributes = command.contains("clean");
-        Feature2DList features = LoopTools.loadFilteredBedpe(args[2], handler, !noAttributes);
+        Feature2DList features = Feature2DParser.loadFeatures(args[2], handler, !noAttributes, null, false);
 
         Feature2DList output = filter(features, doCheckContain);
         output.exportFeatureList(new File(args[3]), false, Feature2DList.ListFormat.NA);

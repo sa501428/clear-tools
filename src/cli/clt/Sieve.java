@@ -2,7 +2,6 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.FeatureStats;
-import cli.utils.clean.LoopTools;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.ManhattanDecay;
@@ -12,6 +11,7 @@ import javastraw.expected.Welford;
 import javastraw.expected.Zscore;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
+import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
@@ -50,7 +50,7 @@ public class Sieve {
 
         Dataset ds = HiCFileTools.extractDatasetForCLT(filepath, false, false, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();
-        Feature2DList loopList = LoopTools.loadFilteredBedpe(loopListPath, handler, true);
+        Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler, true, null, false);
 
         String possibleNorm = parser.getNormalizationStringOption();
         NormalizationType norm = NormalizationHandler.VC;

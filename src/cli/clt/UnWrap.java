@@ -1,9 +1,9 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.clean.LoopTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
+import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 
@@ -26,7 +26,7 @@ public class UnWrap {
 
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
 
-        Feature2DList loopList = LoopTools.loadFilteredBedpe(args[2], handler, true);
+        Feature2DList loopList = Feature2DParser.loadFeatures(args[2], handler, true, null, false);
         String outFile = args[3];
 
         Feature2DList invertedList = unwrap(loopList);

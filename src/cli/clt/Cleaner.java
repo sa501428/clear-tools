@@ -28,7 +28,7 @@ public class Cleaner {
     private static final float ZSCORE_CUTOFF = -1;
 
     public static String usage = "clean[-peek][-strict] <input.hic> <loops.bedpe> <output.bedpe>\n" +
-            "\t\tcoverage filtering of input loop list\n" +
+            "\t\tcoverage and near-diagonal filtering of input loop list\n" +
             "\t\tpeek adds attributes but does not remove any features\n" +
             "\t\tstrict means use more conservative cutoffs\n" +
             "\n\n" +
@@ -64,7 +64,7 @@ public class Cleaner {
         }
 
         for (int z = 0; z < bedpeFiles.length; z++) {
-            Feature2DList loopList = LoopTools.loadFilteredBedpe(bedpeFiles[z], handler, true);
+            Feature2DList loopList = LoopTools.loadNearDiagonalFilteredBedpe(bedpeFiles[z], handler, true);
             Feature2DList cleanList;
             if (dataset != null) {
                 cleanList = cleanupLoops(dataset, loopList, handler, justPeek, beStrict);
