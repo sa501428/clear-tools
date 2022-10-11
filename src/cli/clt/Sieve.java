@@ -7,6 +7,8 @@ import cli.utils.general.HiCUtils;
 import cli.utils.general.ManhattanDecay;
 import cli.utils.general.QuickGrouping;
 import cli.utils.general.Utils;
+import javastraw.expected.ExpectedModel;
+import javastraw.expected.LogExpectedSpline;
 import javastraw.expected.Welford;
 import javastraw.expected.Zscore;
 import javastraw.feature2D.Feature2D;
@@ -22,6 +24,7 @@ import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 
 import java.io.File;
 import java.util.*;
@@ -30,11 +33,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sieve {
 
-    public static String usage = "sieve[-strict] <loops.bedpe> <output.bedpe> <file.hic> <res1,...>";
+    public static String usage = "sieve[-strict][-peek] <loops.bedpe> <output.bedpe> <file.hic> <res1,...>\n" +
+            "\t\tretain loop if at a loop-y location; peek just saves values\n" +
+            "\t\tstrict requires each resolution to meet the criteria";
 
-    /**
-     * retain hi-res loops if at a 'loop-y' location per low-res assessment
-     */
     public Sieve(String[] args, CommandLineParser parser, String command) {
         // sieve <loops.bedpe> <output.bedpe> <file1.hic> <res1,res2,...>
         if (args.length != 5) {
@@ -42,6 +44,7 @@ public class Sieve {
         }
 
         boolean beStrict = command.contains("strict") || command.contains("conserv");
+        boolean justPeek = command.contains("peek");
 
         String loopListPath = args[1];
         String outfile = args[2];
@@ -64,7 +67,7 @@ public class Sieve {
             window = 5;
         }
 
-        Feature2DList result = retainMaxPeaks(ds, loopList, handler, resolutions, window, norm, beStrict);
+        Feature2DList result = retainMaxPeaks(ds, loopList, handler, resolutions, window, norm, beStrict, justPeek);
         result.exportFeatureList(new File(outfile), false, Feature2DList.ListFormat.NA);
 
         System.out.println("sieve complete");
@@ -72,7 +75,7 @@ public class Sieve {
 
     private static Feature2DList retainMaxPeaks(Dataset ds, Feature2DList loopList,
                                                 ChromosomeHandler handler, int[] resolutions, int window,
-                                                NormalizationType norm, boolean beStrict) {
+                                                NormalizationType norm, boolean beStrict, boolean justPeek) {
 
         if (Main.printVerboseComments) {
             System.out.println("Start Recap/Compile process");
@@ -105,6 +108,7 @@ public class Sieve {
                         HiCZoom zoom = new HiCZoom(resolution);
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
+                            ExpectedModel poly = new LogExpectedSpline(zd, norm, chrom1, resolution);
                             Set<Feature2D> loopsToAssessThisRound = filterForAppropriateResolution(loopsToAssessGlobal, resolution);
 
                             if (loopsToAssessThisRound.size() > 0) {
@@ -118,13 +122,30 @@ public class Sieve {
                                     int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + buffer);
                                     float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, norm);
                                     for (Feature2D loop : group) {
-                                        int midX = (int) (loop.getMidPt1() / resolution) - minR;
-                                        int midY = (int) (loop.getMidPt2() / resolution) - minC;
+                                        int absCoordBinX = (int) (loop.getMidPt1() / resolution);
+                                        int absCoordBinY = (int) (loop.getMidPt2() / resolution);
+                                        int dist = Math.abs(absCoordBinX - absCoordBinY);
+                                        int midX = absCoordBinX - minR;
+                                        int midY = absCoordBinY - minC;
                                         float[] manhattanDecay = ManhattanDecay.calculateDecay(regionMatrix, midX, midY, window);
-                                        double zScore = getLocalZscore(regionMatrix, minR, minC, window);
-                                        if (zScore > 1 && ManhattanDecay.passesMonotonicDecreasing(manhattanDecay, 2)) {
+                                        double zScore = getLocalZscore(regionMatrix, midX, midY, window);
+                                        float observed = regionMatrix[midX][midY];
+                                        float oe = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
+                                        float slope0 = getDecaySlope(manhattanDecay, 0);
+                                        float slope1 = getDecaySlope(manhattanDecay, 1);
+                                        float pc = poly.getPercentContact(dist, observed);
+
+                                        if (justPeek || isLoop(zScore, manhattanDecay)) {
                                             loop.addStringAttribute("sieve_resolution_passed", "" + resolution);
+
+                                            loop.addStringAttribute("sieve_observed_value", "" + observed);
+                                            loop.addStringAttribute("sieve_obs_over_enrichment", "" + oe);
                                             loop.addStringAttribute("sieve_local_zscore", "" + zScore);
+                                            loop.addStringAttribute("sieve_percent_contact", "" + pc);
+                                            //loop.addStringAttribute("sieve_local_apa", "" + apa);
+                                            loop.addStringAttribute("sieve_decay_slope_0", "" + slope0);
+                                            loop.addStringAttribute("sieve_decay_slope_1", "" + slope1);
+
                                             loopsToKeep.add(loop);
                                         }
                                     }
@@ -132,7 +153,7 @@ public class Sieve {
                                 }
                                 System.out.print(".");
                             }
-                            if (beStrict) {
+                            if (justPeek || beStrict) {
                                 loopsToAssessGlobal.retainAll(loopsToKeep);
                                 loopsToKeep.clear();
                             } else {
@@ -145,7 +166,7 @@ public class Sieve {
                 }
 
                 synchronized (newLoopList) {
-                    if (beStrict) {
+                    if (justPeek || beStrict) {
                         newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
                                 new ArrayList<>(loopsToAssessGlobal));
                     } else {
@@ -166,6 +187,18 @@ public class Sieve {
         return newLoopList;
     }
 
+    private static float getDecaySlope(float[] decay, int startIndex) {
+        SimpleRegression regression = new SimpleRegression();
+        for (int i = startIndex; i < decay.length; i++) {
+            regression.addData(Math.log(1 + i), Math.log(decay[i]));
+        }
+        return (float) regression.getSlope();
+    }
+
+    private static boolean isLoop(double zScore, float[] manhattanDecay) {
+        return zScore > 1 && ManhattanDecay.passesMonotonicDecreasing(manhattanDecay, 2);
+    }
+
     private static Set<Feature2D> filterForAppropriateResolution(Set<Feature2D> loops, int resolution) {
         Set<Feature2D> goodLoops = new HashSet<>();
         for (Feature2D loop : loops) {
@@ -179,9 +212,9 @@ public class Sieve {
     private static double getLocalZscore(float[][] regionMatrix, int midX, int midY, int window) {
 
         int startR = Math.max(midX - window, 0);
-        int endR = midX + window + 1;
+        int endR = Math.min(midX + window + 1, regionMatrix.length);
         int startC = Math.max(midY - window, 0);
-        int endC = midY + window + 1;
+        int endC = Math.min(midY + window + 1, regionMatrix[0].length);
 
         Welford welford = new Welford();
         for (int i = startR; i < endR; i++) {
