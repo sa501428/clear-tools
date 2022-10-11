@@ -117,7 +117,7 @@ public class Sieve {
 
                             if (loopsToAssessThisRound.size() > 0) {
                                 Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
-                                        loopsToAssessThisRound, 200 * resolution).values();
+                                        loopsToAssessThisRound, 500 * resolution).values();
 
                                 for (List<Feature2D> group : loopGroups) {
                                     int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
@@ -131,12 +131,14 @@ public class Sieve {
                                         int dist = Math.abs(absCoordBinX - absCoordBinY);
                                         int midX = absCoordBinX - minR;
                                         int midY = absCoordBinY - minC;
+
                                         float[] manhattanDecay = ManhattanDecay.calculateDecay(regionMatrix, midX, midY, window);
                                         double zScore = getLocalZscore(regionMatrix, midX, midY, window);
+                                        double llZScore = getLLZscore(regionMatrix, midX, midY, window);
                                         float observed = regionMatrix[midX][midY];
                                         float oe = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
-                                        //float slope0 = getDecaySlope(manhattanDecay, 0);
-                                        //float slope1 = getDecaySlope(manhattanDecay, 1);
+                                        float slope0 = getDecaySlope(manhattanDecay, 0);
+                                        float slope1 = getDecaySlope(manhattanDecay, 1);
                                         float pc = poly.getPercentContact(dist, observed);
 
                                         if (justPeek || isLoop(zScore, manhattanDecay)) {
@@ -144,10 +146,10 @@ public class Sieve {
                                             loop.addStringAttribute("sieve_observed_value", "" + observed);
                                             loop.addStringAttribute("sieve_obs_over_enrichment", "" + oe);
                                             loop.addStringAttribute("sieve_local_zscore", "" + zScore);
+                                            loop.addStringAttribute("sieve_ll_zscore", "" + llZScore);
                                             loop.addStringAttribute("sieve_percent_contact", "" + pc);
-                                            //loop.addStringAttribute("sieve_local_apa", "" + apa);
-                                            //loop.addStringAttribute("sieve_decay_slope_0", "" + slope0);
-                                            //loop.addStringAttribute("sieve_decay_slope_1", "" + slope1);
+                                            loop.addStringAttribute("sieve_decay_slope_0", "" + slope0);
+                                            loop.addStringAttribute("sieve_decay_slope_1", "" + slope1);
                                             loop.addStringAttribute("sieve_decay_array", toString(manhattanDecay));
                                             loopsToKeep.add(loop);
                                         }
@@ -201,7 +203,7 @@ public class Sieve {
     private static float getDecaySlope(float[] decay, int startIndex) {
         SimpleRegression regression = new SimpleRegression();
         for (int i = startIndex; i < decay.length; i++) {
-            regression.addData(Math.log(1 + i), Math.log(decay[i]));
+            regression.addData(Math.log(1 + i), Math.log(1 + decay[i]));
         }
         return (float) regression.getSlope();
     }
@@ -220,13 +222,23 @@ public class Sieve {
         return goodLoops;
     }
 
-    private static double getLocalZscore(float[][] regionMatrix, int midX, int midY, int window) {
+    private static double getLLZscore(float[][] regionMatrix, int midX, int midY, int window) {
+        int startR = Math.max(midX + 1, 0);
+        int endR = Math.min(midX + window + 1, regionMatrix.length);
+        int startC = Math.max(midY - window, 0);
+        int endC = Math.min(midY - 1, regionMatrix[0].length);
+        return getZscoreForRegion(regionMatrix, midX, midY, startR, endR, startC, endC);
+    }
 
+    private static double getLocalZscore(float[][] regionMatrix, int midX, int midY, int window) {
         int startR = Math.max(midX - window, 0);
         int endR = Math.min(midX + window + 1, regionMatrix.length);
         int startC = Math.max(midY - window, 0);
         int endC = Math.min(midY + window + 1, regionMatrix[0].length);
+        return getZscoreForRegion(regionMatrix, midX, midY, startR, endR, startC, endC);
+    }
 
+    private static double getZscoreForRegion(float[][] regionMatrix, int midX, int midY, int startR, int endR, int startC, int endC) {
         Welford welford = new Welford();
         for (int i = startR; i < endR; i++) {
             for (int j = startC; j < endC; j++) {

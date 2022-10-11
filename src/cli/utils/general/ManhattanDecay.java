@@ -30,12 +30,12 @@ public class ManhattanDecay {
             }
         }
 
-        float denominator = 0 + values[0];
+        /*float denominator = 0 + values[0];
         if (denominator > 0) {
             for (int k = 0; k < values.length; k++) {
                 values[k] /= denominator;
             }
-        }
+        }*/
 
         return values;
     }
