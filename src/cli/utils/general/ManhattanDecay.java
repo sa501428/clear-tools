@@ -7,9 +7,9 @@ public class ManhattanDecay {
         int[] counts = new int[window + 1];
 
         int startR = Math.max(midX - window, 0);
-        int endR = midX + window + 1;
+        int endR = Math.min(midX + window + 1, matrix.length);
         int startC = Math.max(midY - window, 0);
-        int endC = midY + window + 1;
+        int endC = Math.min(midY + window + 1, matrix[0].length);
 
         for (int i = startR; i < endR; i++) {
             int di = Math.abs(i - midX);
@@ -31,8 +31,10 @@ public class ManhattanDecay {
         }
 
         float denominator = 0 + values[0];
-        for (int k = 0; k < values.length; k++) {
-            values[k] /= denominator;
+        if (denominator > 0) {
+            for (int k = 0; k < values.length; k++) {
+                values[k] /= denominator;
+            }
         }
 
         return values;

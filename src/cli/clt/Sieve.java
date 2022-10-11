@@ -135,21 +135,20 @@ public class Sieve {
                                         double zScore = getLocalZscore(regionMatrix, midX, midY, window);
                                         float observed = regionMatrix[midX][midY];
                                         float oe = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
-                                        float slope0 = getDecaySlope(manhattanDecay, 0);
-                                        float slope1 = getDecaySlope(manhattanDecay, 1);
+                                        //float slope0 = getDecaySlope(manhattanDecay, 0);
+                                        //float slope1 = getDecaySlope(manhattanDecay, 1);
                                         float pc = poly.getPercentContact(dist, observed);
 
                                         if (justPeek || isLoop(zScore, manhattanDecay)) {
                                             loop.addStringAttribute("sieve_resolution_passed", "" + resolution);
-
                                             loop.addStringAttribute("sieve_observed_value", "" + observed);
                                             loop.addStringAttribute("sieve_obs_over_enrichment", "" + oe);
                                             loop.addStringAttribute("sieve_local_zscore", "" + zScore);
                                             loop.addStringAttribute("sieve_percent_contact", "" + pc);
                                             //loop.addStringAttribute("sieve_local_apa", "" + apa);
-                                            loop.addStringAttribute("sieve_decay_slope_0", "" + slope0);
-                                            loop.addStringAttribute("sieve_decay_slope_1", "" + slope1);
-
+                                            //loop.addStringAttribute("sieve_decay_slope_0", "" + slope0);
+                                            //loop.addStringAttribute("sieve_decay_slope_1", "" + slope1);
+                                            loop.addStringAttribute("sieve_decay_array", toString(manhattanDecay));
                                             loopsToKeep.add(loop);
                                         }
                                     }
@@ -189,6 +188,14 @@ public class Sieve {
         });
 
         return newLoopList;
+    }
+
+    private static String toString(float[] array) {
+        StringBuilder str = new StringBuilder("" + array[0]);
+        for (int k = 1; k < array.length; k++) {
+            str.append(",").append(array[k]);
+        }
+        return str.toString();
     }
 
     private static float getDecaySlope(float[] decay, int startIndex) {
