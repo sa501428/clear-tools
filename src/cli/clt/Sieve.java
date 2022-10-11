@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sieve {
 
-    public static String usage = "sieve[-strict][-peek] <loops.bedpe> <output.bedpe> <file.hic> <res1,...>\n" +
+    public static String usage = "sieve[-strict][-peek] [-k NORM] <loops.bedpe> <output.bedpe> <file.hic> <res1,...>\n" +
             "\t\tretain loop if at a loop-y location; peek just saves values\n" +
             "\t\tstrict requires each resolution to meet the criteria";
 
@@ -58,7 +58,11 @@ public class Sieve {
         String possibleNorm = parser.getNormalizationStringOption();
         NormalizationType norm = NormalizationHandler.VC;
         if (possibleNorm != null && possibleNorm.length() > 0) {
-            norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+            if (possibleNorm.equalsIgnoreCase("none")) {
+                norm = NormalizationHandler.NONE;
+            } else {
+                norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+            }
         }
         System.out.println("Using normalization: " + norm.getLabel());
 
