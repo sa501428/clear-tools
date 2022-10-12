@@ -4,7 +4,6 @@ import cli.Main;
 import cli.utils.FeatureStats;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
-import cli.utils.general.ManhattanDecay;
 import cli.utils.general.QuickGrouping;
 import cli.utils.general.Utils;
 import javastraw.expected.ExpectedModel;
@@ -33,23 +32,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sieve {
 
-    public static String usage = "sieve[-strict][-peek] [-k NORM] <loops.bedpe> <output.bedpe> <file.hic> <res1,...>\n" +
+    // [-strict][-peek]
+    public static String usage = "sieve [-k NORM] <loops.bedpe> <output.bedpe> <file.hic> [res1,...]\n" +
             "\t\tretain loop if at a loop-y location; peek just saves values\n" +
             "\t\tstrict requires each resolution to meet the criteria";
 
     public Sieve(String[] args, CommandLineParser parser, String command) {
         // sieve <loops.bedpe> <output.bedpe> <file1.hic> <res1,res2,...>
-        if (args.length != 5) {
+        if (args.length != 5 && args.length != 4) {
             Main.printGeneralUsageAndExit(5);
         }
 
-        boolean beStrict = command.contains("strict") || command.contains("conserv");
-        boolean justPeek = command.contains("peek");
+        boolean beStrict = false; //command.contains("strict") || command.contains("conserv");
+        boolean justPeek = true; //command.contains("peek");
 
         String loopListPath = args[1];
         String outfile = args[2];
         String filepath = args[3];
-        int[] resolutions = parseInts(args[4]);
+        int[] resolutions = new int[]{1000, 2000, 5000};
+        if (args.length > 4) {
+            resolutions = parseInts(args[4]);
+        }
 
         Dataset ds = HiCFileTools.extractDatasetForCLT(filepath, false, false, true);
         ChromosomeHandler handler = ds.getChromosomeHandler();
@@ -71,18 +74,18 @@ public class Sieve {
             window = 5;
         }
 
-        Feature2DList result = retainMaxPeaks(ds, loopList, handler, resolutions, window, norm, beStrict, justPeek);
+        Feature2DList result = sieveFilter(ds, loopList, handler, resolutions, window, norm, beStrict, justPeek);
         result.exportFeatureList(new File(outfile), false, Feature2DList.ListFormat.NA);
 
         System.out.println("sieve complete");
     }
 
-    private static Feature2DList retainMaxPeaks(Dataset ds, Feature2DList loopList,
-                                                ChromosomeHandler handler, int[] resolutions, int window,
-                                                NormalizationType norm, boolean beStrict, boolean justPeek) {
+    private static Feature2DList sieveFilter(Dataset ds, Feature2DList loopList,
+                                             ChromosomeHandler handler, int[] resolutions, int window,
+                                             NormalizationType norm, boolean beStrict, boolean justPeek) {
 
         if (Main.printVerboseComments) {
-            System.out.println("Start Recap/Compile process");
+            System.out.println("Start Sieve process");
         }
 
         final Feature2DList newLoopList = new Feature2DList();
@@ -112,12 +115,13 @@ public class Sieve {
                         HiCZoom zoom = new HiCZoom(resolution);
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
-                            ExpectedModel poly = new LogExpectedSpline(zd, norm, chrom1, resolution);
                             Set<Feature2D> loopsToAssessThisRound = filterForAppropriateResolution(loopsToAssessGlobal, resolution);
 
                             if (loopsToAssessThisRound.size() > 0) {
                                 Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
                                         loopsToAssessThisRound, 500 * resolution).values();
+
+                                ExpectedModel poly = new LogExpectedSpline(zd, norm, chrom1, resolution);
 
                                 for (List<Feature2D> group : loopGroups) {
                                     int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
@@ -132,25 +136,25 @@ public class Sieve {
                                         int midX = absCoordBinX - minR;
                                         int midY = absCoordBinY - minC;
 
-                                        float[] manhattanDecay = ManhattanDecay.calculateDecay(regionMatrix, midX, midY, window);
+                                        //float[] manhattanDecay = ManhattanDecay.calculateDecay(regionMatrix, midX, midY, window);
                                         double zScore = getLocalZscore(regionMatrix, midX, midY, window);
-                                        double llZScore = getLLZscore(regionMatrix, midX, midY, window);
+                                        //double llZScore = getLLZscore(regionMatrix, midX, midY, window);
                                         float observed = regionMatrix[midX][midY];
                                         float oe = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
-                                        float slope0 = getDecaySlope(manhattanDecay, 0);
-                                        float slope1 = getDecaySlope(manhattanDecay, 1);
-                                        float pc = poly.getPercentContact(dist, observed);
+                                        //float slope0 = getDecaySlope(manhattanDecay, 0);
+                                        //float slope1 = getDecaySlope(manhattanDecay, 1);
+                                        //float pc = poly.getPercentContact(dist, observed);
 
-                                        if (justPeek || isLoop(zScore, manhattanDecay)) {
-                                            loop.addStringAttribute("sieve_resolution_passed", "" + resolution);
-                                            loop.addStringAttribute("sieve_observed_value", "" + observed);
-                                            loop.addStringAttribute("sieve_obs_over_enrichment", "" + oe);
-                                            loop.addStringAttribute("sieve_local_zscore", "" + zScore);
-                                            loop.addStringAttribute("sieve_ll_zscore", "" + llZScore);
-                                            loop.addStringAttribute("sieve_percent_contact", "" + pc);
-                                            loop.addStringAttribute("sieve_decay_slope_0", "" + slope0);
-                                            loop.addStringAttribute("sieve_decay_slope_1", "" + slope1);
-                                            loop.addStringAttribute("sieve_decay_array", toString(manhattanDecay));
+                                        if (justPeek || isLoop(zScore)) { // manhattanDecay
+                                            //loop.addStringAttribute("sieve_resolution_passed", "" + resolution);
+                                            //loop.addStringAttribute("sieve_observed_value", "" + observed);
+                                            loop.addStringAttribute(resolution + "_sieve_obs_over_expected", "" + oe);
+                                            loop.addStringAttribute(resolution + "_sieve_local_zscore", "" + zScore);
+                                            //loop.addStringAttribute(resolution+"_sieve_ll_zscore", "" + llZScore);
+                                            //loop.addStringAttribute("sieve_percent_contact", "" + pc);
+                                            //loop.addStringAttribute("sieve_decay_slope_0", "" + slope0);
+                                            //loop.addStringAttribute("sieve_decay_slope_1", "" + slope1);
+                                            //loop.addStringAttribute("sieve_decay_array", toString(manhattanDecay));
                                             loopsToKeep.add(loop);
                                         }
                                     }
@@ -208,8 +212,8 @@ public class Sieve {
         return (float) regression.getSlope();
     }
 
-    private static boolean isLoop(double zScore, float[] manhattanDecay) {
-        return zScore > 1 && ManhattanDecay.passesMonotonicDecreasing(manhattanDecay, 2);
+    private static boolean isLoop(double zScore) { // , float[] manhattanDecay
+        return zScore > 1; // && ManhattanDecay.passesMonotonicDecreasing(manhattanDecay, 2)
     }
 
     private static Set<Feature2D> filterForAppropriateResolution(Set<Feature2D> loops, int resolution) {
