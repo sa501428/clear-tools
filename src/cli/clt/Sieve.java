@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sieve {
 
+    public int[] resolutions = new int[]{1000, 2000, 5000, 10000};
+
     // [-strict][-peek]
     // ; peek just saves values\n\t\tstrict requires each resolution to meet the criteria
     public static String usage = "sieve [-k NORM] <loops.bedpe> <out.stem> <file.hic> [res1,...]\n" +
@@ -45,7 +47,7 @@ public class Sieve {
         String loopListPath = args[1];
         String outStem = args[2];
         String filepath = args[3];
-        int[] resolutions = new int[]{1000, 2000, 5000};
+
         if (args.length > 4) {
             resolutions = parseInts(args[4]);
         }
@@ -200,23 +202,20 @@ public class Sieve {
 
     private boolean isEnrichedLocalAndGlobalMaxima(Feature2D feature) {
 
-        float zScore1kb = getAttribute(feature, "1000_sieve_local_zscore", 0);
-        float zScore2kb = getAttribute(feature, "2000_sieve_local_zscore", 0);
-        float zScore5kb = getAttribute(feature, "5000_sieve_local_zscore", 0);
-        float oe1kb = getAttribute(feature, "1000_sieve_obs_over_expected", 0);
-        float oe2kb = getAttribute(feature, "2000_sieve_obs_over_expected", 0);
-        float oe5kb = getAttribute(feature, "5000_sieve_obs_over_expected", 0);
+        int strongEnrichment = 0;
+        int weakEnrichment = 0;
+        for (int res : resolutions) {
+            float zScore = getAttribute(feature, res + "_sieve_local_zscore", 0);
+            float oe = getAttribute(feature, res + "_sieve_obs_over_expected", 0);
+            if (zScore > 2 && oe > 2) {
+                strongEnrichment++;
+            }
+            if (zScore > 1.5 && oe > 1.5) {
+                weakEnrichment++;
+            }
+        }
 
-        boolean singleResStrongSignalPrediction = (zScore1kb > 2 && oe1kb > 2)
-                || (zScore2kb > 2 && oe2kb > 2)
-                || (zScore5kb > 2 && oe5kb > 2);
-
-        boolean pz1 = zScore1kb > 1.5 && oe1kb > 1.5;
-        boolean pz2 = zScore2kb > 1.5 && oe2kb > 1.5;
-        boolean pz5 = zScore5kb > 1.5 && oe5kb > 1.5;
-        boolean dualResWeakSignalPrediction = (pz1 && pz2) || (pz2 && pz5) || (pz1 && pz5);
-
-        return singleResStrongSignalPrediction || dualResWeakSignalPrediction;
+        return strongEnrichment >= 1 || weakEnrichment >= 2;
     }
 
     private float getAttribute(Feature2D feature, String key, int defaultValue) {
