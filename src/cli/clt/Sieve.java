@@ -43,9 +43,6 @@ public class Sieve {
             Main.printGeneralUsageAndExit(5);
         }
 
-        boolean beStrict = false; //command.contains("strict") || command.contains("conserv");
-        boolean justPeek = true; //command.contains("peek");
-
         String loopListPath = args[1];
         String outfile = args[2];
         String filepath = args[3];
@@ -74,7 +71,7 @@ public class Sieve {
             window = 5;
         }
 
-        Feature2DList result = sieveFilter(ds, loopList, handler, resolutions, window, norm, beStrict, justPeek);
+        Feature2DList result = sieveFilter(ds, loopList, handler, resolutions, window, norm);
         result.exportFeatureList(new File(outfile), false, Feature2DList.ListFormat.NA);
 
         System.out.println("sieve complete");
@@ -82,7 +79,7 @@ public class Sieve {
 
     private static Feature2DList sieveFilter(Dataset ds, Feature2DList loopList,
                                              ChromosomeHandler handler, int[] resolutions, int window,
-                                             NormalizationType norm, boolean beStrict, boolean justPeek) {
+                                             NormalizationType norm) {
 
         if (Main.printVerboseComments) {
             System.out.println("Start Sieve process");
@@ -106,7 +103,6 @@ public class Sieve {
                 Chromosome chrom2 = config.getChr2();
 
                 Set<Feature2D> loopsToAssessGlobal = new HashSet<>(loopList.get(chrom1.getIndex(), chrom2.getIndex()));
-                Set<Feature2D> loopsToKeep = new HashSet<>();
                 Matrix matrix = ds.getMatrix(chrom1, chrom2);
                 int numLoopsForThisChromosome = loopsToAssessGlobal.size();
 
@@ -136,37 +132,16 @@ public class Sieve {
                                         int midX = absCoordBinX - minR;
                                         int midY = absCoordBinY - minC;
 
-                                        //float[] manhattanDecay = ManhattanDecay.calculateDecay(regionMatrix, midX, midY, window);
                                         double zScore = getLocalZscore(regionMatrix, midX, midY, window);
-                                        //double llZScore = getLLZscore(regionMatrix, midX, midY, window);
                                         float observed = regionMatrix[midX][midY];
                                         float oe = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
-                                        //float slope0 = getDecaySlope(manhattanDecay, 0);
-                                        //float slope1 = getDecaySlope(manhattanDecay, 1);
-                                        //float pc = poly.getPercentContact(dist, observed);
 
-                                        if (justPeek || isLoop(zScore)) { // manhattanDecay
-                                            //loop.addStringAttribute("sieve_resolution_passed", "" + resolution);
-                                            //loop.addStringAttribute("sieve_observed_value", "" + observed);
-                                            loop.addStringAttribute(resolution + "_sieve_obs_over_expected", "" + oe);
-                                            loop.addStringAttribute(resolution + "_sieve_local_zscore", "" + zScore);
-                                            //loop.addStringAttribute(resolution+"_sieve_ll_zscore", "" + llZScore);
-                                            //loop.addStringAttribute("sieve_percent_contact", "" + pc);
-                                            //loop.addStringAttribute("sieve_decay_slope_0", "" + slope0);
-                                            //loop.addStringAttribute("sieve_decay_slope_1", "" + slope1);
-                                            //loop.addStringAttribute("sieve_decay_array", toString(manhattanDecay));
-                                            loopsToKeep.add(loop);
-                                        }
+                                        loop.addStringAttribute(resolution + "_sieve_obs_over_expected", "" + oe);
+                                        loop.addStringAttribute(resolution + "_sieve_local_zscore", "" + zScore);
                                     }
                                     regionMatrix = null;
                                 }
                                 System.out.print(".");
-                            }
-                            if (justPeek || beStrict) {
-                                loopsToAssessGlobal.retainAll(loopsToKeep);
-                                loopsToKeep.clear();
-                            } else {
-                                loopsToAssessGlobal.removeAll(loopsToKeep);
                             }
                         }
                         matrix.clearCacheForZoom(zoom);
@@ -175,13 +150,8 @@ public class Sieve {
                 }
 
                 synchronized (newLoopList) {
-                    if (justPeek || beStrict) {
-                        newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
-                                new ArrayList<>(loopsToAssessGlobal));
-                    } else {
-                        newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
-                                new ArrayList<>(loopsToKeep));
-                    }
+                    newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
+                            new ArrayList<>(loopsToAssessGlobal));
                 }
 
                 if (numLoopsForThisChromosome > 0) {
@@ -223,7 +193,31 @@ public class Sieve {
                 goodLoops.add(loop);
             }
         }
+        return ensureOnlyOneLoopPerBin(goodLoops, resolution);
+    }
+
+    private static Set<Feature2D> ensureOnlyOneLoopPerBin(Set<Feature2D> loops, int resolution) {
+        Map<String, List<Feature2D>> collisions = new HashMap<>();
+        for (Feature2D feature : loops) {
+            String key = getKey(feature, resolution);
+            if (!collisions.containsKey(key)) {
+                collisions.put(key, new LinkedList<>());
+            }
+            collisions.get(key).add(feature);
+        }
+        Set<Feature2D> goodLoops = new HashSet<>();
+        for (List<Feature2D> features : collisions.values()) {
+            if (features.size() == 1) {
+                goodLoops.add(features.get(0));
+            }
+        }
+        collisions.clear();
+        loops.clear();
         return goodLoops;
+    }
+
+    private static String getKey(Feature2D feature, int resolution) {
+        return (int) (feature.getMidPt1() / resolution) + "_" + (int) (feature.getMidPt2() / resolution);
     }
 
     private static double getLLZscore(float[][] regionMatrix, int midX, int midY, int window) {
