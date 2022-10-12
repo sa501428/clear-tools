@@ -2,14 +2,14 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.FeatureStats;
+import cli.utils.clean.BinCollisionChecker;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.QuickGrouping;
 import cli.utils.general.Utils;
+import cli.utils.general.ZscoreTools;
 import javastraw.expected.ExpectedModel;
 import javastraw.expected.LogExpectedSpline;
-import javastraw.expected.Welford;
-import javastraw.expected.Zscore;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -23,7 +23,6 @@ import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
-import org.apache.commons.math3.stat.regression.SimpleRegression;
 
 import java.io.File;
 import java.util.*;
@@ -33,9 +32,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Sieve {
 
     // [-strict][-peek]
-    public static String usage = "sieve [-k NORM] <loops.bedpe> <output.bedpe> <file.hic> [res1,...]\n" +
-            "\t\tretain loop if at a loop-y location; peek just saves values\n" +
-            "\t\tstrict requires each resolution to meet the criteria";
+    // ; peek just saves values\n\t\tstrict requires each resolution to meet the criteria
+    public static String usage = "sieve [-k NORM] <loops.bedpe> <out.stem> <file.hic> [res1,...]\n" +
+            "\t\tretain loop if at a loop-y location";
 
     public Sieve(String[] args, CommandLineParser parser, String command) {
         // sieve <loops.bedpe> <output.bedpe> <file1.hic> <res1,res2,...>
@@ -44,7 +43,7 @@ public class Sieve {
         }
 
         String loopListPath = args[1];
-        String outfile = args[2];
+        String outStem = args[2];
         String filepath = args[3];
         int[] resolutions = new int[]{1000, 2000, 5000};
         if (args.length > 4) {
@@ -72,7 +71,11 @@ public class Sieve {
         }
 
         Feature2DList result = sieveFilter(ds, loopList, handler, resolutions, window, norm);
-        result.exportFeatureList(new File(outfile), false, Feature2DList.ListFormat.NA);
+        result.exportFeatureList(new File(outStem + ".attributes.bedpe"), false, Feature2DList.ListFormat.NA);
+
+        Feature2DList[] goodAndBad = filterByScore(result);
+        goodAndBad[0].exportFeatureList(new File(outStem + ".good.loops.bedpe"), false, Feature2DList.ListFormat.NA);
+        goodAndBad[1].exportFeatureList(new File(outStem + ".not.loops.bedpe"), false, Feature2DList.ListFormat.NA);
 
         System.out.println("sieve complete");
     }
@@ -132,7 +135,7 @@ public class Sieve {
                                         int midX = absCoordBinX - minR;
                                         int midY = absCoordBinY - minC;
 
-                                        double zScore = getLocalZscore(regionMatrix, midX, midY, window);
+                                        float zScore = (float) ZscoreTools.getLocalZscore(regionMatrix, midX, midY, window);
                                         float observed = regionMatrix[midX][midY];
                                         float oe = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
 
@@ -166,26 +169,6 @@ public class Sieve {
         return newLoopList;
     }
 
-    private static String toString(float[] array) {
-        StringBuilder str = new StringBuilder("" + array[0]);
-        for (int k = 1; k < array.length; k++) {
-            str.append(",").append(array[k]);
-        }
-        return str.toString();
-    }
-
-    private static float getDecaySlope(float[] decay, int startIndex) {
-        SimpleRegression regression = new SimpleRegression();
-        for (int i = startIndex; i < decay.length; i++) {
-            regression.addData(Math.log(1 + i), Math.log(1 + decay[i]));
-        }
-        return (float) regression.getSlope();
-    }
-
-    private static boolean isLoop(double zScore) { // , float[] manhattanDecay
-        return zScore > 1; // && ManhattanDecay.passesMonotonicDecreasing(manhattanDecay, 2)
-    }
-
     private static Set<Feature2D> filterForAppropriateResolution(Set<Feature2D> loops, int resolution) {
         Set<Feature2D> goodLoops = new HashSet<>();
         for (Feature2D loop : loops) {
@@ -193,60 +176,57 @@ public class Sieve {
                 goodLoops.add(loop);
             }
         }
-        return ensureOnlyOneLoopPerBin(goodLoops, resolution);
+        return BinCollisionChecker.ensureOnlyOneLoopPerBin(goodLoops, resolution);
     }
 
-    private static Set<Feature2D> ensureOnlyOneLoopPerBin(Set<Feature2D> loops, int resolution) {
-        Map<String, List<Feature2D>> collisions = new HashMap<>();
-        for (Feature2D feature : loops) {
-            String key = getKey(feature, resolution);
-            if (!collisions.containsKey(key)) {
-                collisions.put(key, new LinkedList<>());
-            }
-            collisions.get(key).add(feature);
-        }
-        Set<Feature2D> goodLoops = new HashSet<>();
-        for (List<Feature2D> features : collisions.values()) {
-            if (features.size() == 1) {
-                goodLoops.add(features.get(0));
-            }
-        }
-        collisions.clear();
-        loops.clear();
-        return goodLoops;
-    }
-
-    private static String getKey(Feature2D feature, int resolution) {
-        return (int) (feature.getMidPt1() / resolution) + "_" + (int) (feature.getMidPt2() / resolution);
-    }
-
-    private static double getLLZscore(float[][] regionMatrix, int midX, int midY, int window) {
-        int startR = Math.max(midX + 1, 0);
-        int endR = Math.min(midX + window + 1, regionMatrix.length);
-        int startC = Math.max(midY - window, 0);
-        int endC = Math.min(midY - 1, regionMatrix[0].length);
-        return getZscoreForRegion(regionMatrix, midX, midY, startR, endR, startC, endC);
-    }
-
-    private static double getLocalZscore(float[][] regionMatrix, int midX, int midY, int window) {
-        int startR = Math.max(midX - window, 0);
-        int endR = Math.min(midX + window + 1, regionMatrix.length);
-        int startC = Math.max(midY - window, 0);
-        int endC = Math.min(midY + window + 1, regionMatrix[0].length);
-        return getZscoreForRegion(regionMatrix, midX, midY, startR, endR, startC, endC);
-    }
-
-    private static double getZscoreForRegion(float[][] regionMatrix, int midX, int midY, int startR, int endR, int startC, int endC) {
-        Welford welford = new Welford();
-        for (int i = startR; i < endR; i++) {
-            for (int j = startC; j < endC; j++) {
-                if (i != midX && j != midY) {
-                    welford.addValue(regionMatrix[i][j]);
+    private Feature2DList[] filterByScore(Feature2DList result) {
+        Feature2DList good = new Feature2DList();
+        Feature2DList bad = new Feature2DList();
+        result.processLists((s, list) -> {
+            List<Feature2D> goodLoops = new ArrayList<>();
+            List<Feature2D> badLoops = new ArrayList<>();
+            for (Feature2D feature : list) {
+                if (isEnrichedLocalAndGlobalMaxima(feature)) {
+                    goodLoops.add(feature);
+                } else {
+                    badLoops.add(feature);
                 }
             }
+            good.addByKey(s, goodLoops);
+            bad.addByKey(s, badLoops);
+        });
+        return new Feature2DList[]{good, bad};
+    }
+
+    private boolean isEnrichedLocalAndGlobalMaxima(Feature2D feature) {
+
+        float zScore1kb = getAttribute(feature, "1000_sieve_local_zscore", 0);
+        float zScore2kb = getAttribute(feature, "2000_sieve_local_zscore", 0);
+        float zScore5kb = getAttribute(feature, "5000_sieve_local_zscore", 0);
+        float oe1kb = getAttribute(feature, "1000_sieve_obs_over_expected", 0);
+        float oe2kb = getAttribute(feature, "2000_sieve_obs_over_expected", 0);
+        float oe5kb = getAttribute(feature, "5000_sieve_obs_over_expected", 0);
+
+        boolean singleResStrongSignalPrediction = (zScore1kb > 2 && oe1kb > 2)
+                || (zScore2kb > 2 && oe2kb > 2)
+                || (zScore5kb > 2 && oe5kb > 2);
+
+        boolean pz1 = zScore1kb > 1.5 && oe1kb > 1.5;
+        boolean pz2 = zScore2kb > 1.5 && oe2kb > 1.5;
+        boolean pz5 = zScore5kb > 1.5 && oe5kb > 1.5;
+        boolean dualResWeakSignalPrediction = (pz1 && pz2) || (pz2 && pz5) || (pz1 && pz5);
+
+        return singleResStrongSignalPrediction || dualResWeakSignalPrediction;
+    }
+
+    private float getAttribute(Feature2D feature, String key, int defaultValue) {
+        if (feature.hasAttributeKey(key)) {
+            try {
+                return Float.parseFloat(feature.getAttribute(key));
+            } catch (Exception ignored) {
+            }
         }
-        Zscore zscore = welford.getZscore();
-        return zscore.getZscore(regionMatrix[midX][midY]);
+        return defaultValue;
     }
 
     private int[] parseInts(String input) {

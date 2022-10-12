@@ -1,5 +1,7 @@
 package cli.utils.general;
 
+import org.apache.commons.math3.stat.regression.SimpleRegression;
+
 public class ManhattanDecay {
 
     public static float[] calculateDecay(float[][] matrix, int midX, int midY, int window) {
@@ -47,5 +49,22 @@ public class ManhattanDecay {
             }
         }
         return true;
+    }
+
+
+    private static String toString(float[] array) {
+        StringBuilder str = new StringBuilder("" + array[0]);
+        for (int k = 1; k < array.length; k++) {
+            str.append(",").append(array[k]);
+        }
+        return str.toString();
+    }
+
+    private static float getDecaySlope(float[] decay, int startIndex) {
+        SimpleRegression regression = new SimpleRegression();
+        for (int i = startIndex; i < decay.length; i++) {
+            regression.addData(Math.log(1 + i), Math.log(1 + decay[i]));
+        }
+        return (float) regression.getSlope();
     }
 }
