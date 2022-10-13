@@ -116,8 +116,9 @@ public class Sieve {
                         HiCZoom zoom = new HiCZoom(resolution);
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
-                            Set<Feature2D> loopsToAssessThisRound = filterForAppropriateResolution(loopsToAssessGlobal, resolution);
-
+                            setDefaultAttributes(loopsToAssessGlobal, resolution);
+                            //Set<Feature2D> loopsToAssessThisRound = filterForAppropriateResolution(loopsToAssessGlobal, resolution);
+                            Set<Feature2D> loopsToAssessThisRound = BinCollisionChecker.ensureOnlyOneLoopPerBin(loopsToAssessGlobal, resolution);
                             if (loopsToAssessThisRound.size() > 0) {
                                 Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
                                         loopsToAssessThisRound, 500 * resolution).values();
@@ -169,6 +170,13 @@ public class Sieve {
         });
 
         return newLoopList;
+    }
+
+    private static void setDefaultAttributes(Set<Feature2D> loops, int resolution) {
+        for (Feature2D loop : loops) {
+            loop.addStringAttribute(resolution + "_sieve_obs_over_expected", "NA");
+            loop.addStringAttribute(resolution + "_sieve_local_zscore", "NA");
+        }
     }
 
     private static Set<Feature2D> filterForAppropriateResolution(Set<Feature2D> loops, int resolution) {
