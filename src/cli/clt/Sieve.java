@@ -2,7 +2,6 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.FeatureStats;
-import cli.utils.clean.BinCollisionChecker;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.QuickGrouping;
@@ -30,6 +29,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sieve {
+
+    public static String GLOBAL_OE = "_sieve_obs_over_global_expected";
+    public static String LOCAL_OE = "_sieve_obs_over_local_expected";
+    public static String GLOBAL_Z = "_sieve_global_zscore";
+    public static String LOCAL_Z = "_sieve_local_zscore";
 
     public int[] resolutions = new int[]{1000, 2000, 5000, 10000};
 
@@ -116,12 +120,13 @@ public class Sieve {
                         HiCZoom zoom = new HiCZoom(resolution);
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
-                            setDefaultAttributes(loopsToAssessGlobal, resolution);
+
                             //Set<Feature2D> loopsToAssessThisRound = filterForAppropriateResolution(loopsToAssessGlobal, resolution);
-                            Set<Feature2D> loopsToAssessThisRound = BinCollisionChecker.ensureOnlyOneLoopPerBin(loopsToAssessGlobal, resolution);
-                            if (loopsToAssessThisRound.size() > 0) {
+                            //Set<Feature2D> loopsToAssessThisRound = BinCollisionChecker.ensureOnlyOneLoopPerBin(loopsToAssessGlobal, resolution);
+                            if (loopsToAssessGlobal.size() > 0) {
+                                setDefaultAttributes(loopsToAssessGlobal, resolution);
                                 Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
-                                        loopsToAssessThisRound, 500 * resolution).values();
+                                        loopsToAssessGlobal, 500 * resolution).values();
 
                                 LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom1, resolution);
 
@@ -147,11 +152,11 @@ public class Sieve {
                                         float globalOE = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
                                         float globalZScore = (float) poly.getZscoreForObservedUncompressedBin(dist, observed);
 
-                                        loop.addStringAttribute(resolution + "_sieve_global_zscore", "" + globalZScore);
-                                        loop.addStringAttribute(resolution + "_sieve_local_zscore", "" + localZScore);
+                                        loop.addStringAttribute(resolution + GLOBAL_Z, "" + globalZScore);
+                                        loop.addStringAttribute(resolution + LOCAL_Z, "" + localZScore);
 
-                                        loop.addStringAttribute(resolution + "_sieve_obs_over_global_expected", "" + globalOE);
-                                        loop.addStringAttribute(resolution + "_sieve_obs_over_local_expected", "" + localOE);
+                                        loop.addStringAttribute(resolution + GLOBAL_OE, "" + globalOE);
+                                        loop.addStringAttribute(resolution + LOCAL_OE, "" + localOE);
                                     }
                                     regionMatrix = null;
                                 }
@@ -182,19 +187,11 @@ public class Sieve {
 
     private static void setDefaultAttributes(Set<Feature2D> loops, int resolution) {
         for (Feature2D loop : loops) {
-            loop.addStringAttribute(resolution + "_sieve_obs_over_global_expected", "NA");
-            loop.addStringAttribute(resolution + "_sieve_local_zscore", "NA");
+            loop.addStringAttribute(resolution + GLOBAL_OE, "NaN");
+            loop.addStringAttribute(resolution + LOCAL_OE, "NaN");
+            loop.addStringAttribute(resolution + GLOBAL_Z, "NaN");
+            loop.addStringAttribute(resolution + LOCAL_Z, "NaN");
         }
-    }
-
-    private static Set<Feature2D> filterForAppropriateResolution(Set<Feature2D> loops, int resolution) {
-        Set<Feature2D> goodLoops = new HashSet<>();
-        for (Feature2D loop : loops) {
-            if (Math.max(loop.getWidth1(), loop.getWidth2()) <= resolution) {
-                goodLoops.add(loop);
-            }
-        }
-        return BinCollisionChecker.ensureOnlyOneLoopPerBin(goodLoops, resolution);
     }
 
     private Feature2DList[] filterByScore(Feature2DList result) {
