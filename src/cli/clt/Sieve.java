@@ -8,8 +8,8 @@ import cli.utils.general.HiCUtils;
 import cli.utils.general.QuickGrouping;
 import cli.utils.general.Utils;
 import cli.utils.general.ZscoreTools;
-import javastraw.expected.ExpectedModel;
-import javastraw.expected.LogExpectedSpline;
+import javastraw.expected.LogExpectedZscoreSpline;
+import javastraw.expected.Welford;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -123,7 +123,7 @@ public class Sieve {
                                 Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
                                         loopsToAssessThisRound, 500 * resolution).values();
 
-                                ExpectedModel poly = new LogExpectedSpline(zd, norm, chrom1, resolution);
+                                LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom1, resolution);
 
                                 for (List<Feature2D> group : loopGroups) {
                                     int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
@@ -138,12 +138,20 @@ public class Sieve {
                                         int midX = absCoordBinX - minR;
                                         int midY = absCoordBinY - minC;
 
-                                        float zScore = (float) ZscoreTools.getLocalZscore(regionMatrix, midX, midY, window);
                                         float observed = regionMatrix[midX][midY];
-                                        float oe = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
 
-                                        loop.addStringAttribute(resolution + "_sieve_obs_over_expected", "" + oe);
-                                        loop.addStringAttribute(resolution + "_sieve_local_zscore", "" + zScore);
+                                        Welford localWelford = ZscoreTools.getLocalWelford(regionMatrix, midX, midY, window);
+                                        float localOE = (float) (observed / localWelford.getMean());
+                                        float localZScore = (float) localWelford.getZscore().getZscore(observed);
+
+                                        float globalOE = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
+                                        float globalZScore = (float) poly.getZscoreForObservedUncompressedBin(dist, observed);
+
+                                        loop.addStringAttribute(resolution + "_sieve_global_zscore", "" + globalZScore);
+                                        loop.addStringAttribute(resolution + "_sieve_local_zscore", "" + localZScore);
+
+                                        loop.addStringAttribute(resolution + "_sieve_obs_over_global_expected", "" + globalOE);
+                                        loop.addStringAttribute(resolution + "_sieve_obs_over_local_expected", "" + localOE);
                                     }
                                     regionMatrix = null;
                                 }
