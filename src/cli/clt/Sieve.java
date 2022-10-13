@@ -182,7 +182,7 @@ public class Sieve {
 
     private static void setDefaultAttributes(Set<Feature2D> loops, int resolution) {
         for (Feature2D loop : loops) {
-            loop.addStringAttribute(resolution + "_sieve_obs_over_expected", "NA");
+            loop.addStringAttribute(resolution + "_sieve_obs_over_global_expected", "NA");
             loop.addStringAttribute(resolution + "_sieve_local_zscore", "NA");
         }
     }
