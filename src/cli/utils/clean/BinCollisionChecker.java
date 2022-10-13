@@ -21,7 +21,6 @@ public class BinCollisionChecker {
             }
         }
         collisions.clear();
-        loops.clear();
         return goodLoops;
     }
 
