@@ -61,7 +61,7 @@ public class FusionTools {
                 featureLL.remove(pixel);
                 int buffer = getBuffer(useNMS, pixel);
 
-                Set<Feature2D> pixelList;
+                List<Feature2D> pixelList;
                 if (useExact) {
                     pixelList = OverlapTools.getExactMatches(pixel, featureLL);
                 } else {
@@ -74,14 +74,16 @@ public class FusionTools {
                 if (useNMS || useExact) {
                     coalesced.add(pixel);
                 } else {
-                    coalesced.add(getFeatureFromBounds(pixelList, pixel));
+                    pixelList.add(pixel);
+                    coalesced.add(getFeatureFromBounds(pixelList));
                 }
                 pixelList.clear();
             }
         }
     }
 
-    private static Feature2D getFeatureFromBounds(Set<Feature2D> pixelList, Feature2D pixel) {
+    public static Feature2D getFeatureFromBounds(List<Feature2D> pixelList) {
+        Feature2D pixel = pixelList.get(pixelList.size() - 1);
         long start1 = FeatureStats.minStart1(pixelList);
         long start2 = FeatureStats.minStart2(pixelList);
         long end1 = FeatureStats.maxEnd1(pixelList);

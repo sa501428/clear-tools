@@ -2,30 +2,31 @@ package cli.utils.general;
 
 import javastraw.feature2D.Feature2D;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class OverlapTools {
 
-    public static Set<Feature2D> getMatchesWithOverlap(Feature2D pixel, List<Feature2D> features, int buffer) {
+    public static List<Feature2D> getMatchesWithOverlap(Feature2D pixel, List<Feature2D> features, int buffer) {
         Set<Feature2D> pixelList = new HashSet<>();
         for (Feature2D px : features) {
             if (hasOverlap(px, pixel, buffer)) {
                 pixelList.add(px);
             }
         }
-        return pixelList;
+        return new ArrayList<>(pixelList);
     }
 
-    public static Set<Feature2D> getExactMatches(Feature2D pixel, List<Feature2D> features) {
+    public static List<Feature2D> getExactMatches(Feature2D pixel, List<Feature2D> features) {
         Set<Feature2D> pixelList = new HashSet<>();
         for (Feature2D px : features) {
             if (isExact(px, pixel)) {
                 pixelList.add(px);
             }
         }
-        return pixelList;
+        return new ArrayList<>(pixelList);
     }
 
     private static boolean isExact(Feature2D px, Feature2D px2) {

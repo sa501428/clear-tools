@@ -1,6 +1,7 @@
 package cli.clt;
 
 import cli.Main;
+import cli.utils.general.FusionTools;
 import cli.utils.general.OverlapTools;
 import cli.utils.general.QuickGrouping;
 import cli.utils.sift.SimpleLocation;
@@ -20,7 +21,7 @@ public class IntersectBedpe {
 
     // overlap can be adjusted; exact means exact indices; default will use any overlap
     // clean means don't save attributes
-    public static String usage = "intersect[-subtract][-clean][-exact] [-w window] <genomeID> " +
+    public static String usage = "intersect[-subtract][-clean][-exact][-bounding-box] [-w window] <genomeID> " +
             "<fileA.bedpe> <fileB.bedpe> <output.bedpe>\n" +
             "\t\tsubtract retains features in A with no overlap in B, default requires an overlap\n" +
             "\t\texact requires exact matches, default is any overlap";
@@ -31,6 +32,7 @@ public class IntersectBedpe {
         // otherwise retain things in A that have overlap with B
         boolean doSubtraction = checkForSubtraction(command);
         boolean useExactMatch = checkForExact(command);
+        boolean doBoundingBox = checkForBounds(command);
 
         int window = parser.getWindowSizeOption(0);
         if (window > 0 && Main.printVerboseComments) {
@@ -47,7 +49,7 @@ public class IntersectBedpe {
         Feature2DList featuresB = Feature2DParser.loadFeatures(args[3], handler, !noAttributes, null, false);
 
         Feature2DList output = coalesceFeatures(featuresA, featuresB, handler,
-                doSubtraction, useExactMatch, window);
+                doSubtraction, useExactMatch, window, doBoundingBox);
         output.exportFeatureList(new File(args[4]), false, Feature2DList.ListFormat.NA);
         System.out.println("fusion complete");
 
@@ -55,14 +57,14 @@ public class IntersectBedpe {
 
     private static Feature2DList coalesceFeatures(Feature2DList featuresA, Feature2DList featuresB,
                                                   ChromosomeHandler handler, boolean doSubtraction,
-                                                  boolean useExactMatch, int window) {
+                                                  boolean useExactMatch, int window, boolean doBoundingBox) {
         Feature2DList result = new Feature2DList();
         Chromosome[] chromosomes = handler.getChromosomeArrayWithoutAllByAll();
         for (int i = 0; i < chromosomes.length; i++) {
             for (int j = i; j < chromosomes.length; j++) {
                 String key = Feature2DList.getKey(chromosomes[i], chromosomes[j]);
                 List<Feature2D> features = intersect(featuresA.get(key), featuresB.get(key),
-                        doSubtraction, useExactMatch, window);
+                        doSubtraction, useExactMatch, window, doBoundingBox);
                 result.addByKey(key, features);
             }
         }
@@ -70,7 +72,8 @@ public class IntersectBedpe {
     }
 
     private static List<Feature2D> intersect(List<Feature2D> listA, List<Feature2D> listB,
-                                             boolean doSubtraction, boolean useExactMatch, int window) {
+                                             boolean doSubtraction, boolean useExactMatch, int window,
+                                             boolean doBoundingBox) {
         Map<SimpleLocation, List<Feature2D>> mapA = QuickGrouping.groupNearbyRecords(listA, 1000000);
         Map<SimpleLocation, List<Feature2D>> mapB = QuickGrouping.groupNearbyRecordsWithOverlap(listB, 1000000);
 
@@ -91,7 +94,7 @@ public class IntersectBedpe {
                     featuresB = mapB.get(location);
                 }
 
-                processFeatures(coalesced, featuresA, featuresB, doSubtraction, useExactMatch, window);
+                processFeatures(coalesced, featuresA, featuresB, doSubtraction, useExactMatch, window, doBoundingBox);
 
                 i = index.getAndIncrement();
             }
@@ -108,9 +111,10 @@ public class IntersectBedpe {
     }
 
     private static void processFeatures(Set<Feature2D> coalesced, List<Feature2D> featuresA, List<Feature2D> featuresB,
-                                        boolean doSubtraction, boolean useExactMatch, int window) {
+                                        boolean doSubtraction, boolean useExactMatch, int window,
+                                        boolean doBoundingBox) {
         for (Feature2D pixelA : featuresA) {
-            Set<Feature2D> pixelList;
+            List<Feature2D> pixelList;
             if (useExactMatch) {
                 pixelList = OverlapTools.getExactMatches(pixelA, featuresB);
             } else {
@@ -120,7 +124,14 @@ public class IntersectBedpe {
             if (pixelList.isEmpty()) {
                 if (doSubtraction) coalesced.add(pixelA);
             } else {
-                if (!doSubtraction) coalesced.add(pixelA);
+                if (!doSubtraction) {
+                    if (doBoundingBox) {
+                        pixelList.add(pixelA);
+                        coalesced.add(FusionTools.getFeatureFromBounds(pixelList));
+                    } else {
+                        coalesced.add(pixelA);
+                    }
+                }
             }
         }
     }
@@ -141,6 +152,15 @@ public class IntersectBedpe {
             return true;
         } else {
             if (Main.printVerboseComments) System.out.println("Will use any amount of overlap");
+            return false;
+        }
+    }
+
+    private static boolean checkForBounds(String command) {
+        if (command.contains("bound")) {
+            if (Main.printVerboseComments) System.out.println("Will use bounding box of overlapping features");
+            return true;
+        } else {
             return false;
         }
     }
