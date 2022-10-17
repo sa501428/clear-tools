@@ -218,8 +218,8 @@ public class Sieve {
         int strongEnrichment = 0;
         int weakEnrichment = 0;
         for (int res : resolutions) {
-            float zScore = getAttribute(feature, res + "_sieve_local_zscore", 0);
-            float oe = getAttribute(feature, res + "_sieve_obs_over_expected", 0);
+            float zScore = getAttribute(feature, res + LOCAL_Z, 0);
+            float oe = getAttribute(feature, res + GLOBAL_OE, 0);
             if (zScore > 2 && oe > 2) {
                 strongEnrichment++;
             }
