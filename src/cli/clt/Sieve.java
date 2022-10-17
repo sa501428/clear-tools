@@ -2,12 +2,12 @@ package cli.clt;
 
 import cli.Main;
 import cli.utils.FeatureStats;
-import cli.utils.LogExpZSpline;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.QuickGrouping;
 import cli.utils.general.Utils;
 import cli.utils.general.ZscoreTools;
+import javastraw.expected.LogExpectedZscoreSpline;
 import javastraw.expected.Welford;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -128,14 +128,7 @@ public class Sieve {
                                 Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
                                         loopsToAssessGlobal, 500 * resolution).values();
 
-                                LogExpZSpline poly = null;
-                                try {
-                                    poly = new LogExpZSpline(zd, norm, chrom1, resolution);
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                    System.err.println("Failed to get expected for " + chrom1.getName());
-                                    System.err.println("Failed to get expected for " + chrom1.getName());
-                                }
+                                LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom1, resolution);
 
                                 for (List<Feature2D> group : loopGroups) {
                                     int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
@@ -156,12 +149,8 @@ public class Sieve {
                                         float localOE = (float) (observed / localWelford.getMean());
                                         float localZScore = (float) localWelford.getZscore().getZscore(observed);
 
-                                        float globalOE = 0;
-                                        float globalZScore = -1;
-                                        if (poly != null) {
-                                            globalOE = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
-                                            globalZScore = (float) poly.getZscoreForObservedUncompressedBin(dist, observed);
-                                        }
+                                        float globalOE = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
+                                        float globalZScore = (float) poly.getZscoreForObservedUncompressedBin(dist, observed);
 
                                         loop.addStringAttribute(resolution + GLOBAL_Z, "" + globalZScore);
                                         loop.addStringAttribute(resolution + LOCAL_Z, "" + localZScore);
