@@ -73,7 +73,7 @@ public class Sieve {
 
         int window = parser.getWindowSizeOption(0);
         if (window < 2) {
-            window = 5;
+            window = 10;
         }
 
         Feature2DList result = sieveFilter(ds, loopList, handler, resolutions, window, norm);
