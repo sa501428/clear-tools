@@ -15,6 +15,7 @@ import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.Dataset;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.basics.ChromosomeTools;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
@@ -40,7 +41,8 @@ public class Sieve {
     // [-strict][-peek]
     // ; peek just saves values\n\t\tstrict requires each resolution to meet the criteria
     public static String usage = "sieve [-k NORM] <loops.bedpe> <out.stem> <file.hic> [res1,...]\n" +
-            "\t\tretain loop if at a loop-y location";
+            "\t\tretain loop if at a loop-y location\n" +
+            "\t\tsieve-post-filter <loops.bedpe> <out.stem> <genomeID>";
 
     public Sieve(String[] args, CommandLineParser parser, String command) {
         // sieve <loops.bedpe> <output.bedpe> <file1.hic> <res1,res2,...>
@@ -50,39 +52,46 @@ public class Sieve {
 
         String loopListPath = args[1];
         String outStem = args[2];
-        String filepath = args[3];
+        String hicPath = args[3];
 
-        if (args.length > 4) {
-            resolutions = parseInts(args[4]);
-        }
+        Feature2DList result = null;
+        if (command.contains("post")) {
+            // just filter using values in list
+            ChromosomeHandler handler = ChromosomeTools.loadChromosomes(hicPath);
+            result = Feature2DParser.loadFeatures(loopListPath, handler, true, null, false);
+        } else {
 
-        Dataset ds = HiCFileTools.extractDatasetForCLT(filepath, false, false, true);
-        ChromosomeHandler handler = ds.getChromosomeHandler();
-        Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler, true, null, false);
-
-        String possibleNorm = parser.getNormalizationStringOption();
-        NormalizationType norm = NormalizationHandler.VC;
-        if (possibleNorm != null && possibleNorm.length() > 0) {
-            if (possibleNorm.equalsIgnoreCase("none")) {
-                norm = NormalizationHandler.NONE;
-            } else {
-                norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+            if (args.length > 4) {
+                resolutions = parseInts(args[4]);
             }
+
+            Dataset ds = HiCFileTools.extractDatasetForCLT(hicPath, false, false, true);
+            ChromosomeHandler handler = ds.getChromosomeHandler();
+            Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler, true, null, false);
+
+            String possibleNorm = parser.getNormalizationStringOption();
+            NormalizationType norm = NormalizationHandler.VC;
+            if (possibleNorm != null && possibleNorm.length() > 0) {
+                if (possibleNorm.equalsIgnoreCase("none")) {
+                    norm = NormalizationHandler.NONE;
+                } else {
+                    norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+                }
+            }
+            System.out.println("Using normalization: " + norm.getLabel());
+
+            int window = parser.getWindowSizeOption(0);
+            if (window < 2) {
+                window = 10;
+            }
+
+            result = sieveFilter(ds, loopList, handler, resolutions, window, norm);
+            result.exportFeatureList(new File(outStem + ".attributes.bedpe"), false, Feature2DList.ListFormat.NA);
         }
-        System.out.println("Using normalization: " + norm.getLabel());
-
-        int window = parser.getWindowSizeOption(0);
-        if (window < 2) {
-            window = 10;
-        }
-
-        Feature2DList result = sieveFilter(ds, loopList, handler, resolutions, window, norm);
-        result.exportFeatureList(new File(outStem + ".attributes.bedpe"), false, Feature2DList.ListFormat.NA);
-
         Feature2DList[] goodAndBad = filterByScore(result);
         goodAndBad[0].exportFeatureList(new File(outStem + ".good.loops.bedpe"), false, Feature2DList.ListFormat.NA);
-        goodAndBad[1].exportFeatureList(new File(outStem + ".not.loops.bedpe"), false, Feature2DList.ListFormat.NA);
-
+        goodAndBad[1].exportFeatureList(new File(outStem + ".weak.loops.bedpe"), false, Feature2DList.ListFormat.NA);
+        goodAndBad[2].exportFeatureList(new File(outStem + ".not.loops.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("sieve complete");
     }
 
@@ -196,39 +205,53 @@ public class Sieve {
 
     private Feature2DList[] filterByScore(Feature2DList result) {
         Feature2DList good = new Feature2DList();
+        Feature2DList weak = new Feature2DList();
         Feature2DList bad = new Feature2DList();
         result.processLists((s, list) -> {
             List<Feature2D> goodLoops = new ArrayList<>();
+            List<Feature2D> weakLoops = new ArrayList<>();
             List<Feature2D> badLoops = new ArrayList<>();
             for (Feature2D feature : list) {
                 if (isEnrichedLocalAndGlobalMaxima(feature)) {
                     goodLoops.add(feature);
+                } else if (isWeaklyEnrichedLocalAndGlobalMaxima(feature)) {
+                    weakLoops.add(feature);
                 } else {
                     badLoops.add(feature);
                 }
             }
             good.addByKey(s, goodLoops);
+            weak.addByKey(s, weakLoops);
             bad.addByKey(s, badLoops);
         });
-        return new Feature2DList[]{good, bad};
+        return new Feature2DList[]{good, weak, bad};
     }
 
     private boolean isEnrichedLocalAndGlobalMaxima(Feature2D feature) {
-
-        int strongEnrichment = 0;
+        //int strongEnrichment = 0;
         int weakEnrichment = 0;
         for (int res : resolutions) {
             float zScore = getAttribute(feature, res + LOCAL_Z, 0);
             float oe = getAttribute(feature, res + GLOBAL_OE, 0);
             if (zScore > 2 && oe > 2) {
-                strongEnrichment++;
+                return true;
             }
             if (zScore > 1.5 && oe > 1.5) {
                 weakEnrichment++;
             }
         }
+        return weakEnrichment >= 2; // strongEnrichment >= 1 ||
+    }
 
-        return strongEnrichment >= 1 || weakEnrichment >= 2;
+    private boolean isWeaklyEnrichedLocalAndGlobalMaxima(Feature2D feature) {
+        for (int res : resolutions) {
+            float zScore = getAttribute(feature, res + LOCAL_Z, 0);
+            float oe = getAttribute(feature, res + GLOBAL_OE, 0);
+            if (zScore > 1 && oe > 1) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private float getAttribute(Feature2D feature, String key, int defaultValue) {
