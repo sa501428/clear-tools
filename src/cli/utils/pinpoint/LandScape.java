@@ -38,6 +38,7 @@ import java.util.*;
 public class LandScape {
 
     private static final int MIN_ENRICHED_PIXELS = 4;
+    private static final int PEAK_WIDTH_LIMIT_1D = 10;
 
     public static void extractMaxima(List<ContactRecord> records, int originalBinXStart, int originalBinYStart, long resolution,
                                      List<Feature2D> pinpointedLoops, List<Feature2D> pinpointedBounds,
@@ -58,60 +59,68 @@ public class LandScape {
             float[][] output = new float[newMatrixWidth][newMatrixWidth];
             Utils.fillInMatrixFromRecords(output, records, newBinXStart, newBinYStart);
             ArrayTools.saveIfVerbose(saveString + ".raw.c" + counter + ".npy", output);
+            float[] outputR = ArrayTools.getNormedRowSums(output);
+            float[] outputC = ArrayTools.getNormedColSums(output);
 
             float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
             ArrayTools.saveIfVerbose(saveString + ".kde.c" + counter + ".npy", kde);
+            float[] kdeR = ArrayTools.getNormedRowSums(kde);
+            float[] kdeC = ArrayTools.getNormedColSums(kde);
             output = null; // clear output
+
+            float[] rowSignal = ArrayTools.multiply(outputR, kdeR);
+            float[] colSignal = ArrayTools.multiply(outputC, kdeC);
 
             Zscore zscore = ArrayTools.getZscore(kde, 1);
             double threshold = zscore.getValForZscore(3);
             List<Pixel> preNormEnrichments = ArrayTools.getAllEnrichedPixels(kde, threshold, zscore);
 
             if (preNormEnrichments.size() > MIN_ENRICHED_PIXELS) {
-                LocalMaxima maxima = coalesceAndRetainMaximum(preNormEnrichments, 1, pinpointedBounds);
+                LocalMaxima maxima = coalesceAndRetainMaximum(preNormEnrichments, 1,
+                        rowSignal, colSignal);
                 preNormEnrichments.clear();
                 if (maxima != null) {
                     pinpointedBounds.add(featureFromBounds(maxima, resolution, newBinXStart, newBinYStart, loop));
                     pinpointedLoops.add(peakFromMaxima(maxima, resolution, newBinXStart, newBinYStart, loop));
                 }
             }
-
             counter++;
         }
     }
 
     public static LocalMaxima coalesceAndRetainMaximum(List<Pixel> pixels, int radius,
-                                                       List<Feature2D> pinpointedBounds) {
+                                                       float[] rowSignal, float[] colSignal) {
+        Pixel pixel = Pixel.getMax(pixels, rowSignal, colSignal, PEAK_WIDTH_LIMIT_1D);
+        if (pixel != null) {
+            int numCollapsed = 0;
+            int minR = pixel.row - radius;
+            int minC = pixel.col - radius;
+            int maxR = pixel.row + radius + 1;
+            int maxC = pixel.col + radius + 1;
 
-        Pixel pixel = Pixel.getMax(pixels);
-        int numCollapsed = 0;
-        int minR = pixel.row - radius;
-        int minC = pixel.col - radius;
-        int maxR = pixel.row + radius + 1;
-        int maxC = pixel.col + radius + 1;
+            Set<Pixel> toRemove = new HashSet<>();
+            toRemove.add(pixel);
 
-        Set<Pixel> toRemove = new HashSet<>();
-        toRemove.add(pixel);
+            while (toRemove.size() > 0) {
+                pixels.removeAll(toRemove);
+                numCollapsed += toRemove.size();
+                toRemove.clear();
 
-        while (toRemove.size() > 0) {
-            pixels.removeAll(toRemove);
-            numCollapsed += toRemove.size();
-            toRemove.clear();
+                for (Pixel px : pixels) {
+                    if (Pixel.contains(px, minR, maxR, minC, maxC)) {
+                        toRemove.add(px);
 
-            for (Pixel px : pixels) {
-                if (Pixel.contains(px, minR, maxR, minC, maxC)) {
-                    toRemove.add(px);
-
-                    minR = Math.min(minR, px.row - radius);
-                    minC = Math.min(minC, px.col - radius);
-                    maxR = Math.max(maxR, px.row + radius + 1);
-                    maxC = Math.max(maxC, px.col + radius + 1);
+                        minR = Math.min(minR, px.row - radius);
+                        minC = Math.min(minC, px.col - radius);
+                        maxR = Math.max(maxR, px.row + radius + 1);
+                        maxC = Math.max(maxC, px.col + radius + 1);
+                    }
                 }
             }
-        }
 
-        if (numCollapsed > MIN_ENRICHED_PIXELS) {
-            return new LocalMaxima(pixel, numCollapsed, minR, minC, maxR, maxC);
+            if (numCollapsed > MIN_ENRICHED_PIXELS) {
+                return new LocalMaxima(pixel, numCollapsed, minR, minC, maxR, maxC);
+            }
         }
         return null;
     }
