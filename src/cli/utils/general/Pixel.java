@@ -32,9 +32,9 @@ public class Pixel {
         return max;
     }
 
-    public static Pixel getMax(List<Pixel> pixels, float[] rowSignal, float[] colSignal, int peakWidthLimit) {
-        int i = getMaxIndex(rowSignal, peakWidthLimit);
-        int j = getMaxIndex(colSignal, peakWidthLimit);
+    public static Pixel getMax(List<Pixel> pixels, float[] rowSignal, float[] colSignal) {
+        int i = getWeightedMaxIndex(rowSignal);
+        int j = getWeightedMaxIndex(colSignal);
 
         if (i > -1 && j > -1) {
             for (Pixel pixel : pixels) {
@@ -44,12 +44,12 @@ public class Pixel {
         return null;
     }
 
-    private static int getMaxIndex(float[] signal, int limit) {
+    private static int getWeightedMaxIndex(float[] signal) {
         double weightedSum = 0;
         double weights = 0;
-        float cutoff = 3 * getMedian(signal);
+        float cutoff = Math.max(0.5f, 3 * getMedian(signal));
         for (int i = 0; i < signal.length; i++) {
-            if (signal[i] > 0.5 && signal[i] > cutoff) {
+            if (signal[i] > cutoff) {
                 weightedSum += signal[i] * i;
                 weights += signal[i];
             }

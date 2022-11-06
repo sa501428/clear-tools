@@ -38,7 +38,6 @@ import java.util.*;
 public class LandScape {
 
     private static final int MIN_ENRICHED_PIXELS = 4;
-    private static final int PEAK_WIDTH_LIMIT_1D = 10;
 
     public static void extractMaxima(List<ContactRecord> records, int originalBinXStart, int originalBinYStart, long resolution,
                                      List<Feature2D> pinpointedLoops, List<Feature2D> pinpointedBounds,
@@ -90,7 +89,7 @@ public class LandScape {
 
     public static LocalMaxima coalesceAndRetainMaximum(List<Pixel> pixels, int radius,
                                                        float[] rowSignal, float[] colSignal) {
-        Pixel pixel = Pixel.getMax(pixels, rowSignal, colSignal, PEAK_WIDTH_LIMIT_1D);
+        Pixel pixel = Pixel.getMax(pixels, rowSignal, colSignal);
         if (pixel != null) {
             int numCollapsed = 0;
             int minR = pixel.row - radius;
