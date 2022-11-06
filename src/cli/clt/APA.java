@@ -58,7 +58,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Various updates by mshamim and suhas-rao
  */
 public class APA {
-    public static String usage = "apa [--ag-norm] [-k NORM] [--window val]" +
+    public static String usage = "apa[-1d] [--ag-norm] [-k NORM] [--window val]" +
             " [--min-dist val] [--max-dist val] [--include-inter] [-r resolution]" +
             " <input.hic> <loops.bedpe> <outfolder>";
     private final String loopListPath;
@@ -74,16 +74,18 @@ public class APA {
     private final int matrixWidthL;
     private final int resolution;
     private final boolean includeInterChr;
-    private final boolean useAgNorm;
+    private final boolean useAgNorm, include1DRowSums;
 
     private final float[][] globalAPAMatrix;
     private final double[] globalRowSum;
     private final double[] globalColSum;
 
-    public APA(String[] args, CommandLineParser parser) {
+    public APA(String[] args, CommandLineParser parser, String command) {
         if (args.length != 4) {
             printUsageAndExit();
         }
+
+        include1DRowSums = command.contains("1d");
 
         ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, true);
         loopListPath = args[2];

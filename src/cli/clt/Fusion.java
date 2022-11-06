@@ -13,7 +13,7 @@ public class Fusion {
             "\t\tfile-id saves an index for each input file";
 
     public static void run(String[] args, String command) {
-        if (args.length < 5) {
+        if (args.length < 4) {
             Main.printGeneralUsageAndExit(5);
         }
         // fusion <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]

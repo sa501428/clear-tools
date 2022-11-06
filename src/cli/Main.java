@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.69.0";
+    public static final String VERSION_NUM = "0.70.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode) {
@@ -56,7 +56,7 @@ public class Main {
         } else if (command.startsWith("unwrap")) {
             UnWrap.run(args, parser, command);
         } else if (command.startsWith("apa")) {
-            APA apa = new APA(args, parser);
+            APA apa = new APA(args, parser, command);
             apa.run();
         } else if (command.startsWith("ata")) {
             ATA ata = new ATA(args, parser);
