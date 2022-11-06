@@ -1,8 +1,10 @@
 package cli.clt;
 
 import cli.Main;
+import cli.utils.FeatureStats;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
+import cli.utils.general.QuickGrouping;
 import cli.utils.general.Utils;
 import cli.utils.pinpoint.ConvolutionTools;
 import cli.utils.pinpoint.LandScape;
@@ -23,6 +25,7 @@ import javastraw.tools.ParallelizationTools;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -120,22 +123,26 @@ public class Pinpoint {
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
                             try {
+                                Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
+                                        loops, matrixWidth * resolution).values();
+
                                 List<Feature2D> pinpointedLoops = new ArrayList<>();
                                 List<Feature2D> pinpointedBounds = new ArrayList<>();
-                                for (Feature2D loop : loops) {
 
+                                for (List<Feature2D> group : loopGroups) {
+                                    Feature2D loop = group.get(0);
                                     String saveString = generateLoopInfo(loop);
+                                    int minR = (int) ((FeatureStats.minStart1(group) / resolution) - halfMatrixWidth);
+                                    int minC = (int) ((FeatureStats.minStart2(group) / resolution) - halfMatrixWidth);
+                                    int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + halfMatrixWidth);
+                                    int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + halfMatrixWidth);
 
-                                    int binXStart = (int) ((loop.getMidPt1() / resolution) - halfMatrixWidth);
-                                    int binYStart = (int) ((loop.getMidPt2() / resolution) - halfMatrixWidth);
+                                    List<ContactRecord> records = Utils.getRecords(zd, minR, minC, maxR, maxC, NONE);
 
-                                    List<ContactRecord> records = Utils.getRecords(zd, binXStart, binYStart, matrixWidth, NONE);
-
-                                    LandScape.extractMaxima(records, binXStart, binYStart, resolution,
+                                    LandScape.extractMaxima(records, minR, minC, resolution,
                                             pinpointedLoops, pinpointedBounds, loop, saveString,
                                             onlyGetOne, matrixWidth, kernel, compressedKernel);
-
-                                    if (currNumLoops.incrementAndGet() % 100 == 0) {
+                                    if (currNumLoops.addAndGet(group.size()) % 100 == 0) {
                                         System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                                     }
                                 }
