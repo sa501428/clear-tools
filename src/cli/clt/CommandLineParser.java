@@ -47,7 +47,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option normalizationTypeOption = addStringOption('k', "norm");
     private final Option cutoffOption = addIntegerOption("cutoff");
     private final Option percentileOption = addIntegerOption("percentile");
-    private final Option windowOption = addIntegerOption("window");
+    private final Option windowOption = addIntegerOption('w', "window");
     private final Option minDisValOption = addIntegerOption("min-dist");
     private final Option maxDistValOption = addIntegerOption("max-dist");
     private final Option interChromosomalOption = addBooleanOption("include-inter");

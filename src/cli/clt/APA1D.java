@@ -86,7 +86,7 @@ public class APA1D {
         }
         System.out.println("Using normalization: " + norm.getLabel());
 
-        window = parser.getWindowSizeOption(50);
+        window = parser.getWindowSizeOption(100);
         minPeakDist = parser.getMinDistVal(3 * window);
         maxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
         includeInterChr = parser.getIncludeInterChromosomal();
