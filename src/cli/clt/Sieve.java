@@ -31,12 +31,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sieve {
 
+    private final static int zLowCutoff = 1;
+    private final static float oeLowCutoff = (float) Math.log(1.5);
+    private final static int zHighCutoff = 2;
+    private final static float oeHighCutoff = (float) Math.log(2);
     public static String GLOBAL_OE = "_sieve_obs_over_global_expected";
     public static String LOCAL_OE = "_sieve_obs_over_local_expected";
     public static String GLOBAL_Z = "_sieve_global_zscore";
     public static String LOCAL_Z = "_sieve_local_zscore";
 
-    public int[] resolutions = new int[]{1000, 2000, 5000, 10000};
+    public int[] resolutions = new int[]{1000, 2000, 5000}; // 10000
 
     // [-strict][-peek]
     // ; peek just saves values\n\t\tstrict requires each resolution to meet the criteria
@@ -212,9 +216,9 @@ public class Sieve {
             List<Feature2D> weakLoops = new ArrayList<>();
             List<Feature2D> badLoops = new ArrayList<>();
             for (Feature2D feature : list) {
-                if (isEnrichedLocalAndGlobalMaxima(feature)) {
+                if (isEnrichedLikelyLoop(feature)) {
                     goodLoops.add(feature);
-                } else if (isWeaklyEnrichedLocalAndGlobalMaxima(feature)) {
+                } else if (isWeaklyEnrichedMaybeLoopish(feature)) {
                     weakLoops.add(feature);
                 } else {
                     badLoops.add(feature);
@@ -227,34 +231,55 @@ public class Sieve {
         return new Feature2DList[]{good, weak, bad};
     }
 
-    private boolean isEnrichedLocalAndGlobalMaxima(Feature2D feature) {
-        //int strongEnrichment = 0;
-        int weakEnrichment = 0;
-        for (int res : resolutions) {
-            float zScore = getAttribute(feature, res + LOCAL_Z, 0);
-            float oe = getAttribute(feature, res + GLOBAL_OE, 0);
-            if (zScore > 2 && oe > 2) {
-                return true;
-            }
-            if (zScore > 1.5 && oe > 1.5) {
-                weakEnrichment++;
-            }
-        }
-        return weakEnrichment >= 2; // strongEnrichment >= 1 ||
+    private boolean isEnrichedLikelyLoop(Feature2D feature) {
+
+        double localZ1K = getAttribute(feature, 1000 + LOCAL_Z, -10);
+        double localZ2K = getAttribute(feature, 2000 + LOCAL_Z, -10);
+        double localZ5K = getAttribute(feature, 5000 + LOCAL_Z, -10);
+
+        double localOE1K = Math.log(getAttribute(feature, 1000 + LOCAL_OE, .1f));
+        double localOE2K = Math.log(getAttribute(feature, 2000 + LOCAL_OE, .1f));
+        double localOE5K = Math.log(getAttribute(feature, 5000 + LOCAL_OE, .1f));
+
+        double globalOE1K = Math.log(getAttribute(feature, 1000 + GLOBAL_OE, .1f));
+        double globalOE2K = Math.log(getAttribute(feature, 2000 + GLOBAL_OE, .1f));
+        double globalOE5K = Math.log(getAttribute(feature, 5000 + GLOBAL_OE, .1f));
+
+        boolean weak1 = (localZ1K > zLowCutoff) && (localOE1K > oeLowCutoff);
+        boolean weak2 = (localZ2K > zLowCutoff) && (localOE2K > oeLowCutoff);
+        boolean weak5 = (localZ5K > zLowCutoff) && (localOE5K > oeLowCutoff);
+
+        boolean medium1 = weak1 && (globalOE1K > oeLowCutoff);
+        boolean medium2 = weak2 && (globalOE2K > oeLowCutoff);
+        boolean medium5 = weak5 && (globalOE5K > oeLowCutoff);
+
+        boolean strong1 = (localZ1K > zHighCutoff) && (localOE1K > oeHighCutoff) && (globalOE1K > oeHighCutoff);
+        boolean strong2 = (localZ2K > zHighCutoff) && (localOE2K > oeHighCutoff) && (globalOE2K > oeHighCutoff);
+        boolean strong5 = (localZ5K > zHighCutoff) && (localOE5K > oeHighCutoff) && (globalOE5K > oeHighCutoff);
+
+        boolean localZAvg = (localZ1K + localZ2K + localZ5K) / 3 > 1;
+        boolean localOEAvg = (localOE1K + localOE2K + localOE5K) / 3 > oeHighCutoff;
+        boolean hasAverageEnrichment = localZAvg && localOEAvg;
+
+        return (strong1 && (medium2 || medium5 || hasAverageEnrichment))
+                || (strong2 && (medium1 || medium5 || hasAverageEnrichment))
+                || (strong5 && (medium1 || medium2 || hasAverageEnrichment))
+                || (hasAverageEnrichment && ((medium1 && medium2) || (weak2 && weak5) || (weak1 && weak5)));
     }
 
-    private boolean isWeaklyEnrichedLocalAndGlobalMaxima(Feature2D feature) {
+    private boolean isWeaklyEnrichedMaybeLoopish(Feature2D feature) {
         for (int res : resolutions) {
-            float zScore = getAttribute(feature, res + LOCAL_Z, 0);
-            float oe = getAttribute(feature, res + GLOBAL_OE, 0);
-            if (zScore > 1 && oe > 1) {
+            //float zScore = getAttribute(feature, res + LOCAL_Z, 0);
+            double oe1 = Math.log(getAttribute(feature, res + GLOBAL_OE, 0.1f));
+            double oe2 = Math.log(getAttribute(feature, res + LOCAL_OE, 0.1f));
+            if (oe1 > 1 && oe2 > 1) {
                 return true;
             }
         }
         return false;
     }
 
-    private float getAttribute(Feature2D feature, String key, int defaultValue) {
+    private float getAttribute(Feature2D feature, String key, float defaultValue) {
         if (feature.hasAttributeKey(key)) {
             try {
                 return Float.parseFloat(feature.getAttribute(key));
