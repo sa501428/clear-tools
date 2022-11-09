@@ -15,8 +15,9 @@ import java.util.Random;
 public class SeerUtils {
 
     // create bedgraph file from a rowSums map
-    public static void exportRowSumsToBedgraph(Map<Chromosome, int[]> chromToRowSumsMap, String arg, int resolution) throws IOException {
-        File outputFileName = new File(arg, "rowSums.bedgraph");
+    public static void exportRowSumsToBedgraph(Map<Chromosome, int[]> chromToRowSumsMap,
+                                               String path, int resolution) throws IOException {
+        File outputFileName = new File(path);
         outputFileName.createNewFile();
         BufferedWriter bw = new BufferedWriter(new FileWriter(outputFileName));
         // write for every chromosome
@@ -26,9 +27,8 @@ public class SeerUtils {
             for (int i = 0; i < sums.length; i++) {
                 int startPosition = i * resolution;
                 int endPosition = startPosition + resolution;
-                int value = sums[i];
-                if (value > 0) {
-                    bw.write(chromosome.getName() + " " + startPosition + " " + endPosition + " " + value);
+                if (sums[i] > 0) {
+                    bw.write(chromosome.getName() + " " + startPosition + " " + endPosition + " " + sums[i]);
                     bw.newLine();
                 }
             }

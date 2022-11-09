@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.71.0";
+    public static final String VERSION_NUM = "0.72.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode) {
@@ -55,8 +55,11 @@ public class Main {
             Probability.run(args, parser);
         } else if (command.startsWith("unwrap")) {
             UnWrap.run(args, parser, command);
+        } else if (command.startsWith("apa") && command.contains("1d")) {
+            APA1D apa = new APA1D(args, parser);
+            apa.run();
         } else if (command.startsWith("apa")) {
-            APA apa = new APA(args, parser, command);
+            APA apa = new APA(args, parser);
             apa.run();
         } else if (command.startsWith("ata")) {
             ATA ata = new ATA(args, parser);
