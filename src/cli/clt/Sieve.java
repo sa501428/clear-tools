@@ -40,7 +40,7 @@ public class Sieve {
     public static String GLOBAL_Z = "_sieve_global_zscore";
     public static String LOCAL_Z = "_sieve_local_zscore";
 
-    public int[] resolutions = new int[]{1000, 2000, 5000}; // 10000
+    public int[] resolutions = new int[]{1000, 2000, 5000, 10000};
 
     // [-strict][-peek]
     // ; peek just saves values\n\t\tstrict requires each resolution to meet the criteria
@@ -272,7 +272,8 @@ public class Sieve {
             //float zScore = getAttribute(feature, res + LOCAL_Z, 0);
             double oe1 = Math.log(getAttribute(feature, res + GLOBAL_OE, 0.1f));
             double oe2 = Math.log(getAttribute(feature, res + LOCAL_OE, 0.1f));
-            if (oe1 > 1 && oe2 > 1) {
+            double zVal = getAttribute(feature, res + LOCAL_Z, -10);
+            if (oe1 > 1.25 || oe2 > 1.1 || zVal > 0.5) {
                 return true;
             }
         }
