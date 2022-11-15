@@ -58,11 +58,14 @@ public class Sieve {
         String outStem = args[2];
         String hicPath = args[3];
 
-        Feature2DList result = null;
         if (command.contains("post")) {
             // just filter using values in list
             ChromosomeHandler handler = ChromosomeTools.loadChromosomes(hicPath);
-            result = Feature2DParser.loadFeatures(loopListPath, handler, true, null, false);
+            Feature2DList result = Feature2DParser.loadFeatures(loopListPath, handler, true, null, false);
+            Feature2DList[] goodAndBad = filterByScore(result);
+            goodAndBad[0].exportFeatureList(new File(outStem + ".good.loops.bedpe"), false, Feature2DList.ListFormat.NA);
+            goodAndBad[1].exportFeatureList(new File(outStem + ".weak.loops.bedpe"), false, Feature2DList.ListFormat.NA);
+            goodAndBad[2].exportFeatureList(new File(outStem + ".not.loops.bedpe"), false, Feature2DList.ListFormat.NA);
         } else {
 
             if (args.length > 4) {
@@ -84,18 +87,14 @@ public class Sieve {
             }
             System.out.println("Using normalization: " + norm.getLabel());
 
-            int window = parser.getWindowSizeOption(0);
-            if (window < 2) {
+            int window = parser.getWindowSizeOption(10);
+            if (window < 5) {
                 window = 10;
             }
 
-            result = sieveFilter(ds, loopList, handler, resolutions, window, norm);
+            Feature2DList result = sieveFilter(ds, loopList, handler, resolutions, window, norm);
             result.exportFeatureList(new File(outStem + ".attributes.bedpe"), false, Feature2DList.ListFormat.NA);
         }
-        Feature2DList[] goodAndBad = filterByScore(result);
-        goodAndBad[0].exportFeatureList(new File(outStem + ".good.loops.bedpe"), false, Feature2DList.ListFormat.NA);
-        goodAndBad[1].exportFeatureList(new File(outStem + ".weak.loops.bedpe"), false, Feature2DList.ListFormat.NA);
-        goodAndBad[2].exportFeatureList(new File(outStem + ".not.loops.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("sieve complete");
     }
 

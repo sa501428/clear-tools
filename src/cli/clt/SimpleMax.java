@@ -94,7 +94,12 @@ public class SimpleMax {
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) { // if it's not empty
                             try {
-                                double[] nv = ds.getNormalizationVector(chrom1.getIndex(), zoom, VC).getData().getValues().get(0);
+                                double[] nv = null;
+                                try {
+                                    nv = ds.getNormalizationVector(chrom1.getIndex(), zoom, VC).getData().getValues().get(0);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
                                 Set<Feature2D> newLoops = getMaximaForRegions(new HashSet<>(loops), resolution, buffer, zd, nv);
 
                                 synchronized (finalLoopList) {
@@ -117,7 +122,8 @@ public class SimpleMax {
         return finalLoopList;
     }
 
-    public static Set<Feature2D> getMaximaForRegions(Set<Feature2D> loops, int resolution, int buffer, MatrixZoomData zd, double[] nv) {
+    public static Set<Feature2D> getMaximaForRegions(Set<Feature2D> loops, int resolution,
+                                                     int buffer, MatrixZoomData zd, double[] nv) {
         Set<Feature2D> newLoops = new HashSet<>();
         Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
                 loops, resolution * 200).values();
@@ -169,9 +175,18 @@ public class SimpleMax {
         for (int r = r0; r < rF; r++) {
             for (int c = c0; c < cF; c++) {
                 if (matrix[r][c] > 0) {
-                    float norm = (float) Math.sqrt(nv[minR + r] * nv[minC + c]);
-                    if (norm > 0) {
-                        float realVal = matrix[r][c] / norm;
+                    if (nv != null) {
+                        float norm = (float) Math.sqrt(nv[minR + r] * nv[minC + c]);
+                        if (norm > 0) {
+                            float realVal = matrix[r][c] / norm;
+                            if (realVal > maxCounts) {
+                                maxCounts = realVal;
+                                coordinates[0] = r;
+                                coordinates[1] = c;
+                            }
+                        }
+                    } else {
+                        float realVal = matrix[r][c];
                         if (realVal > maxCounts) {
                             maxCounts = realVal;
                             coordinates[0] = r;
