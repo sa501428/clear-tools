@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.74.0";
+    public static final String VERSION_NUM = "0.75.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode) {
@@ -80,6 +80,8 @@ public class Main {
             IntersectBedpe.run(args, command, parser);
         } else if (command.startsWith("split")) {
             Split.run(args, command);
+        } else if (command.startsWith("fimo")) {
+            Fimo.run(args, command);
         } else if (command.startsWith("seer")) {
             Seer.run(args, parser);
         } else if (command.startsWith("hack")) {
