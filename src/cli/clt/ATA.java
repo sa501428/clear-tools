@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ATA {
 
     public static String usage = "ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>";
+    // java -jar clear-tools.jar ata --window 1000 --res 1 signal.bw ADC.bed name_output hg38
     private final String inputBigWig;
     private final String bedFile;
     private final String outFile;

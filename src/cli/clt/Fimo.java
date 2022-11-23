@@ -7,20 +7,27 @@ import java.util.List;
 import java.util.Map;
 
 public class Fimo {
+
+    // fimo <file.tsv>
+
+    private final static String DATABASE = "_HUMAN.H11MO";
+
     public static void run(String[] args, String command) {
 
         Map<String, Map<String, List<String[]>>> data = new HashMap<>();
         try (BufferedReader br = new BufferedReader(new FileReader(args[1]))) {
             for (String line; (line = br.readLine()) != null; ) {
                 try {
-                    String[] row = line.split("\t");
-                    String motif = cleanMotifName(row[0]);
-                    if (!data.containsKey(motif)) {
-                        data.put(motif, getNewMapForMotif());
+                    if (line.contains(DATABASE)) {
+                        String[] row = line.split("\t");
+                        String motif = cleanMotifName(row[0]);
+                        if (!data.containsKey(motif)) {
+                            data.put(motif, getNewMapForMotif());
+                        }
+                        data.get(motif).get(row[5]).add(new String[]{row[2], row[3], row[4]});
                     }
-                    data.get(motif).get(row[5]).add(new String[]{row[2], row[3], row[4]});
                 } catch (Exception e) {
-                    continue; // ignore problematic lines like header/footer
+                    // ignore problematic lines like header/footer
                 }
             }
         } catch (IOException e) {
@@ -67,6 +74,6 @@ public class Fimo {
     }
 
     private static String cleanMotifName(String param) {
-        return param.split("_HUMAN.H11MO")[0];
+        return param.split(DATABASE)[0];
     }
 }
