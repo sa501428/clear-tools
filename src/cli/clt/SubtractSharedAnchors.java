@@ -1,10 +1,6 @@
 package cli.clt;
 
 import cli.Main;
-import cli.utils.general.FusionTools;
-import cli.utils.general.OverlapTools;
-import cli.utils.general.QuickGrouping;
-import cli.utils.sift.SimpleLocation;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -18,148 +14,123 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SubtractSharedAnchors {
+
+    private static final int resolution = 100;
+
     // overlap can be adjusted; exact means exact indices; default will use any overlap
     // clean means don't save attributes
-    public static String usage = "subtract-shared-anchors[-clean][-exact] [-w window] <genomeID> <output.bedpe>" +
+    public static String usage = "subtract-shared-anchors[-clean] [-w window] <genomeID> " +
             "<fileA.bedpe> <fileB1.bedpe> <fileB2.bedpe> ...\n" +
-            "\t\treturn only loops that have no shared anchors with anything that loops" +
-            "in files B1, B2, etc.\n" +
-            "\t\texact requires exact matches, default is any overlap";
+            "\t\treturn only loops that have no shared anchors with anything that loops in files B1, B2, etc.\n";
 
     public static void run(String[] args, String command, CommandLineParser parser) {
 
-        // subtract will keep things in A that don't overlap with B
-        // otherwise retain things in A that have overlap with B
-        boolean useExactMatch = checkForExact(command);
-
         int window = parser.getWindowSizeOption(0);
         if (window > 0 && Main.printVerboseComments) {
-            System.out.println("Features will be expanded by " + window);
+            System.out.println("Anchors will be expanded by " + window);
         }
 
         if (args.length < 5) {
             Main.printGeneralUsageAndExit(15, usage);
         }
-        // intersect <genomeID> <fileA.bedpe> <fileB.bedpe> <output.bedpe>
+
         boolean noAttributes = command.contains("clean");
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
-        Feature2DList featuresA = Feature2DParser.loadFeatures(args[2], handler, !noAttributes, null, false);
-        Feature2DList featuresB = Feature2DParser.loadFeatures(args[3], handler, !noAttributes, null, false);
+        String inputName = args[2];
+        Feature2DList featuresA = Feature2DParser.loadFeatures(inputName, handler, !noAttributes, null, false);
 
-        Feature2DList output = coalesceFeatures(featuresA, featuresB, handler,
-                false, useExactMatch, window, false);
-        output.exportFeatureList(new File(args[4]), false, Feature2DList.ListFormat.NA);
-        System.out.println("fusion complete");
+        Map<Integer, BitSet> upstreamAnchors = new HashMap<>();
+        Map<Integer, BitSet> downstreamAnchors = new HashMap<>();
+
+        populateFilteringAnchors(upstreamAnchors, downstreamAnchors, handler, args, window, 3);
+
+        Feature2DList output = filterFeatures(featuresA, handler, upstreamAnchors, downstreamAnchors);
+        output.exportFeatureList(new File(getOutputName(inputName)), false, Feature2DList.ListFormat.NA);
+        System.out.println("anchor filtering complete");
 
     }
 
-    private static Feature2DList coalesceFeatures(Feature2DList featuresA, Feature2DList featuresB,
-                                                  ChromosomeHandler handler, boolean doSubtraction,
-                                                  boolean useExactMatch, int window, boolean doBoundingBox) {
-        Feature2DList result = new Feature2DList();
+    private static String getOutputName(String inputName) {
+        return inputName.replace(".bedpe", "") + "_after_anchor_filter.bedpe";
+    }
+
+    private static Feature2DList filterFeatures(Feature2DList featuresA, ChromosomeHandler handler,
+                                                Map<Integer, BitSet> upstreamAnchors,
+                                                Map<Integer, BitSet> downstreamAnchors) {
+        final Feature2DList result = new Feature2DList();
         Chromosome[] chromosomes = handler.getChromosomeArrayWithoutAllByAll();
-        for (int i = 0; i < chromosomes.length; i++) {
-            for (int j = i; j < chromosomes.length; j++) {
-                String key = Feature2DList.getKey(chromosomes[i], chromosomes[j]);
-                List<Feature2D> features = intersect(featuresA.get(key), featuresB.get(key),
-                        doSubtraction, useExactMatch, window, doBoundingBox);
-                result.addByKey(key, features);
+        AtomicInteger index = new AtomicInteger(0);
+        ParallelizationTools.launchParallelizedCode(() -> {
+            int i = index.getAndIncrement();
+            while (i < chromosomes.length) {
+                Chromosome chromosome = chromosomes[i];
+                String key = Feature2DList.getKey(chromosome, chromosome);
+                List<Feature2D> features = intersect(featuresA.get(key),
+                        upstreamAnchors.get(chromosome.getIndex()),
+                        downstreamAnchors.get(chromosome.getIndex()));
+                synchronized (result) {
+                    result.addByKey(key, features);
+                }
+                i = index.getAndIncrement();
             }
-        }
+        });
         return result;
     }
 
-    private static List<Feature2D> intersect(List<Feature2D> listA, List<Feature2D> listB,
-                                             boolean doSubtraction, boolean useExactMatch, int window,
-                                             boolean doBoundingBox) {
-        Map<SimpleLocation, List<Feature2D>> mapA = QuickGrouping.groupNearbyRecords(listA, 1000000);
-        Map<SimpleLocation, List<Feature2D>> mapB = QuickGrouping.groupNearbyRecordsWithOverlap(listB, 1000000);
-
-        List<SimpleLocation> keys = new ArrayList<>(mapA.keySet());
-        Set<Feature2D> allCoalesced = new HashSet<>();
-
-        AtomicInteger index = new AtomicInteger(0);
-        ParallelizationTools.launchParallelizedCode(() -> {
-
-            Set<Feature2D> coalesced = new HashSet<>();
-            int i = index.getAndIncrement();
-            while (i < keys.size()) {
-
-                SimpleLocation location = keys.get(i);
-                List<Feature2D> featuresA = mapA.get(location);
-                List<Feature2D> featuresB = new ArrayList<>();
-                if (mapB.containsKey(location)) {
-                    featuresB = mapB.get(location);
-                }
-
-                processFeatures(coalesced, featuresA, featuresB, doSubtraction, useExactMatch, window, doBoundingBox);
-
-                i = index.getAndIncrement();
+    private static List<Feature2D> intersect(List<Feature2D> features, BitSet upStream, BitSet downStream) {
+        final Set<Feature2D> toSaveFinal = new HashSet<>();
+        for (Feature2D feature : features) {
+            boolean overlapsAnchor = hasAnchor(upStream, feature.getStart1(), feature.getEnd1()) ||
+                    hasAnchor(downStream, feature.getStart2(), feature.getEnd2());
+            if (!overlapsAnchor) {
+                toSaveFinal.add(feature);
             }
-
-            synchronized (allCoalesced) {
-                allCoalesced.addAll(coalesced);
-            }
-        });
-
-        mapA.clear();
-        mapB.clear();
-
-        return new ArrayList<>(allCoalesced);
+        }
+        return new ArrayList<>(toSaveFinal);
     }
 
-    private static void processFeatures(Set<Feature2D> coalesced, List<Feature2D> featuresA, List<Feature2D> featuresB,
-                                        boolean doSubtraction, boolean useExactMatch, int window,
-                                        boolean doBoundingBox) {
-        for (Feature2D pixelA : featuresA) {
-            List<Feature2D> pixelList;
-            if (useExactMatch) {
-                pixelList = OverlapTools.getExactMatches(pixelA, featuresB);
-            } else {
-                pixelList = OverlapTools.getMatchesWithOverlap(pixelA, featuresB, window);
-            }
+    private static boolean hasAnchor(BitSet stream, long start1, long end1) {
+        for (int x = (int) (start1 / resolution); x < end1 / resolution; x++) {
+            if (stream.get(x)) return true;
+        }
+        return false;
+    }
 
-            if (pixelList.isEmpty()) {
-                if (doSubtraction) coalesced.add(pixelA);
-            } else {
-                if (!doSubtraction) {
-                    if (doBoundingBox) {
-                        pixelList.add(pixelA);
-                        coalesced.add(FusionTools.getFeatureFromBounds(pixelList));
-                    } else {
-                        coalesced.add(pixelA);
-                    }
-                }
+    private static void populateFilteringAnchors(Map<Integer, BitSet> upstreamAnchors,
+                                                 Map<Integer, BitSet> downstreamAnchors,
+                                                 ChromosomeHandler handler, String[] args, int window,
+                                                 int startIndex) {
+        for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
+            int length = (int) ((chrom.getLength() / resolution) + 1);
+            upstreamAnchors.put(chrom.getIndex(), new BitSet(length));
+            downstreamAnchors.put(chrom.getIndex(), new BitSet(length));
+        }
+
+        for (int k = startIndex; k < args.length; k++) {
+            Feature2DList featuresB = Feature2DParser.loadFeatures(args[k], handler, false, null, false);
+            for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
+                BitSet[] bitSets = getUpStreamDownStreamAnchors(featuresB.get(chrom.getIndex(),
+                        chrom.getIndex()), chrom, window);
+                upstreamAnchors.get(chrom.getIndex()).or(bitSets[0]);
+                downstreamAnchors.get(chrom.getIndex()).or(bitSets[1]);
             }
         }
     }
 
-    private static boolean checkForSubtraction(String command) {
-        if (command.contains("subtract")) {
-            if (Main.printVerboseComments) System.out.println("Doing subtraction");
-            return true;
-        } else {
-            if (Main.printVerboseComments) System.out.println("Doing intersection");
-            return false;
+    private static BitSet[] getUpStreamDownStreamAnchors(List<Feature2D> features, Chromosome chrom, int window) {
+        int length = (int) ((chrom.getLength() / resolution) + 1);
+        BitSet bitSetUpStream = new BitSet(length);
+        BitSet bitSetDownStream = new BitSet(length);
+        for (Feature2D feature : features) {
+            populate(bitSetUpStream, feature.getStart1() - window, feature.getEnd1() + window);
+            populate(bitSetDownStream, feature.getStart2() - window, feature.getEnd2() + window);
         }
+        return new BitSet[]{bitSetUpStream, bitSetDownStream};
     }
 
-    private static boolean checkForExact(String command) {
-        if (command.contains("exact")) {
-            if (Main.printVerboseComments) System.out.println("Will use exact matches");
-            return true;
-        } else {
-            if (Main.printVerboseComments) System.out.println("Will use any amount of overlap");
-            return false;
-        }
-    }
-
-    private static boolean checkForBounds(String command) {
-        if (command.contains("bound")) {
-            if (Main.printVerboseComments) System.out.println("Will use bounding box of overlapping features");
-            return true;
-        } else {
-            return false;
-        }
+    private static void populate(BitSet anchorStream, long start1, long end1) {
+        int realStart = (int) Math.max(start1 / resolution, 0);
+        int realEnd = (int) Math.max(realStart + 1, end1 / resolution);
+        anchorStream.set(realStart, realEnd);
     }
 }
