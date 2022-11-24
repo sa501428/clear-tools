@@ -17,7 +17,7 @@ public class Split {
 
     public static void run(String[] args, String command) {
         if (args.length < 5) {
-            Main.printGeneralUsageAndExit(5);
+            Main.printGeneralUsageAndExit(5, usage);
         }
         // split[-clean] <genomeID> <number> <input.bedpe> <output>
         String genomeID = args[1];

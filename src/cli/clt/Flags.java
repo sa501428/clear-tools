@@ -17,7 +17,7 @@ public class Flags {
     public static void run(String[] args, CommandLineParser parser) {
 
         if (args.length != 4) {
-            Main.printGeneralUsageAndExit(4);
+            Main.printGeneralUsageAndExit(4, usage);
         }
 
         String hicFile = args[1];

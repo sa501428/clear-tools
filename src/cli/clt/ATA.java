@@ -52,7 +52,7 @@ public class ATA {
 
     public ATA(String[] args, CommandLineParser parser) {
         if (args.length != 5) {
-            Main.printGeneralUsageAndExit(5);
+            Main.printGeneralUsageAndExit(5, usage);
         }
 
         // signal.bw peaks.bed outfile.npy

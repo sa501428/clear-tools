@@ -17,29 +17,27 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class IntersectBedpe {
-
+public class SubtractSharedAnchors {
     // overlap can be adjusted; exact means exact indices; default will use any overlap
     // clean means don't save attributes
-    public static String usage = "intersect[-subtract][-clean][-exact][-bounding-box] [-w window] <genomeID> " +
-            "<fileA.bedpe> <fileB.bedpe> <output.bedpe>\n" +
-            "\t\tsubtract retains features in A with no overlap in B, default requires an overlap\n" +
+    public static String usage = "subtract-shared-anchors[-clean][-exact] [-w window] <genomeID> <output.bedpe>" +
+            "<fileA.bedpe> <fileB1.bedpe> <fileB2.bedpe> ...\n" +
+            "\t\treturn only loops that have no shared anchors with anything that loops" +
+            "in files B1, B2, etc.\n" +
             "\t\texact requires exact matches, default is any overlap";
 
     public static void run(String[] args, String command, CommandLineParser parser) {
 
         // subtract will keep things in A that don't overlap with B
         // otherwise retain things in A that have overlap with B
-        boolean doSubtraction = checkForSubtraction(command);
         boolean useExactMatch = checkForExact(command);
-        boolean doBoundingBox = checkForBounds(command);
 
         int window = parser.getWindowSizeOption(0);
         if (window > 0 && Main.printVerboseComments) {
             System.out.println("Features will be expanded by " + window);
         }
 
-        if (args.length != 5) {
+        if (args.length < 5) {
             Main.printGeneralUsageAndExit(15, usage);
         }
         // intersect <genomeID> <fileA.bedpe> <fileB.bedpe> <output.bedpe>
@@ -49,7 +47,7 @@ public class IntersectBedpe {
         Feature2DList featuresB = Feature2DParser.loadFeatures(args[3], handler, !noAttributes, null, false);
 
         Feature2DList output = coalesceFeatures(featuresA, featuresB, handler,
-                doSubtraction, useExactMatch, window, doBoundingBox);
+                false, useExactMatch, window, false);
         output.exportFeatureList(new File(args[4]), false, Feature2DList.ListFormat.NA);
         System.out.println("fusion complete");
 

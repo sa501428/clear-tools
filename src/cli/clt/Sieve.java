@@ -51,7 +51,7 @@ public class Sieve {
     public Sieve(String[] args, CommandLineParser parser, String command) {
         // sieve <loops.bedpe> <output.bedpe> <file1.hic> <res1,res2,...>
         if (args.length != 5 && args.length != 4) {
-            Main.printGeneralUsageAndExit(5);
+            Main.printGeneralUsageAndExit(5, usage);
         }
 
         String loopListPath = args[1];

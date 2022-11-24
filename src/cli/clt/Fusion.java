@@ -14,7 +14,7 @@ public class Fusion {
 
     public static void run(String[] args, String command) {
         if (args.length < 4) {
-            Main.printGeneralUsageAndExit(5);
+            Main.printGeneralUsageAndExit(5, usage);
         }
         // fusion <genomeID> <output.bedpe> <file1.bedpe> <file2.bedpe> [...files.bedpe]
         String genomeID = args[1];

@@ -37,7 +37,7 @@ public class Pinpoint {
 
     public static void run(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
-            Main.printGeneralUsageAndExit(5);
+            Main.printGeneralUsageAndExit(5, usage);
         }
 
         Dataset dataset = HiCFileTools.extractDatasetForCLT(args[1], false, false, true);

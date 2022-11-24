@@ -37,7 +37,7 @@ public class Recap {
 
         // if input doesn't follow required Recap syntax/format, then exit
         if (args.length != 5) {
-            Main.printGeneralUsageAndExit(5);
+            Main.printGeneralUsageAndExit(5, usage);
         }
 
         // recap <loops.bedpe> <outfolder> <file1.hic,file2.hic,...> <name1,name2,...>

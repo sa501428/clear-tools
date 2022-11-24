@@ -38,7 +38,7 @@ public class Enhance {
 
     public static void run(String[] args, CommandLineParser parser) {
         if (args.length < 4) {
-            Main.printGeneralUsageAndExit(5);
+            Main.printGeneralUsageAndExit(5, null);
         }
 
         String outFolder = args[1];

@@ -24,7 +24,7 @@ public class FilterBedpe {
         boolean doCheckContain = checkForContainment(command);
 
         if (args.length != 4) {
-            Main.printGeneralUsageAndExit(15);
+            Main.printGeneralUsageAndExit(15, usage);
         }
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
         boolean noAttributes = command.contains("clean");

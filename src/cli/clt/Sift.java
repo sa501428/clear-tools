@@ -56,7 +56,7 @@ public class Sift {
 
     public Sift(String[] args, CommandLineParser parser) {
         if (args.length != 3) {
-            Main.printGeneralUsageAndExit(5);
+            Main.printGeneralUsageAndExit(5, usage);
         }
 
         Dataset ds = HiCFileTools.extractDatasetForCLT(args[1], false, false, false);

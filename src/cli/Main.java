@@ -5,21 +5,25 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.76.0";
+    public static final String VERSION_NUM = "0.76.1";
     public static boolean printVerboseComments = false;
 
-    public static void printGeneralUsageAndExit(int exitCode) {
+    public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
         System.out.println("CLEAR Tools Version " + VERSION_NUM);
         System.out.println("Usage:");
         System.out.println("\t" + "-h, --help print help");
         System.out.println("\t" + "-v, --verbose verbose mode");
         System.out.println("\t" + "-V, --version print version");
         System.out.println("Commands:");
-        for (String usage : new String[]{APA.usage, ATA.usage, Cleaner.usage, Fusion.usage,
-                GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage,
-                Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage, UnWrap.usage,
-                Flags.usage, Sift.usage, NormHack.usage, Recap.usage, HotSpot.usage}) {
-            System.out.println("\t" + usage + "\n\n");
+        if (cUsage == null || cUsage.length() < 1) {
+            for (String usage : new String[]{APA.usage, ATA.usage, Cleaner.usage, Fusion.usage,
+                    GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage,
+                    Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage, UnWrap.usage,
+                    Flags.usage, Sift.usage, NormHack.usage, Recap.usage, HotSpot.usage}) {
+                System.out.println("\t" + usage + "\n\n");
+            }
+        } else {
+            System.out.println("\t" + cUsage + "\n\n");
         }
 
         System.out.println("Exit code " + exitCode);
@@ -28,7 +32,7 @@ public class Main {
 
     public static void main(String[] argv) throws CmdLineParser.UnknownOptionException, CmdLineParser.IllegalOptionValueException {
         if (argv.length == 0 || argv[0].equals("-h") || argv[0].equals("--help") || argv[0].equals("-V") || argv[0].equals("--version")) {
-            printGeneralUsageAndExit(1);
+            printGeneralUsageAndExit(1, null);
         }
 
         CommandLineParser parser = new CommandLineParser();
@@ -39,7 +43,7 @@ public class Main {
 
         String[] args = parser.getRemainingArgs();
         if(help || version){
-            printGeneralUsageAndExit(2);
+            printGeneralUsageAndExit(2, null);
         }
 
         String command = args[0].toLowerCase();
@@ -55,6 +59,8 @@ public class Main {
             Probability.run(args, parser);
         } else if (command.startsWith("unwrap")) {
             UnWrap.run(args, parser, command);
+        } else if (command.startsWith("subtract") && command.contains("anchors")) {
+            SubtractSharedAnchors.run(args, command, parser);
         } else if (command.startsWith("apa") && command.contains("1d")) {
             APA1D apa = new APA1D(args, parser);
             apa.run();
@@ -97,7 +103,7 @@ public class Main {
                 SimplePeak.run(args, parser);
             }
         } else {
-            printGeneralUsageAndExit(3);
+            printGeneralUsageAndExit(3, null);
         }
     }
 }

@@ -38,7 +38,7 @@ public class Cleaner {
 
     public static void run(String[] args, CommandLineParser parser, String command) {
         if (args.length != 4) {
-            Main.printGeneralUsageAndExit(5);
+            Main.printGeneralUsageAndExit(5, usage);
         }
 
         boolean justPeek = command.contains("peek");

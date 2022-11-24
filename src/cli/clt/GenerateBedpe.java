@@ -36,7 +36,7 @@ public class GenerateBedpe {
     public static void buildFromAnchors(String[] args, CommandLineParser parser) {
 
         if (args.length != 7) {
-            Main.printGeneralUsageAndExit(4);
+            Main.printGeneralUsageAndExit(4, usage);
         }
         String forwardMotifFile = args[1];
         String reverseMotifFile = args[2];
@@ -57,7 +57,7 @@ public class GenerateBedpe {
     private static void buildFromDomains(String[] args, CommandLineParser parser) {
         // generate-from-domains <genomeID> <domains.bedpe> <output_>
         if (args.length != 4) {
-            Main.printGeneralUsageAndExit(4);
+            Main.printGeneralUsageAndExit(4, usage);
         }
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
         Feature2DList domains = Feature2DParser.loadFeatures(args[2], handler, false, null, false);
@@ -70,7 +70,7 @@ public class GenerateBedpe {
     private static void buildFromOffsets(String[] args, CommandLineParser parser) {
         // generate-from-offsets <genomeID> <loops.bedpe> <output.bedpe> <+-offset>
         if (args.length != 5) {
-            Main.printGeneralUsageAndExit(4);
+            Main.printGeneralUsageAndExit(4, usage);
         }
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
         Feature2DList loops = Feature2DParser.loadFeatures(args[2], handler, false, null, false);
