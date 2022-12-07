@@ -58,26 +58,19 @@ public class Pinpoint {
             resolution = HiCUtils.getHighestResolution(dataset.getBpZooms()).getBinSize();
         }
 
+        int halfMatrixWidth = parser.getWindowSizeOption(getDefaultHalfMatrixWidth(loopList, resolution));
+
         final Feature2DList pinpointLoopsNoNorm = new Feature2DList();
         final Feature2DList pinpointBounds = new Feature2DList();
 
-        localize(dataset, loopList, handler, resolution, onlyGetOne, pinpointLoopsNoNorm, pinpointBounds);
+        localize(dataset, loopList, handler, resolution, onlyGetOne, pinpointLoopsNoNorm, pinpointBounds,
+                halfMatrixWidth);
         pinpointLoopsNoNorm.exportFeatureList(new File(outFile + "_raw.bedpe"), false, Feature2DList.ListFormat.NA);
         pinpointBounds.exportFeatureList(new File(outFile + "_bounds.bedpe"), false, Feature2DList.ListFormat.NA);
         System.out.println("pinpoint complete");
     }
 
-    private static void localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
-                                 int resolution, boolean onlyGetOne,
-                                 Feature2DList finalLoops, Feature2DList finalBounds) {
-
-        if (Main.printVerboseComments) {
-            System.out.println("Pinpointing location for loops");
-        }
-
-        int compressedKernelSize = Math.max((400 / resolution) + 1, 3); // effectively multiplied by 20 later
-        int kernelSize = Math.max((2000 / resolution) + 1, 3);
-
+    private static int getDefaultHalfMatrixWidth(Feature2DList loopList, int resolution) {
         final int[] globalMaxWidth = new int[1];
         loopList.processLists((s, list) -> {
             int maxWidth = 0;
@@ -88,7 +81,21 @@ public class Pinpoint {
             globalMaxWidth[0] = Math.max(globalMaxWidth[0], maxWidth);
         });
 
-        int halfMatrixWidth = (int) (1.5 * Math.max(globalMaxWidth[0], 10)) + 1;
+        return (int) (1.5 * Math.max(globalMaxWidth[0], 10)) + 1;
+    }
+
+    private static void localize(final Dataset dataset, Feature2DList loopList, ChromosomeHandler handler,
+                                 int resolution, boolean onlyGetOne,
+                                 Feature2DList finalLoops, Feature2DList finalBounds,
+                                 int halfMatrixWidth) {
+
+        if (Main.printVerboseComments) {
+            System.out.println("Pinpointing location for loops");
+        }
+
+        int compressedKernelSize = Math.max((400 / resolution) + 1, 3); // effectively multiplied by 20 later
+        int kernelSize = Math.max((2000 / resolution) + 1, 3);
+
         int matrixWidth = 2 * halfMatrixWidth + 1;
 
         //GPUController gpuController = Circe.buildGPUController(kernelSize, matrixWidth, kernelSize / 2 + 1);

@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SimpleMax {
 
-    private static final NormalizationType VC = NormalizationHandler.VC;
     private static final NormalizationType NONE = NormalizationHandler.NONE;
     public static String usage = "simple-max [-r resolution] [-k norm] <file.hic> <loops.bedpe> <output.bedpe>\n" +
             "\t\tget the maximum pixel within the feature inside the bounds";
@@ -54,10 +53,14 @@ public class SimpleMax {
         NormalizationType norm = NormalizationHandler.NONE;
         String possibleNorm = parser.getNormalizationStringOption();
         if (possibleNorm != null && possibleNorm.length() > 0) {
-            try {
-                norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
-            } catch (Exception e) {
-                norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
+            if (possibleNorm.equalsIgnoreCase("none")) {
+                norm = NONE;
+            } else {
+                try {
+                    norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+                } catch (Exception e) {
+                    norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
+                }
             }
         }
         System.out.println("Normalization being used: " + norm.getLabel());
@@ -96,8 +99,10 @@ public class SimpleMax {
                             try {
                                 double[] nv = null;
                                 try {
-                                    nv = ds.getNormalizationVector(chrom1.getIndex(), zoom, VC).getData().getValues().get(0);
+                                    nv = ds.getNormalizationVector(chrom1.getIndex(), zoom, norm).getData().getValues().get(0);
                                 } catch (Exception e) {
+                                    System.err.println("Warning: could not find norm vector for " + norm.getLabel());
+                                    System.err.println("Will use NONE");
                                     e.printStackTrace();
                                 }
                                 Set<Feature2D> newLoops = getMaximaForRegions(new HashSet<>(loops), resolution, buffer, zd, nv);
@@ -150,13 +155,7 @@ public class SimpleMax {
         int rF = (int) ((loop.getEnd1() / resolution) + window + 1 - minR);
         int cF = (int) ((loop.getEnd2() / resolution) + window + 1 - minC);
 
-        int[] binCoords;
-        if (resolution > 10) { // or median 1
-            binCoords = getMaxPixelInBox(regionMatrix, r0, rF, c0, cF, nv, minR, minC);
-        } else {
-            binCoords = null; // TODO getCentroidInBox(regionMatrix, r0, rF, c0, cF, nv, minR, minC);
-        }
-
+        int[] binCoords = getMaxPixelInBox(regionMatrix, r0, rF, c0, cF, nv, minR, minC);
         if (binCoords != null) {
             long startX = (long) (binCoords[0] + minR) * resolution;
             long endX = startX + resolution;
@@ -170,14 +169,14 @@ public class SimpleMax {
 
     public static int[] getMaxPixelInBox(float[][] matrix, int r0, int rF, int c0, int cF,
                                          double[] nv, int minR, int minC) {
-        float maxCounts = 0;
+        float maxCounts = 1;
         int[] coordinates = new int[]{-1, -1};
         for (int r = r0; r < rF; r++) {
             for (int c = c0; c < cF; c++) {
                 if (matrix[r][c] > 0) {
                     if (nv != null) {
-                        float norm = (float) Math.sqrt(nv[minR + r] * nv[minC + c]);
-                        if (norm > 0) {
+                        float norm = (float) (nv[minR + r] * nv[minC + c]);
+                        if (norm > .5) {
                             float realVal = matrix[r][c] / norm;
                             if (realVal > maxCounts) {
                                 maxCounts = realVal;
@@ -196,7 +195,7 @@ public class SimpleMax {
                 }
             }
         }
-        if (maxCounts > 0) {
+        if (maxCounts > 1) {
             return coordinates;
         }
         return null;
