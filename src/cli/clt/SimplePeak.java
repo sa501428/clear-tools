@@ -15,9 +15,7 @@ import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SimplePeak {
@@ -55,6 +53,13 @@ public class SimplePeak {
         Feature2DList finalLoopList = new Feature2DList();
         final int buffer = 5;
 
+        int numTotalLoops = loopList.getNumTotalFeatures();
+
+        Map<Integer, AtomicInteger> counters = new HashMap<>();
+        for (int resolution : new int[]{1000, 500, 200, 10}) {
+            counters.put(resolution, new AtomicInteger(0));
+        }
+
         AtomicInteger currChromIndex = new AtomicInteger(0);
         Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
         ParallelizationTools.launchParallelizedCode(() -> {
@@ -76,7 +81,8 @@ public class SimplePeak {
                             if (zd != null) { // if it's not empty
                                 try {
                                     double[] nv = ds.getNormalizationVector(chrom1.getIndex(), zoom, VC).getData().getValues().get(0);
-                                    Set<Feature2D> currentLoops = SimpleMax.getMaximaForRegions(retainedLoops, resolution, buffer, zd, nv);
+                                    Set<Feature2D> currentLoops = SimpleMax.getMaximaForRegions(retainedLoops,
+                                            resolution, buffer, zd, nv, counters.get(resolution), numTotalLoops);
 
                                     retainedLoops.clear();
                                     if (resolution == 10) {

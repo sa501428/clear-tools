@@ -80,6 +80,9 @@ public class SimpleMax {
         Feature2DList finalLoopList = new Feature2DList();
         HiCZoom zoom = new HiCZoom(resolution);
 
+        final AtomicInteger currNumLoops = new AtomicInteger(0);
+        int numTotalLoops = loopList.getNumTotalFeatures();
+
         AtomicInteger currChromIndex = new AtomicInteger(0);
         Chromosome[] chromosomes = ds.getChromosomeHandler().getChromosomeArrayWithoutAllByAll();
         ParallelizationTools.launchParallelizedCode(() -> {
@@ -105,7 +108,8 @@ public class SimpleMax {
                                     System.err.println("Will use NONE");
                                     e.printStackTrace();
                                 }
-                                Set<Feature2D> newLoops = getMaximaForRegions(new HashSet<>(loops), resolution, buffer, zd, nv);
+                                Set<Feature2D> newLoops = getMaximaForRegions(new HashSet<>(loops), resolution,
+                                        buffer, zd, nv, currNumLoops, numTotalLoops);
 
                                 synchronized (finalLoopList) {
                                     finalLoopList.addByKey(Feature2DList.getKey(chrom1, chrom1), new ArrayList<>(newLoops));
@@ -128,7 +132,8 @@ public class SimpleMax {
     }
 
     public static Set<Feature2D> getMaximaForRegions(Set<Feature2D> loops, int resolution,
-                                                     int buffer, MatrixZoomData zd, double[] nv) {
+                                                     int buffer, MatrixZoomData zd, double[] nv,
+                                                     AtomicInteger currNumLoops, int numTotalLoops) {
         Set<Feature2D> newLoops = new HashSet<>();
         Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
                 loops, resolution * 200).values();
@@ -140,6 +145,9 @@ public class SimpleMax {
             float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, NONE);
             for (Feature2D loop : group) {
                 getTheMaxPixel(regionMatrix, loop, resolution, newLoops, minR, minC, nv, 2);
+            }
+            if (currNumLoops.addAndGet(group.size()) % 100 == 0) {
+                System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
             }
             regionMatrix = null;
         }
