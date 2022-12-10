@@ -59,9 +59,9 @@ public class UnWrap {
 
                     int dist = getDistanceBetweenAnchorsAndLocal(inv);
                     inv.addIntAttribute("local_vs_mid_anchor_offset", dist);
-                    if (dist < 100) {
+                    if (dist < 10) {
                         idealList.add(inv);
-                    } else {
+                    } else if (dist > 400) {
                         badAnchorList.add(inv);
                         badLocalList.add(unwrapLocal(inv));
                     }
