@@ -125,12 +125,12 @@ public class AnchorStrength {
                                     int dist = ExpectedUtils.getDist(cr);
                                     if (dist > minPeakDist) {
                                         float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
-
-                                        upStreamSums[cr.getBinX()] += (dist * zscore);
-                                        upStreamCounts[cr.getBinX()] += dist;
-
-                                        downStreamSums[cr.getBinY()] += (dist * zscore);
-                                        downStreamCounts[cr.getBinY()] += dist;
+                                        if (zscore > 1) {
+                                            upStreamSums[cr.getBinX()] += (dist * zscore);
+                                            upStreamCounts[cr.getBinX()] += dist;
+                                            downStreamSums[cr.getBinY()] += (dist * zscore);
+                                            downStreamCounts[cr.getBinY()] += dist;
+                                        }
                                     }
                                 }
                             }
