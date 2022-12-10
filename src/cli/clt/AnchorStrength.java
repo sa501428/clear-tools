@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnchorStrength {
     public static String usage = "anchor-strength [-k NORM] " +
-            " [--min-dist val] [-r resolution] <input.hic> <output.stem>";
+            "[--min-dist val] [-r resolution] <input.hic> <output.stem>";
     private final String outputPath;
     private final Dataset ds;
     private final int minPeakDist; // distance between two bins, can be changed in opts
@@ -58,7 +58,7 @@ public class AnchorStrength {
 
 
     public AnchorStrength(String[] args, CommandLineParser parser) {
-        if (args.length != 4) {
+        if (args.length != 3) {
             printUsageAndExit();
         }
 
