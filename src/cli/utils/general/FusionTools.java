@@ -25,34 +25,31 @@ public class FusionTools {
     }
 
     private static List<Feature2D> removeOverlappingPixels(List<Feature2D> features, boolean useNMS, boolean useExact) {
-        Map<SimpleLocation, List<Feature2D>> map = QuickGrouping.groupNearbyRecords(features, 5000000);
-        Set<Feature2D> allCoalesced = new HashSet<>();
-
-        List<List<Feature2D>> featureLists = new ArrayList<>(map.values());
-
-        AtomicInteger index = new AtomicInteger(0);
-        ParallelizationTools.launchParallelizedCode(() -> {
-
-            Set<Feature2D> coalesced = new HashSet<>();
-            int i = index.getAndIncrement();
-            while (i < featureLists.size()) {
-                List<Feature2D> featureLL = featureLists.get(i);
-                processFeatures(coalesced, featureLL, useNMS, useExact);
-                i = index.getAndIncrement();
-            }
-
-            synchronized (allCoalesced) {
-                allCoalesced.addAll(coalesced);
-            }
-
-        });
-
-        map.clear();
-
-        return new ArrayList<>(allCoalesced);
+        if (useExact) {
+            return new ArrayList<>(new HashSet<>(features));
+        } else {
+            Map<SimpleLocation, List<Feature2D>> map = QuickGrouping.groupNearbyRecords(features, 5000000);
+            Set<Feature2D> allCoalesced = new HashSet<>();
+            List<List<Feature2D>> featureLists = new ArrayList<>(map.values());
+            AtomicInteger index = new AtomicInteger(0);
+            ParallelizationTools.launchParallelizedCode(() -> {
+                Set<Feature2D> coalesced = new HashSet<>();
+                int i = index.getAndIncrement();
+                while (i < featureLists.size()) {
+                    List<Feature2D> featureLL = featureLists.get(i);
+                    processFeatures(coalesced, featureLL, useNMS);
+                    i = index.getAndIncrement();
+                }
+                synchronized (allCoalesced) {
+                    allCoalesced.addAll(coalesced);
+                }
+            });
+            map.clear();
+            return new ArrayList<>(allCoalesced);
+        }
     }
 
-    private static void processFeatures(Set<Feature2D> coalesced, List<Feature2D> featureLL, boolean useNMS, boolean useExact) {
+    private static void processFeatures(Set<Feature2D> coalesced, List<Feature2D> featureLL, boolean useNMS) {
         sort(featureLL);
 
         while (!featureLL.isEmpty()) {
@@ -61,17 +58,11 @@ public class FusionTools {
                 featureLL.remove(pixel);
                 int buffer = getBuffer(useNMS, pixel);
 
-                List<Feature2D> pixelList;
-                if (useExact) {
-                    pixelList = OverlapTools.getExactMatches(pixel, featureLL);
-                } else {
-                    pixelList = OverlapTools.getMatchesWithOverlap(pixel, featureLL, buffer);
-                }
-
+                List<Feature2D> pixelList = OverlapTools.getMatchesWithOverlap(pixel, featureLL, buffer);
                 featureLL.removeAll(pixelList);
-                pixel.addStringAttribute("NumCollapsed", String.valueOf(pixelList.size()));
+                //pixel.addStringAttribute("NumCollapsed", String.valueOf(pixelList.size()));
 
-                if (useNMS || useExact) {
+                if (useNMS) {
                     coalesced.add(pixel);
                 } else {
                     pixelList.add(pixel);
