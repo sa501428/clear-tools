@@ -59,15 +59,15 @@ public class APA {
     private final String loopListPath;
     private final File outputDirectory;
     private final Dataset ds;
-    private NormalizationType norm;
+    protected final NormalizationType norm;
     //defaults
     // TODO right now these units are based on n*res/sqrt(2)
     // TODO the sqrt(2) scaling should be removed (i.e. handle scaling internally)
     private final int minPeakDist; // distance between two bins, can be changed in opts
     private final int maxPeakDist;
-    private final int window;
-    private final int matrixWidthL;
-    private final int resolution;
+    protected final int window;
+    protected final int matrixWidthL;
+    protected final int resolution;
     private final boolean includeInterChr;
     private final boolean useAgNorm;
 
@@ -86,16 +86,17 @@ public class APA {
 
         String possibleNorm = parser.getNormalizationStringOption();
         useAgNorm = parser.getAggregateNormalization() || isAgNorm(possibleNorm);
-        if (useAgNorm) {
-            norm = NormalizationHandler.NONE;
-        } else {
+
+        NormalizationType tempNorm = NormalizationHandler.NONE;
+        if (!useAgNorm) {
             try {
-                norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+                tempNorm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
             } catch (Exception e) {
-                norm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
+                tempNorm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
             }
         }
 
+        norm = tempNorm;
         System.out.println("Using normalization: " + norm.getLabel());
         if (useAgNorm) {
             System.out.println("Will apply aggregate normalization.");
@@ -173,46 +174,20 @@ public class APA {
 
                 Matrix matrix = ds.getMatrix(chr1, chr2);
                 if (matrix != null) {
-
                     List<Feature2D> loops = loopList.get(chr1.getIndex(), chr2.getIndex());
                     if (loops != null && loops.size() > 0) {
-
-                        double[] vector1 = null;
-                        double[] vector2 = null;
-                        if (useAgNorm) {
-                            vector1 = ds.getNormalizationVector(chr1.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-
-                            if (chr1.getIndex() == chr2.getIndex()) {
-                                vector2 = vector1;
-                            } else {
-                                vector2 = ds.getNormalizationVector(chr2.getIndex(), zoom, vcNorm).getData().getValues().get(0);
-                            }
-                        }
-
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
                             try {
-                                for (Feature2D loop : loops) {
-
-                                    int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
-                                    int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
-                                    Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidthL, norm);
-                                    if (useAgNorm) {
-                                        APAUtils.addLocalRowSums(rowSum, vector1, binXStart);
-                                        APAUtils.addLocalRowSums(colSum, vector2, binYStart);
-                                    }
-
-                                    if (currNumLoops.incrementAndGet() % 100 == 0) {
-                                        System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
-                                    }
+                                processLoopsForRegion(zd, loops, output, currNumLoops, numTotalLoops);
+                                if (useAgNorm) {
+                                    doAggregateNormalization(chr1, chr2, zoom, vcNorm, loops, rowSum, colSum);
                                 }
                                 System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                             } catch (Exception e) {
                                 System.err.println(e.getMessage());
                             }
                         }
-                        vector1 = null;
-                        vector2 = null;
                     }
                     matrix.clearCache();
                 }
@@ -232,6 +207,32 @@ public class APA {
         APADataExporter.exportGenomeWideData(gwPeakNumbers, outputDirectory, useAgNorm, globalAPAMatrix,
                 globalRowSum, globalColSum);
         System.out.println("APA complete");
+    }
+
+    private void doAggregateNormalization(Chromosome chr1, Chromosome chr2, HiCZoom zoom, NormalizationType vcNorm, List<Feature2D> loops, double[] rowSum, double[] colSum) {
+        double[] vector1 = ds.getNormalizationVector(chr1.getIndex(), zoom, vcNorm).getData().getValues().get(0);
+        double[] vector2 = vector1;
+        if (chr1.getIndex() != chr2.getIndex()) {
+            vector2 = ds.getNormalizationVector(chr2.getIndex(), zoom, vcNorm).getData().getValues().get(0);
+        }
+
+        for (Feature2D loop : loops) {
+            int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
+            int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
+            APAUtils.addLocalRowSums(rowSum, vector1, binXStart);
+            APAUtils.addLocalRowSums(colSum, vector2, binYStart);
+        }
+    }
+
+    protected void processLoopsForRegion(MatrixZoomData zd, List<Feature2D> loops, float[][] output, AtomicInteger currNumLoops, int numTotalLoops) {
+        for (Feature2D loop : loops) {
+            int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
+            int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
+            Utils.addLocalBoundedRegion(output, zd, binXStart, binYStart, matrixWidthL, norm);
+            if (currNumLoops.incrementAndGet() % 100 == 0) {
+                System.out.print(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
+            }
+        }
     }
 
     private Feature2DList loadLoopsAPAStyle(AtomicInteger[] gwPeakNumbers, ChromosomeHandler handler) {
