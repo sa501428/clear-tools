@@ -45,11 +45,7 @@ import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class APA {
@@ -75,13 +71,23 @@ public class APA {
     private final double[] globalRowSum;
     private final double[] globalColSum;
 
+    private final AtomicInteger currChromPair = new AtomicInteger(0);
+    private final AtomicInteger currNumLoops = new AtomicInteger(0);
+    private final NormalizationType vcNorm = NormalizationHandler.VC;
+    private final Object key = new Object();
+    private final AtomicInteger[] gwPeakNumbers = {new AtomicInteger(0),
+            new AtomicInteger(0), new AtomicInteger(0)};
+    private final HiCZoom zoom;
+    private final ChromosomeHandler handler;
+    private final Feature2DList loopList;
+    private final int numTotalLoops;
+
     public APA(String[] args, CommandLineParser parser, boolean loadAllBlockIndices) {
         if (args.length != 4) {
             printUsageAndExit();
         }
 
         resolution = parser.getResolutionOption(5000);
-
         boolean useBI = !loadAllBlockIndices || resolution >= 50;
 
         ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, useBI);
@@ -110,15 +116,19 @@ public class APA {
         maxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
         includeInterChr = parser.getIncludeInterChromosomal();
 
-
         matrixWidthL = 2 * window + 1;
         globalAPAMatrix = new float[matrixWidthL][matrixWidthL];
-        if (useAgNorm) {
-            globalRowSum = new double[matrixWidthL];
-            globalColSum = new double[matrixWidthL];
-        } else {
-            globalRowSum = null;
-            globalColSum = null;
+        globalRowSum = new double[matrixWidthL];
+        globalColSum = new double[matrixWidthL];
+
+        zoom = new HiCZoom(resolution);
+        handler = ds.getChromosomeHandler();
+
+        loopList = loadLoopsAPAStyle(gwPeakNumbers, handler);
+        numTotalLoops = loopList.getNumTotalFeatures();
+        if (numTotalLoops < 1) {
+            System.err.println("Loop list is empty or incorrect path provided.");
+            System.exit(3);
         }
     }
 
@@ -136,39 +146,16 @@ public class APA {
 
     public void run() {
         System.out.println("Processing APA for resolution " + resolution);
-        HiCZoom zoom = new HiCZoom(resolution);
 
-        ChromosomeHandler handler = ds.getChromosomeHandler();
-        final AtomicInteger[] gwPeakNumbers = {new AtomicInteger(0), new AtomicInteger(0), new AtomicInteger(0)};
-
-        Feature2DList loopList = loadLoopsAPAStyle(gwPeakNumbers, handler);
-        if (loopList.getNumTotalFeatures() < 1) {
-            System.err.println("Loop list is empty or incorrect path provided.");
-            System.exit(3);
-        }
-
-        Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
+        Map<Integer, RegionConfiguration> chromosomePairs = new HashMap<>();
         int pairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
                 handler.getChromosomeArrayWithoutAllByAll(), includeInterChr);
-
-        int numTotalLoops = loopList.getNumTotalFeatures();
-        final AtomicInteger currChromPair = new AtomicInteger(0);
-        final AtomicInteger currNumLoops = new AtomicInteger(0);
-
-        final NormalizationType vcNorm = ds.getNormalizationHandler().getNormTypeFromString("VC");
-
-        final Object key = new Object();
 
         ParallelizationTools.launchParallelizedCode(() -> {
 
             float[][] output = new float[matrixWidthL][matrixWidthL];
-            double[] rowSum = null;
-            double[] colSum = null;
-
-            if (useAgNorm) {
-                rowSum = new double[matrixWidthL];
-                colSum = new double[matrixWidthL];
-            }
+            double[] rowSum = new double[matrixWidthL];
+            double[] colSum = new double[matrixWidthL];
 
             int threadPair = currChromPair.getAndIncrement();
             while (threadPair < pairCounter) {
