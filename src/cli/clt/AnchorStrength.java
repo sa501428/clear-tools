@@ -62,7 +62,8 @@ public class AnchorStrength {
             printUsageAndExit();
         }
 
-        ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, true);
+        resolution = parser.getResolutionOption(2000);
+        ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, resolution > 50);
         outputPath = args[2];
 
         String possibleNorm = parser.getNormalizationStringOption();
@@ -73,7 +74,6 @@ public class AnchorStrength {
             System.err.println(e.getMessage());
         }
         System.out.println("Using normalization: " + norm.getLabel());
-        resolution = parser.getResolutionOption(2000);
         minPeakDist = parser.getMinDistVal(10);
     }
 

@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class APA3 extends APA {
     public APA3(String[] args, CommandLineParser parser) {
-        super(args, parser);
+        super(args, parser, true);
     }
 
     public static List<float[][]> initList(int size) {

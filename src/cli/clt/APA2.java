@@ -13,7 +13,7 @@ public class APA2 extends APA {
     private final static int C0 = 0, C1 = 1, R0 = 2;
 
     public APA2(String[] args, CommandLineParser parser) {
-        super(args, parser);
+        super(args, parser, true);
     }
 
     @Override

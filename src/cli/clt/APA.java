@@ -75,12 +75,16 @@ public class APA {
     private final double[] globalRowSum;
     private final double[] globalColSum;
 
-    public APA(String[] args, CommandLineParser parser) {
+    public APA(String[] args, CommandLineParser parser, boolean loadAllBlockIndices) {
         if (args.length != 4) {
             printUsageAndExit();
         }
 
-        ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, true);
+        resolution = parser.getResolutionOption(5000);
+
+        boolean useBI = !loadAllBlockIndices || resolution >= 50;
+
+        ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, useBI);
         loopListPath = args[2];
         outputDirectory = HiCFileTools.createValidDirectory(args[3]);
 
@@ -105,7 +109,7 @@ public class APA {
         minPeakDist = parser.getMinDistVal(2 * window);
         maxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
         includeInterChr = parser.getIncludeInterChromosomal();
-        resolution = parser.getResolutionOption(5000);
+
 
         matrixWidthL = 2 * window + 1;
         globalAPAMatrix = new float[matrixWidthL][matrixWidthL];
