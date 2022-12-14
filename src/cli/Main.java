@@ -72,6 +72,9 @@ public class Main {
         } else if (command.startsWith("apa2")) {
             APA2 apa = new APA2(args, parser);
             apa.run();
+        } else if (command.startsWith("anchor-apa")) {
+            AnchorAPA apa = new AnchorAPA(args, parser);
+            apa.run();
         } else if (command.startsWith("apa")) {
             APA apa = new APA(args, parser, false);
             apa.run();

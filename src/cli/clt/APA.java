@@ -49,7 +49,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class APA {
-    public static String usage = "apa [--ag-norm] [-k NORM] [--window val]" +
+    public static String usage = "apa[2] [--ag-norm] [-k NORM] [--window val]" +
             " [--min-dist val] [--max-dist val] [--include-inter] [-r resolution]" +
             " <input.hic> <loops.bedpe> <outfolder>";
     private final String loopListPath;
@@ -138,9 +138,7 @@ public class APA {
     }
 
     private void printUsageAndExit() {
-        System.out.println("apa [--min-dist minval] [--max-dist max_val] [--window window] [-r resolution]" +
-                " [-k NONE/VC/VC_SQRT/KR] [--corner-width corner_width] [--include-inter include_inter_chr] [--ag-norm]" +
-                " <input.hic> <loops.bedpe> <outfolder>");
+        System.out.println(usage);
         System.exit(19);
     }
 

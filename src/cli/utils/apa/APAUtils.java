@@ -137,4 +137,13 @@ public class APAUtils {
             }
         }
     }
+
+    public static void addLocalSums(float[] sums, double[] vector, int binStart) {
+        for (int i = 0; i < sums.length; i++) {
+            float val = (float) vector[binStart + i];
+            if (val > 0) {
+                sums[i] += val;
+            }
+        }
+    }
 }
