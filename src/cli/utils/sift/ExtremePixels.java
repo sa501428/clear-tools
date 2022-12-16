@@ -1,6 +1,6 @@
 package cli.utils.sift;
 
-import cli.clt.Sift;
+import cli.clt.loops.Sift;
 import cli.utils.sift.collapse.CentroidCollapser;
 import javastraw.expected.ExpectedModel;
 import javastraw.expected.ExpectedUtils;

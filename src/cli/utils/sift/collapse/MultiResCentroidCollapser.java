@@ -1,6 +1,6 @@
 package cli.utils.sift.collapse;
 
-import cli.clt.Sift;
+import cli.clt.loops.Sift;
 import cli.utils.sift.ContactRecordBox;
 import cli.utils.sift.SimpleLocation;
 import javastraw.reader.block.ContactRecord;

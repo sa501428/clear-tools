@@ -1,6 +1,13 @@
 package cli;
 
-import cli.clt.*;
+import cli.clt.CommandLineParser;
+import cli.clt.apa.*;
+import cli.clt.bedpe.*;
+import cli.clt.enhance.Enhance;
+import cli.clt.enhance.Seer;
+import cli.clt.loops.*;
+import cli.clt.misc.Fimo;
+import cli.clt.misc.NormHack;
 import jargs.gnu.CmdLineParser;
 
 public class Main {
@@ -55,6 +62,8 @@ public class Main {
             Enhance.run(args, parser);
         } else if (command.equals("pinpoint")) {
             Pinpoint.run(args, parser);
+        } else if (command.startsWith("clique")) {
+            Clique.run(args, parser, command);
         } else if (command.startsWith("clean")) {
             Cleaner.run(args, parser, command);
         } else if (command.startsWith("prob")) {
