@@ -5,7 +5,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.87.0";
+    public static final String VERSION_NUM = "0.88.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -20,7 +20,7 @@ public class Main {
                     GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage,
                     Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage, UnWrap.usage,
                     Flags.usage, Sift.usage, NormHack.usage, Recap.usage, HotSpot.usage,
-                    AnchorStrength.usage
+                    AnchorStrength.usage, Expand.usage
             }) {
                 System.out.println("\t" + usage + "\n\n");
             }
@@ -59,6 +59,8 @@ public class Main {
             Cleaner.run(args, parser, command);
         } else if (command.startsWith("prob")) {
             Probability.run(args, parser);
+        } else if (command.startsWith("expand")) {
+            Expand.run(args, command);
         } else if (command.startsWith("unwrap")) {
             UnWrap.run(args, parser, command);
         } else if (command.startsWith("subtract") && command.contains("anchors")) {

@@ -67,7 +67,6 @@ public class APA1D {
     private final boolean includeInterChr;
     private NormalizationType norm = NormalizationHandler.NONE;
 
-
     public APA1D(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
             printUsageAndExit();
