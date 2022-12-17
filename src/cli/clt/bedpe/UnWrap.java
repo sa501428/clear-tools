@@ -17,17 +17,17 @@ import java.util.Map;
 
 public class UnWrap {
 
-    private static final int resolution = 10;
-    private static final int numLists = 5;
-
-
-    public static String usage = "unwrap[-filter] <genomeID> <loops.bedpe> <output_stem_>\n" +
+    public static String usage = "unwrap[-filter] [-r resolution] <genomeID> <loops.bedpe> <output_stem_>\n" +
             "\t\tunwrap localizer output to proper hi-res inverted bounds list";
+    private static final int numLists = 5;
+    private static int resolution = 10;
 
     public static void run(String[] args, CommandLineParser parser, String command) {
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(5, usage);
         }
+
+        resolution = parser.getResolutionOption(10);
 
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
 
