@@ -2,17 +2,23 @@ package cli.clt.bedpe;
 
 import cli.Main;
 import cli.clt.CommandLineParser;
+import cli.utils.clique.MatrixUtils;
+import cli.utils.clique.NetworkBuilder;
+import cli.utils.clique.Node;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
+import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 
+import java.awt.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Clique {
 
@@ -21,82 +27,94 @@ public class Clique {
             "\t\tdefault behavior finds the cliques using midpoints of the anchors at the resolution specified\n" +
             "\t\trescue will predict loops that were potentially missed\n" +
             "\t\tclean avoids saving old attributes";
-    private static int resolution = 500;
+    private static int resolution = 200;
 
     public static void run(String[] args, CommandLineParser parser, String command) {
         if (args.length != 4) {
             Main.printGeneralUsageAndExit(5, usage);
         }
-        resolution = parser.getResolutionOption(500);
+        resolution = parser.getResolutionOption(200);
         String genomeID = args[1];
         String inFile = args[2];
         String outStem = args[3];
-        getCliques(inFile, genomeID, outStem,
-                command.contains("clean"), command.contains("rescue"));
+        if (command.contains("rescue")) {
+            rescueLoops(inFile, genomeID, outStem, command.contains("clean"));
+        } else {
+            // todo
+        }
         System.out.println("anchor expansion complete");
     }
 
-    private static void getCliques(String inputBedpe, String genomeID, String outStem,
-                                   boolean noAttributes, boolean rescueLoops) {
-        if (rescueLoops) {
-            System.err.println("Not yet implemented");
-            System.exit(9);
-        }
-
+    private static void rescueLoops(String inputBedpe, String genomeID, String outStem, boolean noAttributes) {
+        Feature2DList output = new Feature2DList();
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
         Feature2DList loopList = Feature2DParser.loadFeatures(inputBedpe, handler, !noAttributes,
                 null, false);
-
-        loopList.filterLists((s, list) -> {
-            return recoverLoops(list);
-        });
-
-        loopList.exportFeatureList(new File(outStem + ".rescue.bedpe"), false, Feature2DList.ListFormat.NA);
-    }
-
-    private static List<Feature2D> recoverLoops(List<Feature2D> list) {
-        List<Feature2D> newLoops = new ArrayList<>(2 * list.size());
-
-        Map<Integer, Integer> upStreamAnchors = new HashMap<>();
-        Map<Integer, Integer> downStreamAnchors = new HashMap<>();
-
-
-        // matrix multiplication
-        // N^3
-
-        /*
-        for(int i = 0; i < n; i++){
-            for(int j = i+1; j < n; j++){
-
+        for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
+            List<Feature2D> loops = loopList.get(chrom.getIndex(), chrom.getIndex());
+            if (loops.size() > 0) {
+                if (Main.printVerboseComments) System.out.println("Processing " + chrom.getName());
+                List<Feature2D> newLoops = recoverLoops(loops);
+                output.addByKey(Feature2DList.getKey(chrom, chrom), newLoops);
             }
         }
-        */
 
+        output.exportFeatureList(new File(outStem + ".rescue.bedpe"), false, Feature2DList.ListFormat.NA);
+    }
+
+    private static List<Feature2D> recoverLoops(List<Feature2D> initialLoops) {
+
+        List<Long> upStreamAnchorBins = new ArrayList<>(initialLoops.size());
+        List<Long> downStreamAnchorBins = new ArrayList<>(initialLoops.size());
+        for (Feature2D feature : initialLoops) {
+            upStreamAnchorBins.add((feature.getMidPt1()));
+            downStreamAnchorBins.add((feature.getMidPt2()));
+        }
+
+        AtomicInteger nodeCount = new AtomicInteger(0);
+        List<Node> upStreamNodes = NetworkBuilder.getNodes(upStreamAnchorBins, nodeCount, resolution);
+        List<Node> downStreamNodes = NetworkBuilder.getNodes(downStreamAnchorBins, nodeCount, resolution);
+        int maxN = nodeCount.get();
+
+        Map<Integer, Node> upStreamBinToNode = NetworkBuilder.buildIndexToNodeMapping(upStreamNodes);
+        Map<Integer, Node> downStreamBinToNode = NetworkBuilder.buildIndexToNodeMapping(downStreamNodes);
+
+        float[][] adjacencyMatrix = NetworkBuilder.buildAdjacencyMatrix(maxN, initialLoops,
+                upStreamBinToNode, downStreamBinToNode, resolution);
+        float[][] a3 = MatrixUtils.cube(adjacencyMatrix);
+        MatrixUtils.setEverythingBelowDiagonalToZero(a3);
+        adjacencyMatrix = null;
+
+        Map<Integer, Node> idToNode = new HashMap<>();
+        for (Node node : upStreamNodes) {
+            idToNode.put(node.getId(), node);
+        }
+
+        return retrieveAllLoopsPerAdjMatrix(a3, idToNode, initialLoops.get(0).getChr1(), initialLoops.size());
+    }
+
+    private static List<Feature2D> retrieveAllLoopsPerAdjMatrix(float[][] adjMatrix, Map<Integer, Node> idToNode,
+                                                                String chrom, int numLoops) {
+        List<Feature2D> newLoops = new ArrayList<>(2 * numLoops);
+        for (int i = 0; i < adjMatrix.length; i++) {
+            for (int j = i + 1; j < adjMatrix[0].length; j++) {
+                if (adjMatrix[i][j] > 0) {
+                    Node node1 = idToNode.get(i);
+                    Node node2 = idToNode.get(j);
+                    if (node1.getMinPosition() < node2.getMinPosition()) {
+                        newLoops.add(new Feature2D(Feature2D.FeatureType.PEAK,
+                                chrom, node1.getMinPosition(), node1.getMaxPosition(),
+                                chrom, node2.getMinPosition(), node2.getMaxPosition(),
+                                Color.BLACK, new HashMap<>()));
+                    } else {
+                        newLoops.add(new Feature2D(Feature2D.FeatureType.PEAK,
+                                chrom, node2.getMinPosition(), node2.getMaxPosition(),
+                                chrom, node1.getMinPosition(), node1.getMaxPosition(),
+                                Color.BLACK, new HashMap<>()));
+                    }
+                }
+            }
+        }
         return newLoops;
-    }
-
-
-    private static Feature2D getUpdatedLoop(Feature2D feature, int newAnchorSize, boolean setExactSize) {
-        long mid1 = feature.getMidPt1();
-        long mid2 = feature.getMidPt2();
-        long start1 = mid1 - (newAnchorSize / 2);
-        long start2 = mid2 - (newAnchorSize / 2);
-        long end1 = start1 + newAnchorSize;
-        long end2 = start2 + newAnchorSize;
-
-        if (!setExactSize) {
-            if (feature.getWidth1() > newAnchorSize) {
-                start1 = feature.getStart1();
-                end1 = feature.getEnd1();
-            }
-            if (feature.getWidth2() > newAnchorSize) {
-                start2 = feature.getStart2();
-                end2 = feature.getEnd2();
-            }
-        }
-        return new Feature2D(feature.getFeatureType(),
-                feature.getChr1(), start1, end1,
-                feature.getChr2(), start2, end2,
-                feature.getColor(), feature.getAttributes());
     }
 }

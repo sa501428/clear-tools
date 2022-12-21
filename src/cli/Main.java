@@ -27,7 +27,7 @@ public class Main {
                     GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage,
                     Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage, UnWrap.usage,
                     Flags.usage, Sift.usage, NormHack.usage, Recap.usage, HotSpot.usage,
-                    AnchorStrength.usage, Expand.usage
+                    AnchorStrength.usage, Expand.usage, Clique.usage
             }) {
                 System.out.println("\t" + usage + "\n\n");
             }
