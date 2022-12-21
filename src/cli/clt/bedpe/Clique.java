@@ -39,10 +39,10 @@ public class Clique {
         String outStem = args[3];
         if (command.contains("rescue")) {
             rescueLoops(inFile, genomeID, outStem, command.contains("clean"));
+            System.out.println("clique rescue complete");
         } else {
             // todo
         }
-        System.out.println("anchor expansion complete");
     }
 
     private static void rescueLoops(String inputBedpe, String genomeID, String outStem, boolean noAttributes) {
@@ -51,6 +51,7 @@ public class Clique {
         Feature2DList loopList = Feature2DParser.loadFeatures(inputBedpe, handler, !noAttributes,
                 null, false);
         for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
+            if (Main.printVerboseComments) System.out.println("Processing " + chrom.getName());
             List<Feature2D> loops = loopList.get(chrom.getIndex(), chrom.getIndex());
             if (loops.size() > 0) {
                 if (Main.printVerboseComments) System.out.println("Processing " + chrom.getName());
@@ -89,6 +90,9 @@ public class Clique {
         for (Node node : upStreamNodes) {
             idToNode.put(node.getId(), node);
         }
+        for (Node node : downStreamNodes) {
+            idToNode.put(node.getId(), node);
+        }
 
         return retrieveAllLoopsPerAdjMatrix(a3, idToNode, initialLoops.get(0).getChr1(), initialLoops.size());
     }
@@ -103,13 +107,13 @@ public class Clique {
                     Node node2 = idToNode.get(j);
                     if (node1.getMinPosition() < node2.getMinPosition()) {
                         newLoops.add(new Feature2D(Feature2D.FeatureType.PEAK,
-                                chrom, node1.getMinPosition(), node1.getMaxPosition(),
-                                chrom, node2.getMinPosition(), node2.getMaxPosition(),
+                                chrom, node1.getMinPosition() - resolution, node1.getMaxPosition() + resolution,
+                                chrom, node2.getMinPosition() - resolution, node2.getMaxPosition() + resolution,
                                 Color.BLACK, new HashMap<>()));
                     } else {
                         newLoops.add(new Feature2D(Feature2D.FeatureType.PEAK,
-                                chrom, node2.getMinPosition(), node2.getMaxPosition(),
-                                chrom, node1.getMinPosition(), node1.getMaxPosition(),
+                                chrom, node2.getMinPosition() - resolution, node2.getMaxPosition() + resolution,
+                                chrom, node1.getMinPosition() - resolution, node1.getMaxPosition() + resolution,
                                 Color.BLACK, new HashMap<>()));
                     }
                 }

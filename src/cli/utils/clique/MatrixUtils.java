@@ -25,6 +25,7 @@ public class MatrixUtils {
                         result[i][j] += a[i][k] * b[k][j];
                     }
                 }
+                i = currRowIndex.getAndIncrement();
             }
         });
         return result;
