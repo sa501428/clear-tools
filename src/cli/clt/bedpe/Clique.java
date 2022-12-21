@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Clique {
 
     // [-rescue]
-    public static String usage = "clique[-clean][-rescue] [-r resolution] <genomeID> <input.bedpe> <output.bedpe>\n" +
+    public static String usage = "clique[-clean][-rescue] [-r resolution] <genomeID> <input.bedpe> <output.stem>\n" +
             "\t\tdefault behavior finds the cliques using midpoints of the anchors at the resolution specified\n" +
             "\t\trescue will predict loops that were potentially missed\n" +
             "\t\tclean avoids saving old attributes";
