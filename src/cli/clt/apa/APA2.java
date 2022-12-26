@@ -1,6 +1,7 @@
 package cli.clt.apa;
 
 import cli.clt.CommandLineParser;
+import cli.utils.data.BoundsInfo;
 import javastraw.expected.ExpectedUtils;
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.block.ContactRecord;
@@ -11,8 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class APA2 extends APA {
 
-    private final static int C0 = 0, C1 = 1, R0 = 2;
-
     public APA2(String[] args, CommandLineParser parser) {
         super(args, parser, true);
     }
@@ -21,7 +20,7 @@ public class APA2 extends APA {
     protected void processLoopsForRegion(MatrixZoomData zd, List<Feature2D> loops,
                                          float[][] output, AtomicInteger currNumLoops,
                                          int numTotalLoops) {
-        Map<Integer, List<int[]>> loopListAsMap = convertToMap(loops);
+        Map<Integer, List<BoundsInfo>> loopListAsMap = convertToMap(loops);
         Set<Integer> allColumns = getColumns(loops);
         int counter = 0;
 
@@ -48,11 +47,11 @@ public class APA2 extends APA {
         allColumns = null;
     }
 
-    private void populateMatrixIfApplicable(float[][] matrix, ContactRecord cr, List<int[]> allBounds) {
-        for (int[] bounds : allBounds) {
-            if (cr.getBinY() >= bounds[C0] && cr.getBinY() < bounds[C1]) {
-                int relativeX = cr.getBinX() - bounds[R0];
-                int relativeY = cr.getBinY() - bounds[C0];
+    private void populateMatrixIfApplicable(float[][] matrix, ContactRecord cr, List<BoundsInfo> allBounds) {
+        for (BoundsInfo bound : allBounds) {
+            if (bound.contains(cr.getBinY())) {
+                int relativeX = cr.getBinX() - bound.getBinXStart();
+                int relativeY = cr.getBinY() - bound.getBinYStart();
                 matrix[relativeX][relativeY] += cr.getCounts();
             }
         }
@@ -71,8 +70,8 @@ public class APA2 extends APA {
         return columns;
     }
 
-    private Map<Integer, List<int[]>> convertToMap(List<Feature2D> loops) {
-        Map<Integer, List<int[]>> loopListAsMap = new HashMap<>();
+    private Map<Integer, List<BoundsInfo>> convertToMap(List<Feature2D> loops) {
+        Map<Integer, List<BoundsInfo>> loopListAsMap = new HashMap<>();
         for (Feature2D loop : loops) {
             int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
             int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
@@ -84,7 +83,7 @@ public class APA2 extends APA {
                     loopListAsMap.put(r, new LinkedList<>());
                 }
                 // C0 = 0, C1 = 1, R0 = 2
-                loopListAsMap.get(r).add(new int[]{binYStart, binYEnd, binXStart});
+                loopListAsMap.get(r).add(new BoundsInfo(binYStart, binYEnd, binXStart));
             }
         }
         return loopListAsMap;
