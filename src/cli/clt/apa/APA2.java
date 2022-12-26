@@ -82,7 +82,6 @@ public class APA2 extends APA {
                 if (!loopListAsMap.containsKey(r)) {
                     loopListAsMap.put(r, new LinkedList<>());
                 }
-                // C0 = 0, C1 = 1, R0 = 2
                 loopListAsMap.get(r).add(new BoundsInfo(binYStart, binYEnd, binXStart));
             }
         }

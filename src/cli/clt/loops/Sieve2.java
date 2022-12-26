@@ -31,6 +31,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sieve2 {
 
+    /*
+     * TODO: probably should be deprecated, and option for filtering should be added to the main sieve command
+     */
+
     private final static int zLowCutoff = 1;
     private final static float oeLowCutoff = (float) Math.log(1.5);
     public static String LOCAL_OE = "_sieve_obs_over_local_expected";
@@ -43,6 +47,8 @@ public class Sieve2 {
     public int[] resolutions = new int[]{1000, 500};
 
     public Sieve2(String[] args, CommandLineParser parser, String command) {
+        System.out.println("Warning: running local-based SIEVE2; you should be running " +
+                "SIEVE instead of SIEVE2 for most applications");
         // sieve <loops.bedpe> <output.bedpe> <file1.hic> <res1,res2,...>
         if (args.length != 5 && args.length != 4) {
             Main.printGeneralUsageAndExit(5, usage);
