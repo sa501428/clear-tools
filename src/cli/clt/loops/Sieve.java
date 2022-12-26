@@ -3,10 +3,10 @@ package cli.clt.loops;
 import cli.Main;
 import cli.clt.CommandLineParser;
 import cli.utils.FeatureStats;
+import cli.utils.data.SparseContactMatrixWithMasking;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.QuickGrouping;
-import cli.utils.general.Utils;
 import cli.utils.general.ZscoreTools;
 import javastraw.expected.LogExpectedZscoreSpline;
 import javastraw.expected.Welford;
@@ -142,13 +142,15 @@ public class Sieve {
                                         loopsToAssessGlobal, 500 * resolution).values();
 
                                 LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom1, resolution);
+                                SparseContactMatrixWithMasking sparseMatrix = new SparseContactMatrixWithMasking(zd,
+                                        loopsToAssessGlobal, resolution, buffer, 2 * buffer + 1, norm);
 
                                 for (List<Feature2D> group : loopGroups) {
                                     int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);
                                     int minC = (int) ((FeatureStats.minStart2(group) / resolution) - buffer);
                                     int maxR = (int) ((FeatureStats.maxEnd1(group) / resolution) + buffer);
                                     int maxC = (int) ((FeatureStats.maxEnd2(group) / resolution) + buffer);
-                                    float[][] regionMatrix = Utils.getRegion(zd, minR, minC, maxR, maxC, norm);
+                                    float[][] regionMatrix = sparseMatrix.getRegion(minR, minC, maxR, maxC);
                                     for (Feature2D loop : group) {
                                         int absCoordBinX = (int) (loop.getMidPt1() / resolution);
                                         int absCoordBinY = (int) (loop.getMidPt2() / resolution);
