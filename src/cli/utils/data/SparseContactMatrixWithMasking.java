@@ -71,4 +71,12 @@ public class SparseContactMatrixWithMasking {
         }
         return matrix;
     }
+
+    public void addLocalBoundedRegion(float[][] output, int binXStart, int binYStart, int matrixWidth) {
+        for (int r = 0; r < matrixWidth; r++) {
+            for (int c = 0; c < matrixWidth; c++) {
+                output[r][c] += getContact(r + binXStart, c + binYStart);
+            }
+        }
+    }
 }
