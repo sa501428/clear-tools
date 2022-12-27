@@ -17,8 +17,9 @@ import java.util.Map;
 
 public class UnWrap {
 
-    public static String usage = "unwrap[-filter] [-r resolution] <genomeID> <loops.bedpe> <output_stem_>\n" +
-            "\t\tunwrap localizer output to proper hi-res inverted bounds list";
+    public static String usage = "unwrap[-filter][-legacy] [-r resolution] <genomeID> <loops.bedpe> <output_stem_>\n" +
+            "\t\tunwrap localizer output to proper hi-res inverted bounds list\n" +
+            "\t\tlegacy mode will use the old method of unwrapping the combined anchors\n";
     private static final int numLists = 5;
     private static int resolution = 10;
 
@@ -34,8 +35,9 @@ public class UnWrap {
         Feature2DList loopList = Feature2DParser.loadFeatures(args[2], handler, true, null, false);
         String outFile = args[3];
         boolean doFilter = command.contains("filter");
+        boolean useLegacy = command.contains("legacy");
 
-        Feature2DList[] invertedLists = unwrap(loopList, doFilter);
+        Feature2DList[] invertedLists = unwrap(loopList, doFilter, useLegacy);
         invertedLists[0].exportFeatureList(new File(outFile + "unwrapped.anchors.bedpe"), false, Feature2DList.ListFormat.NA);
         invertedLists[1].exportFeatureList(new File(outFile + "unwrapped.local.bedpe"), false, Feature2DList.ListFormat.NA);
 
@@ -46,7 +48,7 @@ public class UnWrap {
         }
     }
 
-    private static Feature2DList[] unwrap(Feature2DList loopList, boolean doFilter) {
+    private static Feature2DList[] unwrap(Feature2DList loopList, boolean doFilter, boolean useLegacy) {
         Feature2DList[] unwrapped = new Feature2DList[numLists];
         for (int k = 0; k < unwrapped.length; k++) {
             unwrapped[k] = new Feature2DList();
@@ -60,7 +62,7 @@ public class UnWrap {
             List<Feature2D> badLocalList = new ArrayList<>(list.size() / 10);
 
             for (Feature2D feature2D : list) {
-                Feature2D inv = unwrap(feature2D);
+                Feature2D inv = unwrap(feature2D, useLegacy);
                 if (inv != null) {
                     invAnchorsList.add(inv);
                     invLocalList.add(unwrapLocal(feature2D));
@@ -108,12 +110,20 @@ public class UnWrap {
         return (int) (Math.abs(mid1 - x) + Math.abs(mid2 - y));
     }
 
-    private static Feature2D unwrap(Feature2D feature2D) {
+    private static Feature2D unwrap(Feature2D feature2D, boolean useLegacy) {
         try {
-            long start1 = Long.parseLong(feature2D.getAttribute("highRes_start_1"));
-            long start2 = Long.parseLong(feature2D.getAttribute("highRes_start_2"));
-            long end1 = Long.parseLong(feature2D.getAttribute("highRes_end_1"));
-            long end2 = Long.parseLong(feature2D.getAttribute("highRes_end_2"));
+            long start1, start2, end1, end2;
+            if (useLegacy) {
+                start1 = Long.parseLong(feature2D.getAttribute("highRes_start_1"));
+                start2 = Long.parseLong(feature2D.getAttribute("highRes_start_2"));
+                end1 = Long.parseLong(feature2D.getAttribute("highRes_end_1"));
+                end2 = Long.parseLong(feature2D.getAttribute("highRes_end_2"));
+            } else {
+                start1 = Long.parseLong(feature2D.getAttribute("upstream_start_1"));
+                end1 = Long.parseLong(feature2D.getAttribute("upstream_end_1"));
+                start2 = Long.parseLong(feature2D.getAttribute("downstream_start_2"));
+                end2 = Long.parseLong(feature2D.getAttribute("downstream_end_2"));
+            }
             Map<String, String> attrs = new HashMap<>(feature2D.getAttributes());
             attrs.put("original_start_1", "" + feature2D.getStart1());
             attrs.put("original_start_2", "" + feature2D.getStart2());
