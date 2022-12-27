@@ -2,6 +2,7 @@ package cli.clt.bedpe;
 
 import cli.Main;
 import cli.clt.CommandLineParser;
+import cli.utils.clean.LoopTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -20,7 +21,7 @@ public class UnWrap {
     public static String usage = "unwrap[-filter][-legacy] [-r resolution] <genomeID> <loops.bedpe> <output_stem_>\n" +
             "\t\tunwrap localizer output to proper hi-res inverted bounds list\n" +
             "\t\tlegacy mode will use the old method of unwrapping the combined anchors\n";
-    private static final int numLists = 5;
+    private static final int numLists = 6;
     private static int resolution = 10;
 
     public static void run(String[] args, CommandLineParser parser, String command) {
@@ -39,12 +40,13 @@ public class UnWrap {
 
         Feature2DList[] invertedLists = unwrap(loopList, doFilter, useLegacy);
         invertedLists[0].exportFeatureList(new File(outFile + "unwrapped.anchors.bedpe"), false, Feature2DList.ListFormat.NA);
-        invertedLists[1].exportFeatureList(new File(outFile + "unwrapped.local.bedpe"), false, Feature2DList.ListFormat.NA);
+        invertedLists[1].exportFeatureList(new File(outFile + "unwrapped.best.anchors.bedpe"), false, Feature2DList.ListFormat.NA);
+        invertedLists[2].exportFeatureList(new File(outFile + "unwrapped.local.bedpe"), false, Feature2DList.ListFormat.NA);
 
         if (doFilter) {
-            invertedLists[2].exportFeatureList(new File(outFile + "ideal.bedpe"), false, Feature2DList.ListFormat.NA);
-            invertedLists[3].exportFeatureList(new File(outFile + "suboptimal.anchor.bedpe"), false, Feature2DList.ListFormat.NA);
-            invertedLists[4].exportFeatureList(new File(outFile + "suboptimal.local.bedpe"), false, Feature2DList.ListFormat.NA);
+            invertedLists[3].exportFeatureList(new File(outFile + "optimal.bedpe"), false, Feature2DList.ListFormat.NA);
+            invertedLists[4].exportFeatureList(new File(outFile + "suboptimal.anchor.bedpe"), false, Feature2DList.ListFormat.NA);
+            invertedLists[5].exportFeatureList(new File(outFile + "suboptimal.local.bedpe"), false, Feature2DList.ListFormat.NA);
         }
     }
 
@@ -55,17 +57,21 @@ public class UnWrap {
         }
 
         loopList.processLists((s, list) -> {
-            List<Feature2D> invAnchorsList = new ArrayList<>(list.size());
-            List<Feature2D> invLocalList = new ArrayList<>(list.size());
-            List<Feature2D> idealList = new ArrayList<>(list.size() / 10);
-            List<Feature2D> badAnchorList = new ArrayList<>(list.size() / 10);
-            List<Feature2D> badLocalList = new ArrayList<>(list.size() / 10);
+            List<Feature2D> invAnchorsList = new ArrayList<>(list.size() / 2);
+            List<Feature2D> invBestAnchorsList = new ArrayList<>(list.size() / 2);
+            List<Feature2D> invLocalList = new ArrayList<>(list.size() / 2);
+            List<Feature2D> idealList = new ArrayList<>(list.size() / 3);
+            List<Feature2D> badAnchorList = new ArrayList<>(list.size() / 3);
+            List<Feature2D> badLocalList = new ArrayList<>(list.size() / 3);
 
             for (Feature2D feature2D : list) {
                 Feature2D inv = unwrap(feature2D, useLegacy);
                 if (inv != null) {
                     invAnchorsList.add(inv);
                     invLocalList.add(unwrapLocal(feature2D));
+                    if (containsLocalAndNotOnDiagonal(inv)) {
+                        invBestAnchorsList.add(inv);
+                    }
 
                     int dist = getDistanceBetweenAnchorsAndLocal(inv);
                     inv.addIntAttribute("local_vs_mid_anchor_offset", dist);
@@ -80,14 +86,25 @@ public class UnWrap {
                 }
             }
             unwrapped[0].addByKey(s, invAnchorsList);
-            unwrapped[1].addByKey(s, invLocalList);
+            unwrapped[1].addByKey(s, invBestAnchorsList);
+            unwrapped[2].addByKey(s, invLocalList);
             if (doFilter) {
-                unwrapped[2].addByKey(s, idealList);
-                unwrapped[3].addByKey(s, badAnchorList);
-                unwrapped[4].addByKey(s, badLocalList);
+                unwrapped[3].addByKey(s, idealList);
+                unwrapped[4].addByKey(s, badAnchorList);
+                unwrapped[5].addByKey(s, badLocalList);
             }
         });
         return unwrapped;
+    }
+
+    private static boolean containsLocalAndNotOnDiagonal(Feature2D feature2D) {
+        if (LoopTools.dist(feature2D) > 10000) {
+            long x = Long.parseLong(feature2D.getAttribute("localX"));
+            long y = Long.parseLong(feature2D.getAttribute("localY"));
+            return feature2D.getStart1() <= x && x < feature2D.getEnd1() &&
+                    feature2D.getStart2() <= y && y < feature2D.getEnd2();
+        }
+        return false;
     }
 
     private static Feature2D unwrapLocal(Feature2D feature2D) {

@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class AnchorAPA {
     public static String usage = "anchor-apa [--ag-norm] [-k NORM] [--window val]" +
             " [--min-dist val] [--max-dist val] [-r resolution]" +
-            " <input.hic> <loops.bedpe> <outfolder>";
+            " <input.hic> <loops.bedpe> <out.folder>";
     protected final NormalizationType norm;
     protected final int window;
     protected final int matrixWidthL;
