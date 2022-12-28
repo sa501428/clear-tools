@@ -155,6 +155,7 @@ public class AnchorAPA {
         });
 
         System.out.println("Exporting Anchor-APA results...");
+        scores.sort(AnchorAPAScore.getComparator());
         export(scores);
         System.out.println("Anchor-APA complete");
     }

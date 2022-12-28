@@ -2,6 +2,8 @@ package cli.utils.apa;
 
 import javastraw.reader.basics.Chromosome;
 
+import java.util.Comparator;
+
 public class AnchorAPAScore {
 
     private final Chromosome chromosome;
@@ -20,13 +22,31 @@ public class AnchorAPAScore {
         this.isUpstream = isUpstream;
     }
 
+    public static Comparator<? super AnchorAPAScore> getComparator() {
+        return (Comparator<AnchorAPAScore>) (o1, o2) -> {
+            if (o1.chromosome.getIndex() != o2.chromosome.getIndex()) {
+                return o1.chromosome.getIndex() - o2.chromosome.getIndex();
+            } else {
+                return o1.gx1 - o2.gx1;
+            }
+        };
+    }
+
+    public Integer getChromosomeIndex() {
+        return chromosome.getIndex();
+    }
+
+    public int getGX1() {
+        return gx1;
+    }
+
     public String getLineForBedgraphFile() {
         return chromosome.getName() + "\t" + gx1 + "\t" + gx2 + "\t" + score;
     }
 
     public String getLineForBEDFile() {
         return chromosome.getName() + "\t" + gx1 + "\t" + gx2 + "\t" +
-                id + "\t" + score + "\t" + (isUpstream ? "+" : "-") +
+                id + "\t" + score + "\t" + (isUpstream ? "+" : "-") + "\t" +
                 gx1 + "\t" + gx2 + "\t" + getColor();
     }
 
