@@ -140,6 +140,7 @@ public class AnchorAPA {
                                 synchronized (scores) {
                                     scores.addAll(threadScores);
                                 }
+                                currNumLoops.addAndGet(loops.size());
 
                                 System.out.println(((int) Math.floor((100.0 * currNumLoops.get()) / numTotalLoops)) + "% ");
                             } catch (Exception e) {

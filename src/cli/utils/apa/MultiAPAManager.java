@@ -85,16 +85,16 @@ public class MultiAPAManager {
 
     public List<AnchorAPAScore> getAnchorAPAScores(Chromosome chromosome, int resolution) {
         List<AnchorAPAScore> scores = new ArrayList<>();
-        int width = Math.max(resolution, 50);
+        int width = 100;
         for (int bin : upStreamAPAMatrices.keySet()) {
-            scores.add(new AnchorAPAScore(chromosome,
-                    bin - width, bin + width, "Forward_" + bin,
+            scores.add(new AnchorAPAScore(chromosome, resolution,
+                    bin, width, "Forward_" + bin,
                     getAPAScore(upStreamAPAMatrices.get(bin), resolution),
                     true));
         }
         for (int bin : downStreamAPAMatrices.keySet()) {
-            scores.add(new AnchorAPAScore(chromosome,
-                    bin - width, bin + width, "Reverse_" + bin,
+            scores.add(new AnchorAPAScore(chromosome, resolution,
+                    bin, width, "Reverse_" + bin,
                     getAPAScore(downStreamAPAMatrices.get(bin), resolution),
                     false));
         }

@@ -12,7 +12,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.94.0";
+    public static final String VERSION_NUM = "0.96.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -27,8 +27,7 @@ public class Main {
                     GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage,
                     Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage, UnWrap.usage,
                     Flags.usage, Sift.usage, NormHack.usage, Recap.usage, HotSpot.usage,
-                    AnchorStrength.usage, Expand.usage, Clique.usage
-            }) {
+                    AnchorStrength.usage, Expand.usage, Clique.usage}) {
                 System.out.println("\t" + usage + "\n\n");
             }
         } else {
@@ -74,7 +73,7 @@ public class Main {
             UnWrap.run(args, parser, command);
         } else if (command.startsWith("subtract") && command.contains("anchors")) {
             SubtractSharedAnchors.run(args, command, parser);
-        } else if (command.startsWith("anchor")) {
+        } else if (command.startsWith("anchor") && command.contains("strength")) {
             AnchorStrength anchorStrength = new AnchorStrength(args, parser);
             anchorStrength.run();
         } else if (command.startsWith("apa") && command.contains("1d")) {
