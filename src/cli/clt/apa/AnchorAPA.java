@@ -1,6 +1,7 @@
 package cli.clt.apa;
 
 import cli.clt.CommandLineParser;
+import cli.clt.bedpe.UnWrap;
 import cli.utils.apa.APAUtils;
 import cli.utils.apa.AnchorAPAScore;
 import cli.utils.apa.MultiAPAManager;
@@ -29,7 +30,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnchorAPA {
-    public static String usage = "anchor-apa [--ag-norm] [-k NORM] [--window val]" +
+    public static String usage = "anchor-apa [--no-orientation] [--ag-norm] [-k NORM] [--window val]" +
             " [--min-dist val] [--max-dist val] [-r resolution]" +
             " <input.hic> <loops.bedpe> <out.folder>";
     protected final NormalizationType norm;
@@ -48,12 +49,14 @@ public class AnchorAPA {
     private final ChromosomeHandler handler;
     private final Feature2DList loopList;
     private final int numTotalLoops;
+    private final boolean dontUseOrientation;
 
     public AnchorAPA(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
             printUsageAndExit();
         }
 
+        dontUseOrientation = parser.getNoOrientationFlag();
         resolution = parser.getResolutionOption(5000);
         ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, resolution > 50);
         loopListPath = args[2];
@@ -85,7 +88,7 @@ public class AnchorAPA {
         handler = ds.getChromosomeHandler();
 
         // needs to be last step
-        loopList = loadUniqueDistanceFilteredLoops(handler, minPeakDist, maxPeakDist);
+        loopList = loadUniqueDistanceFilteredLoops(handler, minPeakDist, maxPeakDist, dontUseOrientation);
         numTotalLoops = loopList.getNumTotalFeatures();
         if (numTotalLoops < 1) {
             System.err.println("Loop list is empty or incorrect path provided.");
@@ -134,9 +137,10 @@ public class AnchorAPA {
                                         loops, resolution, window, matrixWidthL, norm);
 
                                 MultiAPAManager manager = new MultiAPAManager(loops, window, resolution,
-                                        matrixWidthL, scm, vector, useAgNorm);
+                                        matrixWidthL, scm, vector, useAgNorm, dontUseOrientation);
 
-                                List<AnchorAPAScore> threadScores = manager.getAnchorAPAScores(chr1, resolution);
+                                List<AnchorAPAScore> threadScores = manager.getAnchorAPAScores(chr1, resolution,
+                                        dontUseOrientation);
                                 synchronized (scores) {
                                     scores.addAll(threadScores);
                                 }
@@ -182,9 +186,23 @@ public class AnchorAPA {
         }
     }
 
-    private Feature2DList loadUniqueDistanceFilteredLoops(ChromosomeHandler handler, int minPeakDist, int maxPeakDist) {
-        return Feature2DParser.loadFeatures(loopListPath, handler, false,
+    private Feature2DList loadUniqueDistanceFilteredLoops(ChromosomeHandler handler, int minPeakDist,
+                                                          int maxPeakDist, boolean dontUseOrientation) {
+        Feature2DList initialList = Feature2DParser.loadFeatures(loopListPath, handler, false,
                 (chr, features) -> APAUtils.filterFeaturesBySize(new ArrayList<>(new HashSet<>(features)),
                         minPeakDist, maxPeakDist, resolution), false);
+
+        initialList.filterLists((s, list) -> {
+            List<Feature2D> result = new ArrayList<>(list.size());
+            for (Feature2D feature2D : list) {
+                Feature2D inv = UnWrap.unwrap(feature2D, dontUseOrientation, false);
+                if (inv != null) {
+                    result.add(inv);
+                }
+            }
+            return result;
+        });
+
+        return initialList;
     }
 }

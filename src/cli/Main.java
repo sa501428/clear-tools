@@ -12,7 +12,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.97.0";
+    public static final String VERSION_NUM = "0.98.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -23,11 +23,11 @@ public class Main {
         System.out.println("\t" + "-V, --version print version");
         System.out.println("Commands:");
         if (cUsage == null || cUsage.length() < 1) {
-            for (String usage : new String[]{APA.usage, ATA.usage, Cleaner.usage, Fusion.usage,
+            for (String usage : new String[]{APA2.usage, ATA.usage, Cleaner.usage, Fusion.usage,
                     GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage,
                     Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage, UnWrap.usage,
                     Flags.usage, Sift.usage, NormHack.usage, Recap.usage, HotSpot.usage,
-                    AnchorStrength.usage, Expand.usage, Clique.usage}) {
+                    AnchorAPA.usage, Expand.usage, Clique.usage}) {
                 System.out.println("\t" + usage + "\n\n");
             }
         } else {

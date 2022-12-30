@@ -12,15 +12,24 @@ import java.util.Map;
 public class MultiAPAManager {
 
     private final Map<Integer, float[][]> upStreamAPAMatrices = new HashMap<>();
-    private final Map<Integer, float[][]> downStreamAPAMatrices = new HashMap<>();
+    private final Map<Integer, float[][]> downStreamAPAMatrices;
 
     public MultiAPAManager(List<Feature2D> loops, int window, int resolution, int matrixWidth,
-                           SparseContactMatrixWithMasking scm, double[] vector, boolean isAggNorm) {
+                           SparseContactMatrixWithMasking scm, double[] vector, boolean isAggNorm, boolean dontUseOrientation) {
 
         Map<Integer, float[]> upStreamRowSums = new HashMap<>();
         Map<Integer, float[]> upStreamColSums = new HashMap<>();
-        Map<Integer, float[]> downStreamRowSums = new HashMap<>();
-        Map<Integer, float[]> downStreamColSums = new HashMap<>();
+        Map<Integer, float[]> downStreamRowSums;
+        Map<Integer, float[]> downStreamColSums;
+        if (dontUseOrientation) {
+            downStreamAPAMatrices = upStreamAPAMatrices;
+            downStreamRowSums = upStreamRowSums;
+            downStreamColSums = upStreamColSums;
+        } else {
+            downStreamAPAMatrices = new HashMap<>();
+            downStreamRowSums = new HashMap<>();
+            downStreamColSums = new HashMap<>();
+        }
 
         for (Feature2D loop : loops) {
             int upStreamBin = (int) (loop.getMidPt1() / resolution);
@@ -44,7 +53,9 @@ public class MultiAPAManager {
 
         if (isAggNorm) {
             finalAggregateNormalization(upStreamAPAMatrices, upStreamRowSums, upStreamColSums);
-            finalAggregateNormalization(downStreamAPAMatrices, downStreamRowSums, downStreamColSums);
+            if (!dontUseOrientation) {
+                finalAggregateNormalization(downStreamAPAMatrices, downStreamRowSums, downStreamColSums);
+            }
         }
     }
 
@@ -83,7 +94,7 @@ public class MultiAPAManager {
         APAUtils.addLocalSums(colSums, nv, binYStart);
     }
 
-    public List<AnchorAPAScore> getAnchorAPAScores(Chromosome chromosome, int resolution) {
+    public List<AnchorAPAScore> getAnchorAPAScores(Chromosome chromosome, int resolution, boolean dontUseOrientation) {
         List<AnchorAPAScore> scores = new ArrayList<>();
         int width = 100;
         for (int bin : upStreamAPAMatrices.keySet()) {
@@ -92,11 +103,13 @@ public class MultiAPAManager {
                     getAPAScore(upStreamAPAMatrices.get(bin), resolution),
                     true));
         }
-        for (int bin : downStreamAPAMatrices.keySet()) {
-            scores.add(new AnchorAPAScore(chromosome, resolution,
-                    bin, width, "Reverse_" + bin,
-                    getAPAScore(downStreamAPAMatrices.get(bin), resolution),
-                    false));
+        if (!dontUseOrientation) {
+            for (int bin : downStreamAPAMatrices.keySet()) {
+                scores.add(new AnchorAPAScore(chromosome, resolution,
+                        bin, width, "Reverse_" + bin,
+                        getAPAScore(downStreamAPAMatrices.get(bin), resolution),
+                        false));
+            }
         }
         return scores;
     }

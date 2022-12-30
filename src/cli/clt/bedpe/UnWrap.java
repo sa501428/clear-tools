@@ -65,7 +65,7 @@ public class UnWrap {
             List<Feature2D> badLocalList = new ArrayList<>(list.size() / 3);
 
             for (Feature2D feature2D : list) {
-                Feature2D inv = unwrap(feature2D, useLegacy);
+                Feature2D inv = unwrap(feature2D, useLegacy, true);
                 if (inv != null) {
                     invAnchorsList.add(inv);
                     invLocalList.add(unwrapLocal(feature2D));
@@ -127,7 +127,7 @@ public class UnWrap {
         return (int) (Math.abs(mid1 - x) + Math.abs(mid2 - y));
     }
 
-    private static Feature2D unwrap(Feature2D feature2D, boolean useLegacy) {
+    public static Feature2D unwrap(Feature2D feature2D, boolean useLegacy, boolean saveOriginalBounds) {
         try {
             long start1, start2, end1, end2;
             if (useLegacy) {
@@ -142,10 +142,12 @@ public class UnWrap {
                 end2 = Long.parseLong(feature2D.getAttribute("downstream_end_2"));
             }
             Map<String, String> attrs = new HashMap<>(feature2D.getAttributes());
-            attrs.put("original_start_1", "" + feature2D.getStart1());
-            attrs.put("original_start_2", "" + feature2D.getStart2());
-            attrs.put("original_end_1", "" + feature2D.getEnd1());
-            attrs.put("original_end_2", "" + feature2D.getEnd2());
+            if (saveOriginalBounds) {
+                attrs.put("original_start_1", "" + feature2D.getStart1());
+                attrs.put("original_start_2", "" + feature2D.getStart2());
+                attrs.put("original_end_1", "" + feature2D.getEnd1());
+                attrs.put("original_end_2", "" + feature2D.getEnd2());
+            }
             return new Feature2D(Feature2D.FeatureType.PEAK, feature2D.getChr1(), start1, end1,
                     feature2D.getChr2(), start2, end2, Color.BLUE, attrs);
         } catch (Exception ignored) {
