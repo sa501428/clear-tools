@@ -64,7 +64,7 @@ public class UnWrap {
             for (Feature2D feature2D : list) {
                 Feature2D inv = unwrapLocal(feature2D);
                 if (inv != null) {
-                    if (localXYNotNearDiagonal(inv)) {
+                    if (localXYNotNearDiagonal(inv, 5000)) {
                         invLocalList.add(inv);
                     }
                 }
@@ -136,12 +136,12 @@ public class UnWrap {
         return false;
     }
 
-    private static boolean localXYNotNearDiagonal(Feature2D loop) {
+    private static boolean localXYNotNearDiagonal(Feature2D loop, int minDist) {
         long x = Long.parseLong(loop.getAttribute("localX"));
         long y = Long.parseLong(loop.getAttribute("localY"));
         int dist = (int) Math.min(Math.abs(x - y),
                 Math.abs(loop.getMidPt1() - loop.getMidPt2()));
-        return dist > 10000;
+        return dist > minDist;
     }
 
     private static Feature2D unwrapLocal(Feature2D feature2D) {
