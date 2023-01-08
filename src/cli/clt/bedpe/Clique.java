@@ -23,8 +23,8 @@ import java.util.Map;
 public class Clique {
 
     // [-rescue]
-    public static String usage = "clique[-clean][-rescue] [-r resolution] <genomeID> <input.bedpe> <output.stem>\n" +
-            "\t\tdefault behavior finds the cliques using midpoints of the anchors at the resolution specified\n" +
+    public static String usage = "clique[-rescue][-split][-clean] [-r resolution] <genomeID> <input.bedpe> <output.stem>\n" +
+            "\t\tsplit will partition the loops into cliques using midpoints of the anchors at the resolution specified\n" +
             "\t\trescue will predict loops that were potentially missed\n" +
             "\t\tclean avoids saving old attributes";
     private static int resolution = 200;
@@ -40,7 +40,7 @@ public class Clique {
         if (command.contains("rescue")) {
             rescueLoops(inFile, genomeID, outStem, command.contains("clean"));
             System.out.println("clique rescue complete");
-        } else {
+        } else if (command.contains("split")) {
             splitFilesIntoCliques(inFile, genomeID, outStem, command.contains("clean"));
         }
     }
