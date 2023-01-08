@@ -2,6 +2,47 @@
 
 Chromatin Landscape Exploration, Analysis, and Research Tools
 
+# Main Tools
+
+## APA2
+
+Faster version of APA specifically for larger loop lists (>10k loops)
+
+## ATA:
+
+Aggregate Track Analysis
+
+## FUSE
+
+Combines multiple bedpe files into one.
+Flags available for duplicate removal, NMS, combining, and more.
+Attributes do not need to be in the same order between the files.
+Simplest usage is just to combine multiple bedpe files together without worrying about order of attributes etc.
+
+## SPLIT
+
+Split up a bedpe into multiple lists.
+E.g. will split a file into 10 by randomly assigning features to 1 of the 10 outputs.
+Useful when you want to parallelize a task on a cluster but need to split up the bedpe to do it.
+Can use FUSE to combine the results into a final file.
+Specifying a number <= 0 will split the bedpe by chromosome
+(i.e. will make a new bedpe for each chromosome, and all features of that chromosome will be together
+in the split file)
+
+## INTERSECT
+
+Intersect two bedpe files.
+Flag available to substract the files instead of intersecting them.
+Also has flags for using exact matches, overlapping boundaries, etc.
+
+## EXPAND
+
+Expands the size of anchors for each loop.
+Flags available for whether to explicitly set a size or only expand if the width
+is currently smaller than the requested width.
+
+# Dev or Deprecated Tools
+
 ## PINPOINT
 
 Peak Intensity (or Identification) Near Points Of INTeraction
