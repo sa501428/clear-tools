@@ -32,7 +32,7 @@ in the split file)
 ## INTERSECT
 
 Intersect two bedpe files.
-Flag available to substract the files instead of intersecting them.
+Flag available to subtract the files instead of intersecting them.
 Also has flags for using exact matches, overlapping boundaries, etc.
 
 ## EXPAND
