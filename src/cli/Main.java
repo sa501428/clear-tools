@@ -1,24 +1,37 @@
 package cli;
 
-import cli.clt.*;
+import cli.clt.CommandLineParser;
+import cli.clt.apa.*;
+import cli.clt.bedpe.*;
+import cli.clt.enhance.Enhance;
+import cli.clt.enhance.Seer;
+import cli.clt.loops.*;
+import cli.clt.misc.Fimo;
+import cli.clt.misc.NormHack;
 import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.54.0";
+    public static final String VERSION_NUM = "0.98.0";
     public static boolean printVerboseComments = false;
 
-    public static void printGeneralUsageAndExit(int exitCode) {
+    public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
         System.out.println("CLEAR Tools Version " + VERSION_NUM);
         System.out.println("Usage:");
         System.out.println("\t" + "-h, --help print help");
         System.out.println("\t" + "-v, --verbose verbose mode");
         System.out.println("\t" + "-V, --version print version");
         System.out.println("Commands:");
-        for (String usage : new String[]{Flags.usage, Pinpoint.usage, Cleaner.usage, APA.usage, ATA.usage, Recap.usage,
-                Sieve.usage, HotSpot.usage, Fusion.usage, Sift.usage, NormHack.usage, SimplePeak.usage, SimpleMax.usage,
-                GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage}) {
-            System.out.println("\t" + usage);
+        if (cUsage == null || cUsage.length() < 1) {
+            for (String usage : new String[]{APA2.usage, ATA.usage, Cleaner.usage, Fusion.usage,
+                    GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage,
+                    Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage, UnWrap.usage,
+                    Flags.usage, Sift.usage, NormHack.usage, Recap.usage, HotSpot.usage,
+                    AnchorAPA.usage, Expand.usage, Clique.usage}) {
+                System.out.println("\t" + usage + "\n\n");
+            }
+        } else {
+            System.out.println("\t" + cUsage + "\n\n");
         }
 
         System.out.println("Exit code " + exitCode);
@@ -27,7 +40,7 @@ public class Main {
 
     public static void main(String[] argv) throws CmdLineParser.UnknownOptionException, CmdLineParser.IllegalOptionValueException {
         if (argv.length == 0 || argv[0].equals("-h") || argv[0].equals("--help") || argv[0].equals("-V") || argv[0].equals("--version")) {
-            printGeneralUsageAndExit(1);
+            printGeneralUsageAndExit(1, null);
         }
 
         CommandLineParser parser = new CommandLineParser();
@@ -38,7 +51,7 @@ public class Main {
 
         String[] args = parser.getRemainingArgs();
         if(help || version){
-            printGeneralUsageAndExit(2);
+            printGeneralUsageAndExit(2, null);
         }
 
         String command = args[0].toLowerCase();
@@ -48,18 +61,40 @@ public class Main {
             Enhance.run(args, parser);
         } else if (command.equals("pinpoint")) {
             Pinpoint.run(args, parser);
+        } else if (command.startsWith("clique")) {
+            Clique.run(args, parser, command);
         } else if (command.startsWith("clean")) {
             Cleaner.run(args, parser, command);
         } else if (command.startsWith("prob")) {
             Probability.run(args, parser);
+        } else if (command.startsWith("expand")) {
+            Expand.run(args, command);
+        } else if (command.startsWith("unwrap")) {
+            UnWrap.run(args, parser, command);
+        } else if (command.startsWith("subtract") && command.contains("anchors")) {
+            SubtractSharedAnchors.run(args, command, parser);
+        } else if (command.startsWith("anchor") && command.contains("strength")) {
+            AnchorStrength anchorStrength = new AnchorStrength(args, parser);
+            anchorStrength.run();
+        } else if (command.startsWith("apa") && command.contains("1d")) {
+            APA1D apa = new APA1D(args, parser);
+            apa.run();
+        } else if (command.startsWith("apa2")) {
+            APA2 apa = new APA2(args, parser);
+            apa.run();
+        } else if (command.startsWith("anchor-apa")) {
+            AnchorAPA apa = new AnchorAPA(args, parser);
+            apa.run();
         } else if (command.startsWith("apa")) {
-            APA apa = new APA(args, parser);
+            APA apa = new APA(args, parser, false);
             apa.run();
         } else if (command.startsWith("ata")) {
             ATA ata = new ATA(args, parser);
             ata.run();
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
+        } else if (command.startsWith("sieve2")) {
+            new Sieve2(args, parser, command);
         } else if (command.startsWith("sieve")) {
             new Sieve(args, parser, command);
         } else if (command.startsWith("hotspot")) {
@@ -74,6 +109,8 @@ public class Main {
             IntersectBedpe.run(args, command, parser);
         } else if (command.startsWith("split")) {
             Split.run(args, command);
+        } else if (command.startsWith("fimo")) {
+            Fimo.run(args, command);
         } else if (command.startsWith("seer")) {
             Seer.run(args, parser);
         } else if (command.startsWith("hack")) {
@@ -81,7 +118,7 @@ public class Main {
         } else if (command.startsWith("random")) {
             RandomLoops.run(args, parser);
         } else if (command.startsWith("generate")) {
-            GenerateBedpe.run(args, parser);
+            GenerateBedpe.run(args, parser, command);
         } else if (command.startsWith("simple")) {
             if (command.contains("max")) {
                 SimpleMax.run(args, parser);
@@ -89,7 +126,7 @@ public class Main {
                 SimplePeak.run(args, parser);
             }
         } else {
-            printGeneralUsageAndExit(3);
+            printGeneralUsageAndExit(3, null);
         }
     }
 }

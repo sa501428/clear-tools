@@ -47,11 +47,12 @@ public class CommandLineParser extends CmdLineParser {
     private final Option normalizationTypeOption = addStringOption('k', "norm");
     private final Option cutoffOption = addIntegerOption("cutoff");
     private final Option percentileOption = addIntegerOption("percentile");
-    private final Option windowOption = addIntegerOption("window");
+    private final Option windowOption = addIntegerOption('w', "window");
     private final Option minDisValOption = addIntegerOption("min-dist");
     private final Option maxDistValOption = addIntegerOption("max-dist");
     private final Option interChromosomalOption = addBooleanOption("include-inter");
     private final Option onlyOneOption = addBooleanOption("only-one");
+    private final Option noOrientationOption = addBooleanOption("no-orientation");
     private final Option aggregateNormalization = addBooleanOption("ag-norm");
     private final Option isLoopAnalysis = addBooleanOption("loop");
     private final Option thresholdOption = addDoubleOption("threshold");
@@ -159,5 +160,9 @@ public class CommandLineParser extends CmdLineParser {
 
     public boolean getOnlyOneOption() {
         return optionToBoolean(onlyOneOption);
+    }
+
+    public boolean getNoOrientationFlag() {
+        return optionToBoolean(noOrientationOption);
     }
 }

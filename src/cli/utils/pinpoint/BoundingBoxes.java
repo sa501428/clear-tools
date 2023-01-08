@@ -20,7 +20,7 @@ public class BoundingBoxes {
         ArrayTools.saveIfVerbose(saveString + ".kde.S10.npy", kde);
         outputD10 = null;
 
-        float threshold = 0.8f * ArrayTools.getMax(kde);
+        float threshold = 0.7f * ArrayTools.getMax(kde);
         Zscore zscore = ArrayTools.getZscore(kde, 1);
         threshold = (float) Math.max(threshold, zscore.getValForZscore(3));
 

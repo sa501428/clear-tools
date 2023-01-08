@@ -56,7 +56,16 @@ public class APADataExporter {
                 finalResult);
     }
 
-    private static void normalizeBySum(double[] globalSum) {
+    public static void normalizeBySum(double[] globalSum) {
+        double average = getAverage(globalSum);
+        if (average > 0) {
+            for (int k = 0; k < globalSum.length; k++) {
+                globalSum[k] /= average;
+            }
+        }
+    }
+
+    public static void normalizeBySum(float[] globalSum) {
         double average = getAverage(globalSum);
         if (average > 0) {
             for (int k = 0; k < globalSum.length; k++) {
@@ -83,7 +92,37 @@ public class APADataExporter {
         return matrix;
     }
 
+    public static float[][] normedCopyFloats(float[][] original, float[] v1, float[] v2) {
+        int n = original.length;
+        float[][] matrix = new float[n][n];
+
+        for (int r = 0; r < n; ++r) {
+            for (int c = 0; c < n; ++c) {
+                double normVal = (v1[r] * v2[c]);
+                if (normVal > 0.0) {
+                    matrix[r][c] = (float) (original[r][c] / normVal);
+                } else {
+                    matrix[r][c] = 0.0F;
+                }
+            }
+        }
+
+        return matrix;
+    }
+
     public static double getAverage(double[] data) {
+        double average = 0;
+        if (data.length > 0) {
+            double total = 0;
+            for (double val : data) {
+                total += val;
+            }
+            average = (total / data.length);
+        }
+        return average;
+    }
+
+    public static double getAverage(float[] data) {
         double average = 0;
         if (data.length > 0) {
             double total = 0;

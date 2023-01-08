@@ -54,9 +54,9 @@ public class Utils {
     }
 
     public static float[][] getRegion(MatrixZoomData zd, int binXStart, int binYStart,
-                                      long binXEnd, long binYEnd, NormalizationType norm) {
-        int numRows = (int) (binXEnd - binXStart);
-        int numCols = (int) (binYEnd - binYStart);
+                                      int binXEnd, int binYEnd, NormalizationType norm) {
+        int numRows = binXEnd - binXStart;
+        int numCols = binYEnd - binYStart;
         float[][] matrix = new float[numRows][numCols];
         List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
                 binXEnd, binYEnd, norm, false);
@@ -161,10 +161,9 @@ public class Utils {
         }
     }
 
-    public static List<ContactRecord> getRecords(MatrixZoomData zd, int binXStart, int binYStart, int matrixWidth,
+    public static List<ContactRecord> getRecords(MatrixZoomData zd, int binXStart, int binYStart,
+                                                 int binXEnd, int binYEnd,
                                                  NormalizationType norm) {
-        int binXEnd = binXStart + (matrixWidth + 1);
-        int binYEnd = binYStart + (matrixWidth + 1);
         List<Block> blocks = zd.getNormalizedBlocksOverlapping(binXStart, binYStart,
                 binXEnd, binYEnd, norm, false);
 
