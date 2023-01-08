@@ -3,6 +3,7 @@ package cli.clt.bedpe;
 import cli.Main;
 import cli.clt.CommandLineParser;
 import cli.utils.clique.Node95;
+import cli.utils.clique.SimpleClustering;
 import cli.utils.peaks.Point1D;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -123,16 +124,14 @@ public class AnchorFix {
 
 
     public static List<Node95> getNodes(List<Long> genomePositions) {
-
-        /*
-        List<Cluster<Point1D>> clusters = dbscan1D(genomePositions);
-        List<Point1D> pointsToReassign = new ArrayList<>(clusters.size()/2);
-        List<Cluster<Point1D>> clustersToKeep = new ArrayList<>(clusters.size()/2);
-        for(Cluster<Point1D> cluster : clusters) {
-            if(cluster.getPoints().size() > 1){
+        List<List<Long>> clusters = SimpleClustering.cluster(genomePositions, 100);
+        List<Long> pointsToReassign = new ArrayList<>(clusters.size() / 2);
+        List<List<Long>> clustersToKeep = new ArrayList<>(clusters.size() / 2);
+        for (List<Long> cluster : clusters) {
+            if (cluster.size() > 1) {
                 clustersToKeep.add(cluster);
             } else {
-                pointsToReassign.add(cluster.getPoints().get(0));
+                pointsToReassign.add(cluster.get(0));
             }
         }
 
@@ -140,35 +139,29 @@ public class AnchorFix {
         clustersToKeep.clear();
         pointsToReassign.clear();
         return cleanedUpClusters;
-        */
-        List<Node95> test = new ArrayList<>(genomePositions.size());
-        for (Long pos : genomePositions) {
-            test.add(new Node95(pos, false));
-        }
-        return test;
     }
 
-    private static List<Node95> assignToNearestClusterOrMakeSingleton(List<Cluster<Point1D>> clustersToKeep, List<Point1D> pointsToReassign) {
+    private static List<Node95> assignToNearestClusterOrMakeSingleton(List<List<Long>> clustersToKeep, List<Long> pointsToReassign) {
         List<Node95> nodes = Node95.convert(clustersToKeep);
         for (Node95 node : nodes) {
             node.calculate95();
         }
-        for (Point1D point : pointsToReassign) {
+        for (long point : pointsToReassign) {
             Node95 nearest = getNearestNode(point, nodes, MAX_DIST);
             if (nearest == null) {
-                nodes.add(new Node95(point.getX(), true));
+                nodes.add(new Node95(point, true));
             } else {
-                nearest.addWeak(point.getX());
+                nearest.addWeak(point);
             }
         }
         return nodes;
     }
 
-    private static Node95 getNearestNode(Point1D point, List<Node95> nodes, int maxDist) {
+    private static Node95 getNearestNode(long point, List<Node95> nodes, int maxDist) {
         double currDist = Double.MAX_VALUE;
         Node95 nearest = null;
         for (Node95 node : nodes) {
-            double dist = Math.abs(node.getMu() - point.getX());
+            double dist = Math.abs(node.getMu() - point);
             if (dist < currDist) {
                 currDist = dist;
                 nearest = node;

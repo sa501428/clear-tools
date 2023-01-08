@@ -1,8 +1,6 @@
 package cli.utils.clique;
 
 import cli.clt.bedpe.AnchorFix;
-import cli.utils.peaks.Point1D;
-import org.apache.commons.math3.ml.clustering.Cluster;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,14 +19,10 @@ public class Node95 {
         weakGenomePositions.add(x);
     }
 
-    public static List<Node95> convert(List<Cluster<Point1D>> clustersToKeep) {
+    public static List<Node95> convert(List<List<Long>> clustersToKeep) {
         List<Node95> nodes = new ArrayList<>();
-        for (Cluster<Point1D> cluster : clustersToKeep) {
-            List<Long> longs = new ArrayList<>(cluster.getPoints().size());
-            for (Point1D point : cluster.getPoints()) {
-                longs.add(point.getX());
-            }
-            nodes.add(new Node95(longs));
+        for (List<Long> cluster : clustersToKeep) {
+            nodes.add(new Node95(cluster));
         }
         return nodes;
     }
