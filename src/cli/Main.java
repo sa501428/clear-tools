@@ -12,7 +12,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.102.0";
+    public static final String VERSION_NUM = "0.103.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -90,6 +90,9 @@ public class Main {
         } else if (command.startsWith("apa")) {
             APA apa = new APA(args, parser, false);
             apa.run();
+        } else if (command.startsWith("assign") && command.contains("motif")) {
+            MotifAssignment motif = new MotifAssignment(args, parser);
+            motif.run();
         } else if (command.startsWith("ata")) {
             ATA ata = new ATA(args, parser);
             ata.run();
