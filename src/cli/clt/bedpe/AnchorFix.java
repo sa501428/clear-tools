@@ -4,28 +4,26 @@ import cli.Main;
 import cli.clt.CommandLineParser;
 import cli.utils.clique.Node95;
 import cli.utils.clique.SimpleClustering;
-import cli.utils.peaks.Point1D;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
-import org.apache.commons.math3.ml.clustering.Cluster;
-import org.apache.commons.math3.ml.clustering.DBSCANClusterer;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class AnchorFix {
 
-    private static final int widthToConnect = 2;
     public static String usage = "anchor-fix[-clean] [-r resolution] <genomeID> <input.bedpe> <output.stem>\n" +
             "\t\tdefault behavior will fix the hi-res shared anchors for loops\n" +
             "\t\tclean avoids saving old attributes";
     private static int resolution = 100;
     public static int MAX_DIST = 250;
-    public static int CLUSTER_DIST = 100;
 
     public static void run(String[] args, CommandLineParser parser, String command) {
         if (args.length != 4) {
@@ -48,7 +46,6 @@ public class AnchorFix {
             if (Main.printVerboseComments) System.out.println("Processing " + chrom.getName());
             List<Feature2D> loops = loopList.get(chrom.getIndex(), chrom.getIndex());
             if (loops.size() > 0) {
-                if (true) System.out.println("Processing " + chrom.getName());
                 List<Feature2D> newLoops = recoverLoops(loops);
                 output.addByKey(Feature2DList.getKey(chrom, chrom), newLoops);
             }
@@ -64,9 +61,9 @@ public class AnchorFix {
         allAnchorBins.addAll(upStreamAnchorBins);
         allAnchorBins.addAll(downStreamAnchorBins);
 
-        List<Node95> upStreamNodes = getNodes(upStreamAnchorBins);
-        List<Node95> downStreamNodes = getNodes(downStreamAnchorBins);
-        List<Node95> allNodes = getNodes(allAnchorBins);
+        List<Node95> upStreamNodes = getNodes(upStreamAnchorBins, resolution);
+        List<Node95> downStreamNodes = getNodes(downStreamAnchorBins, resolution);
+        List<Node95> allNodes = getNodes(allAnchorBins, resolution);
 
         return fixedList(loops, upStreamNodes, downStreamNodes, allNodes);
     }
@@ -123,8 +120,8 @@ public class AnchorFix {
     }
 
 
-    public static List<Node95> getNodes(List<Long> genomePositions) {
-        List<List<Long>> clusters = SimpleClustering.cluster(genomePositions, 100);
+    public static List<Node95> getNodes(List<Long> genomePositions, int resolution) {
+        List<List<Long>> clusters = SimpleClustering.cluster(genomePositions, resolution);
         List<Long> pointsToReassign = new ArrayList<>(clusters.size() / 2);
         List<List<Long>> clustersToKeep = new ArrayList<>(clusters.size() / 2);
         for (List<Long> cluster : clusters) {
@@ -171,29 +168,6 @@ public class AnchorFix {
             return nearest;
         }
         return null;
-    }
-
-    private static List<Cluster<Point1D>> dbscan1D(List<Long> points) {
-        DBSCANClusterer<Point1D> dbscan = new DBSCANClusterer<>(CLUSTER_DIST, 1);
-        return dbscan.cluster(convert(points));
-    }
-
-    private static Collection<Point1D> convert(List<Long> points) {
-        List<Point1D> converted = new ArrayList<>(points.size());
-        for (Long point : points) {
-            converted.add(new Point1D(point));
-        }
-        return converted;
-    }
-
-    private static int[] getCounts(Map<Integer, List<Long>> counts, int maxBin) {
-        int[] countsTrack = new int[maxBin];
-        for (int i = 0; i < maxBin; i++) {
-            if (counts.containsKey(i)) {
-                countsTrack[i] = counts.get(i).size();
-            }
-        }
-        return countsTrack;
     }
 
     public static Map<Long, Node95> buildPositionToNodeMapping(List<Node95> nodes) {

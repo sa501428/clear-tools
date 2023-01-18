@@ -37,17 +37,16 @@ public class IndexedBedFile {
         return bedMap;
     }
 
-    public static int[] getUniqueMotif(String localPos, Map<Integer, List<int[]>> binnedMotifs,
-                                       int binSize, int window) {
+    public static int[] getUniqueMotif(long position, Map<Integer, List<int[]>> binnedMotifs,
+                                       int binSize, int window, boolean isPermissive) {
         try {
-            long x = Long.parseLong(localPos);
-            int bin = (int) (x / binSize);
+            int bin = (int) (position / binSize);
 
             List<int[]> motifs = new ArrayList<>();
             for (int i = bin - 1; i < bin + 2; i++) {
                 if (binnedMotifs.containsKey(i)) {
                     for (int[] motif : binnedMotifs.get(i)) {
-                        if (Math.abs(motif[MIDPT] - x) < window) {
+                        if (Math.abs(motif[MIDPT] - position) < window) {
                             motifs.add(motif);
                         }
                     }
@@ -55,11 +54,27 @@ public class IndexedBedFile {
             }
             if (motifs.size() == 1) {
                 return motifs.get(0);
+            } else if (motifs.size() > 1 && isPermissive) {
+                return returnClosest(position, motifs);
             }
         } catch (Exception e) {
             return null;
         }
         return null;
+    }
+
+    private static int[] returnClosest(long position, List<int[]> motifs) {
+        int[] closest = motifs.get(0);
+        long minDist = Math.abs(closest[MIDPT] - position);
+
+        for (int[] motif : motifs) {
+            long dist = Math.abs(motif[MIDPT] - position);
+            if (dist < minDist) {
+                minDist = dist;
+                closest = motif;
+            }
+        }
+        return closest;
     }
 
     public static void setMotifAttributes(Feature2D loop, int[] motif, boolean isUpStream) {
