@@ -52,19 +52,20 @@ public class AnchorFix {
         }
 
         output.exportFeatureList(new File(outStem + ".fixed.anchors.bedpe"), false, Feature2DList.ListFormat.NA);
-        exportAnchors(output, outStem);
+        exportAnchors(output, outStem, handler);
     }
 
-    private static void exportAnchors(Feature2DList output, String outStem) {
+    private static void exportAnchors(Feature2DList output, String outStem, ChromosomeHandler handler) {
         Set<Anchor> disoriented = new HashSet<>();
         Set<Anchor> upstream = new HashSet<>();
         Set<Anchor> downstream = new HashSet<>();
         output.processLists((s, list) -> {
+            Chromosome chrom = handler.getChromosomeFromName(list.get(0).getChr1());
             for (Feature2D f : list) {
-                disoriented.add(AnchorTools.getAnchor(f, "highRes_start_1", "highRes_end_1"));
-                disoriented.add(AnchorTools.getAnchor(f, "highRes_start_2", "highRes_end_2"));
-                upstream.add(AnchorTools.getAnchor(f, "upstream_start_1", "upstream_end_1"));
-                downstream.add(AnchorTools.getAnchor(f, "downstream_start_2", "downstream_end_2"));
+                disoriented.add(AnchorTools.getAnchor(f, "highRes_start_1", "highRes_end_1", chrom.getIndex()));
+                disoriented.add(AnchorTools.getAnchor(f, "highRes_start_2", "highRes_end_2", chrom.getIndex()));
+                upstream.add(AnchorTools.getAnchor(f, "upstream_start_1", "upstream_end_1", chrom.getIndex()));
+                downstream.add(AnchorTools.getAnchor(f, "downstream_start_2", "downstream_end_2", chrom.getIndex()));
             }
         });
 

@@ -69,8 +69,8 @@ public class AnchorTools {
         return results;
     }
 
-    public static Anchor getAnchor(Feature2D feature, String startPos, String endPos) {
+    public static Anchor getAnchor(Feature2D feature, String startPos, String endPos, int chrIndex) {
         return new Anchor(feature.getChr1(), Long.parseLong(feature.getAttribute(startPos)),
-                Long.parseLong(feature.getAttribute(endPos)));
+                Long.parseLong(feature.getAttribute(endPos)), chrIndex);
     }
 }

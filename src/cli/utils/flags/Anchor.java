@@ -8,8 +8,9 @@ public class Anchor extends Feature1D {
 
     private final String chromName;
     private final long start, end, mid;
+    private final int chrIndex;
 
-    public Anchor(String chromName, long start1, long end1) {
+    public Anchor(String chromName, long start1, long end1, int chrIndex) {
         if (chromName.startsWith("chr")) {
             this.chromName = chromName;
         } else {
@@ -18,16 +19,17 @@ public class Anchor extends Feature1D {
         this.start = start1;
         this.end = end1;
         this.mid = (start1 + end1) / 2;
+        this.chrIndex = chrIndex;
     }
 
     @Override
     public String getKey() {
-        return chromName;
+        return "" + chrIndex;
     }
 
     @Override
     public Feature1D deepClone() {
-        return new Anchor(chromName, start, end);
+        return new Anchor(chromName, start, end, chrIndex);
     }
 
     public long getStart() {

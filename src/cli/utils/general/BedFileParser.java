@@ -72,13 +72,13 @@ public class BedFileParser {
                 if (useCutoff) {
                     if (isPercentile) {
                         float score = Float.parseFloat(tokens[4]);
-                        anchors.add(new AnchorWithScore(chr.getName(), start1, end1, score));
+                        anchors.add(new AnchorWithScore(chr.getName(), start1, end1, score, chr.getIndex()));
                         statistics.addValue(score);
                     } else if (Float.parseFloat(tokens[4]) > scoreCutoff) {
-                        anchors.add(new Anchor(chr.getName(), start1, end1));
+                        anchors.add(new Anchor(chr.getName(), start1, end1, chr.getIndex()));
                     }
                 } else {
-                    anchors.add(new Anchor(chr.getName(), start1, end1));
+                    anchors.add(new Anchor(chr.getName(), start1, end1, chr.getIndex()));
                 }
             }
         }
