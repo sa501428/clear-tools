@@ -12,7 +12,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.104.0";
+    public static final String VERSION_NUM = "0.105.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -107,7 +107,7 @@ public class Main {
         } else if (command.startsWith("sift")) {
             new Sift(args, parser);
         } else if (command.startsWith("fuse") || command.startsWith("fusion") || command.startsWith("join") || command.startsWith("union")) {
-            Fusion.run(args, command);
+            Fusion.run(args, command, parser);
         } else if (command.startsWith("filter")) {
             FilterBedpe.run(args, command);
         } else if (command.startsWith("subtract") || command.startsWith("intersect")) {

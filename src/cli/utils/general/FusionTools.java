@@ -18,10 +18,34 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FusionTools {
 
     public static void coalesceFeatures(String[] fileNames, String genomeID, String outFile,
-                                        boolean useNMS, boolean noAttributes, boolean useExact, boolean addIDs) {
+                                        boolean useNMS, boolean noAttributes, boolean useExact, boolean addIDs,
+                                        String[] attributes) {
         Feature2DList list = combineAll(fileNames, genomeID, noAttributes, addIDs);
         list.filterLists((chr, feature2DList) -> removeOverlappingPixels(feature2DList, useNMS, useExact));
+        if (attributes != null && attributes.length > 0) {
+            list.filterLists((chr, feature2DList) -> filterAttributes(feature2DList, attributes));
+        }
         list.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
+    }
+
+    private static List<Feature2D> filterAttributes(List<Feature2D> feature2DList, String[] attributes) {
+        List<Feature2D> filtered = new ArrayList<>();
+        for (Feature2D feature : feature2DList) {
+            Map<String, String> filteredAttributes = getSpecificAttributes(feature.getAttributes(), attributes);
+            Feature2D newFeature = new Feature2D(feature.getFeatureType(), feature.getChr1(), feature.getStart1(), feature.getEnd1(),
+                    feature.getChr2(), feature.getStart2(), feature.getEnd2(), feature.getColor(),
+                    filteredAttributes);
+            filtered.add(newFeature);
+        }
+        return filtered;
+    }
+
+    private static Map<String, String> getSpecificAttributes(Map<String, String> attributes, String[] attributesToKeep) {
+        Map<String, String> filteredAttributes = new HashMap<>();
+        for (String attribute : attributesToKeep) {
+            filteredAttributes.put(attribute, attributes.getOrDefault(attribute, "NA"));
+        }
+        return filteredAttributes;
     }
 
     private static List<Feature2D> removeOverlappingPixels(List<Feature2D> features, boolean useNMS, boolean useExact) {

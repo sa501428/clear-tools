@@ -56,6 +56,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option aggregateNormalization = addBooleanOption("ag-norm");
     private final Option isLoopAnalysis = addBooleanOption("loop");
     private final Option thresholdOption = addDoubleOption("threshold");
+    private final Option attributeOption = addStringOption("attributes");
 
     private boolean optionToBoolean(Option option) {
         Object opt = getOptionValue(option);
@@ -75,6 +76,11 @@ public class CommandLineParser extends CmdLineParser {
     private String optionToString(Option option) {
         Object opt = getOptionValue(option);
         return opt == null ? null : opt.toString();
+    }
+
+    private String[] optionToStringArray(Option option) {
+        Object opt = getOptionValue(option);
+        return opt == null ? null : opt.toString().split(",");
     }
 
     public boolean getHelpOption() {
@@ -164,5 +170,9 @@ public class CommandLineParser extends CmdLineParser {
 
     public boolean getNoOrientationFlag() {
         return optionToBoolean(noOrientationOption);
+    }
+
+    public String[] getAttributesOption() {
+        return optionToStringArray(attributeOption);
     }
 }
