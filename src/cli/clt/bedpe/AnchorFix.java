@@ -4,6 +4,9 @@ import cli.Main;
 import cli.clt.CommandLineParser;
 import cli.utils.clique.Node95;
 import cli.utils.clique.SimpleClustering;
+import cli.utils.flags.Anchor;
+import cli.utils.general.BedTools;
+import cli.utils.loops.AnchorTools;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -12,10 +15,7 @@ import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class AnchorFix {
 
@@ -52,6 +52,25 @@ public class AnchorFix {
         }
 
         output.exportFeatureList(new File(outStem + ".fixed.anchors.bedpe"), false, Feature2DList.ListFormat.NA);
+        exportAnchors(output, outStem);
+    }
+
+    private static void exportAnchors(Feature2DList output, String outStem) {
+        Set<Anchor> disoriented = new HashSet<>();
+        Set<Anchor> upstream = new HashSet<>();
+        Set<Anchor> downstream = new HashSet<>();
+        output.processLists((s, list) -> {
+            for (Feature2D f : list) {
+                disoriented.add(AnchorTools.getAnchor(f, "highRes_start_1", "highRes_end_1"));
+                disoriented.add(AnchorTools.getAnchor(f, "highRes_start_2", "highRes_end_2"));
+                upstream.add(AnchorTools.getAnchor(f, "upstream_start_1", "upstream_end_1"));
+                downstream.add(AnchorTools.getAnchor(f, "downstream_start_2", "downstream_end_2"));
+            }
+        });
+
+        BedTools.exportBedFile(new File(outStem + ".disoriented.anchors.bed"), disoriented);
+        BedTools.exportBedFile(new File(outStem + ".upstream.anchors.bed"), upstream);
+        BedTools.exportBedFile(new File(outStem + ".downstream.anchors.bed"), downstream);
     }
 
     private static List<Feature2D> recoverLoops(List<Feature2D> loops) {

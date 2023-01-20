@@ -15,7 +15,7 @@ public class LoopGenerator {
         if (chrom1.getIndex() == chrom2.getIndex()) {
             List<Anchor> aList = anchors.getFeatures("" + chrom1.getIndex());
             aList = new ArrayList<>(aList);
-            aList.sort(Comparator.comparingInt(Anchor::getMid));
+            aList.sort(Comparator.comparingLong(Anchor::getMid));
             for (int i = 0; i < aList.size(); i++) {
                 for (int j = i + 1; j < aList.size(); j++) {
                     Feature2D feature2D = createIntraFeature(chrom1, aList.get(i), aList.get(j),
@@ -37,7 +37,7 @@ public class LoopGenerator {
 
     public static Feature2D createIntraFeature(Chromosome chrom1, Anchor a1, Anchor a2,
                                                long minGenomeDist, long maxGenomeDist, int resolution) {
-        int dist = a2.getMid() - a1.getMid();
+        long dist = a2.getMid() - a1.getMid();
         if (dist < 0) {
             System.err.println("Weird error!!");
             System.exit(10);
@@ -63,8 +63,8 @@ public class LoopGenerator {
         return null;
     }
 
-    private static long round(int number, int resolution) {
-        return (long) (number / resolution) * resolution;
+    private static long round(long number, int resolution) {
+        return (number / resolution) * resolution;
     }
 
     private static Feature2D createFeature(Chromosome chrom1, Anchor a1, Chromosome chrom2, Anchor a2) {

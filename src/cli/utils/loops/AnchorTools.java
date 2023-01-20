@@ -48,10 +48,10 @@ public class AnchorTools {
                                            long maxGenomeDist, int resolution) {
 
         List<Anchor> forwards = forwardAnchors.getFeatures("" + chromosome.getIndex());
-        forwards.sort(Comparator.comparingInt(Anchor::getMid));
+        forwards.sort(Comparator.comparingLong(Anchor::getMid));
 
         List<Anchor> reverses = reverseAnchors.getFeatures("" + chromosome.getIndex());
-        reverses.sort(Comparator.comparingInt(Anchor::getMid));
+        reverses.sort(Comparator.comparingLong(Anchor::getMid));
 
         List<Feature2D> results = new ArrayList<>();
 
@@ -67,5 +67,10 @@ public class AnchorTools {
             }
         }
         return results;
+    }
+
+    public static Anchor getAnchor(Feature2D feature, String startPos, String endPos) {
+        return new Anchor(feature.getChr1(), Long.parseLong(feature.getAttribute(startPos)),
+                Long.parseLong(feature.getAttribute(endPos)));
     }
 }
