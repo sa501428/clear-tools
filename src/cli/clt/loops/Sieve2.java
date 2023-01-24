@@ -35,15 +35,15 @@ public class Sieve2 {
      * TODO: probably should be deprecated, and option for filtering should be added to the main sieve command
      */
 
-    private final static int zLowCutoff = 1;
-    private final static float oeLowCutoff = (float) Math.log(1.5);
-    public static String LOCAL_OE = "_sieve_obs_over_local_expected";
-    public static String LOCAL_Z = "_sieve_local_zscore";
     // [-strict][-peek]
     // ; peek just saves values\n\t\tstrict requires each resolution to meet the criteria
-    public static String usage = "sieve2 [-k NORM] <loops.bedpe> <out.stem> <file.hic> [res1,...]\n" +
+    public static String usage = "sieve2[-easy] [-k NORM] <loops.bedpe> <out.stem> <file.hic> [res1,...]\n" +
             "\t\tretain loop if at a loop-y location at high resolutions (1000, 500, 200, 100)\n" +
             "\t\tsieve-post-filter <loops.bedpe> <out.stem> <genomeID>";
+    private static int zLowCutoff = 1;
+    public static String LOCAL_OE = "_sieve_obs_over_local_expected";
+    public static String LOCAL_Z = "_sieve_local_zscore";
+    private static float oeLowCutoff = (float) Math.log(1.5);
     public int[] resolutions = new int[]{1000, 500};
 
     public Sieve2(String[] args, CommandLineParser parser, String command) {
@@ -57,6 +57,11 @@ public class Sieve2 {
         String loopListPath = args[1];
         String outStem = args[2];
         String hicPath = args[3];
+
+        if (command.contains("easy")) {
+            zLowCutoff = 0;
+            oeLowCutoff = 0;
+        }
 
         if (command.contains("post")) {
             // just filter using values in list
