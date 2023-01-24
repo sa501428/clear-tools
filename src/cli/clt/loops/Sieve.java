@@ -32,22 +32,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sieve {
 
-    private final static int zLowCutoff = 1;
-    private final static float oeLowCutoff = (float) Math.log(1.5);
-    private final static int zHighCutoff = 2;
-    private final static float oeHighCutoff = (float) Math.log(2);
+    private static final int zHighCutoff = 2;
+    private static final float oeHighCutoff = (float) Math.log(2);
+    // [-strict][-peek]
+    // ; peek just saves values\n\t\tstrict requires each resolution to meet the criteria
+    public static String usage = "sieve[-easy][-skip-global] [-k NORM] <loops.bedpe> <out.stem> <file.hic> [res1,...]\n" +
+            "\t\tretain loop if at a loop-y location\n" +
+            "\t\tsieve-post-filter <loops.bedpe> <out.stem> <genomeID>";
+    private static int zLowCutoff = 1;
     public static String GLOBAL_OE = "_sieve_obs_over_global_expected";
     public static String LOCAL_OE = "_sieve_obs_over_local_expected";
     public static String GLOBAL_Z = "_sieve_global_zscore";
     public static String LOCAL_Z = "_sieve_local_zscore";
+    private static float oeLowCutoff = (float) Math.log(1.5);
 
     public int[] resolutions = new int[]{1000, 2000, 5000, 10000};
-
-    // [-strict][-peek]
-    // ; peek just saves values\n\t\tstrict requires each resolution to meet the criteria
-    public static String usage = "sieve [-k NORM] <loops.bedpe> <out.stem> <file.hic> [res1,...]\n" +
-            "\t\tretain loop if at a loop-y location\n" +
-            "\t\tsieve-post-filter <loops.bedpe> <out.stem> <genomeID>";
+    private static boolean skipGlobal = false;
 
     public Sieve(String[] args, CommandLineParser parser, String command) {
         // sieve <loops.bedpe> <output.bedpe> <file1.hic> <res1,res2,...>
@@ -58,6 +58,14 @@ public class Sieve {
         String loopListPath = args[1];
         String outStem = args[2];
         String hicPath = args[3];
+
+        if (command.contains("easy")) {
+            zLowCutoff = 0;
+            oeLowCutoff = 0;
+        }
+        if (command.contains("skip") && command.contains("global")) {
+            skipGlobal = true;
+        }
 
         if (command.contains("post")) {
             // just filter using values in list
@@ -95,6 +103,11 @@ public class Sieve {
 
             Feature2DList result = sieveFilter(ds, loopList, handler, resolutions, window, norm);
             result.exportFeatureList(new File(outStem + ".attributes.bedpe"), false, Feature2DList.ListFormat.NA);
+
+            if (command.contains("easy")) {
+                Feature2DList goodCalls = filterBySimpleScore(result);
+                goodCalls.exportFeatureList(new File(outStem + ".minimal.loops.bedpe"), false, Feature2DList.ListFormat.NA);
+            }
         }
         System.out.println("sieve complete");
     }
@@ -141,7 +154,10 @@ public class Sieve {
                                 Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
                                         loopsToAssessGlobal, 500 * resolution).values();
 
-                                LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom1, resolution);
+                                LogExpectedZscoreSpline poly = null;
+                                if (!skipGlobal) {
+                                    poly = new LogExpectedZscoreSpline(zd, norm, chrom1, resolution);
+                                }
                                 SparseContactMatrixWithMasking sparseMatrix = new SparseContactMatrixWithMasking(zd,
                                         loopsToAssessGlobal, resolution, buffer, 2 * buffer + 1, norm);
 
@@ -163,15 +179,15 @@ public class Sieve {
                                         Welford localWelford = ZscoreTools.getLocalWelford(regionMatrix, midX, midY, window);
                                         float localOE = (float) (observed / localWelford.getMean());
                                         float localZScore = (float) localWelford.getZscore().getZscore(observed);
-
-                                        float globalOE = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
-                                        float globalZScore = (float) poly.getZscoreForObservedUncompressedBin(dist, observed);
-
-                                        loop.addStringAttribute(resolution + GLOBAL_Z, "" + globalZScore);
                                         loop.addStringAttribute(resolution + LOCAL_Z, "" + localZScore);
-
-                                        loop.addStringAttribute(resolution + GLOBAL_OE, "" + globalOE);
                                         loop.addStringAttribute(resolution + LOCAL_OE, "" + localOE);
+
+                                        if (poly != null) {
+                                            float globalOE = (float) (observed / poly.getExpectedFromUncompressedBin(dist));
+                                            float globalZScore = (float) poly.getZscoreForObservedUncompressedBin(dist, observed);
+                                            loop.addStringAttribute(resolution + GLOBAL_Z, "" + globalZScore);
+                                            loop.addStringAttribute(resolution + GLOBAL_OE, "" + globalOE);
+                                        }
                                     }
                                     regionMatrix = null;
                                 }
@@ -202,11 +218,27 @@ public class Sieve {
 
     private static void setDefaultAttributes(Set<Feature2D> loops, int resolution) {
         for (Feature2D loop : loops) {
-            loop.addStringAttribute(resolution + GLOBAL_OE, "NaN");
             loop.addStringAttribute(resolution + LOCAL_OE, "NaN");
-            loop.addStringAttribute(resolution + GLOBAL_Z, "NaN");
             loop.addStringAttribute(resolution + LOCAL_Z, "NaN");
+            if (!skipGlobal) {
+                loop.addStringAttribute(resolution + GLOBAL_OE, "NaN");
+                loop.addStringAttribute(resolution + GLOBAL_Z, "NaN");
+            }
         }
+    }
+
+    private Feature2DList filterBySimpleScore(Feature2DList result) {
+        Feature2DList good = new Feature2DList();
+        result.processLists((s, list) -> {
+            List<Feature2D> goodLoops = new ArrayList<>();
+            for (Feature2D feature : list) {
+                if (isSimpleEnrichedLikelyLoop(feature, resolutions)) {
+                    goodLoops.add(feature);
+                }
+            }
+            good.addByKey(s, goodLoops);
+        });
+        return good;
     }
 
     private Feature2DList[] filterByScore(Feature2DList result) {
@@ -267,6 +299,17 @@ public class Sieve {
                 || (strong2 && (medium1 || medium5 || hasAverageEnrichment))
                 || (strong5 && (medium1 || medium2 || hasAverageEnrichment))
                 || (hasAverageEnrichment && ((medium1 && medium2) || (weak2 && weak5) || (weak1 && weak5)));
+    }
+
+    private boolean isSimpleEnrichedLikelyLoop(Feature2D feature, int[] resolutions) {
+        boolean isEnriched = true;
+        for (int res : resolutions) {
+            double localZ = getAttribute(feature, res + LOCAL_Z, -10);
+            double localOE = Math.log(getAttribute(feature, res + LOCAL_OE, .1f));
+            boolean weak = (localZ > zLowCutoff) && (localOE > oeLowCutoff);
+            isEnriched = isEnriched && weak;
+        }
+        return isEnriched;
     }
 
     private boolean isWeaklyEnrichedMaybeLoopish(Feature2D feature) {

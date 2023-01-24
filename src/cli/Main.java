@@ -12,7 +12,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.107.0";
+    public static final String VERSION_NUM = "0.108.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -98,8 +98,6 @@ public class Main {
             ata.run();
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
-        } else if (command.startsWith("sieve2")) {
-            new Sieve2(args, parser, command);
         } else if (command.startsWith("sieve")) {
             new Sieve(args, parser, command);
         } else if (command.startsWith("hotspot")) {
