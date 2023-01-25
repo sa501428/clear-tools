@@ -36,7 +36,7 @@ public class Sieve {
     private static final float oeHighCutoff = (float) Math.log(2);
     // [-strict][-peek]
     // ; peek just saves values\n\t\tstrict requires each resolution to meet the criteria
-    public static String usage = "sieve[-easy][-skip-global] [-k NORM] <loops.bedpe> <out.stem> <file.hic> [res1,...]\n" +
+    public static String usage = "sieve[-easy][-skip-global] [--threads num_threads] [-k NORM] <loops.bedpe> <out.stem> <file.hic> [res1,...]\n" +
             "\t\tretain loop if at a loop-y location\n" +
             "\t\tsieve-post-filter <loops.bedpe> <out.stem> <genomeID>";
     private static int zLowCutoff = 1;
@@ -45,6 +45,7 @@ public class Sieve {
     public static String GLOBAL_Z = "_sieve_global_zscore";
     public static String LOCAL_Z = "_sieve_local_zscore";
     private static float oeLowCutoff = (float) Math.log(1.5);
+    private static int numThreads = 8;
 
     public int[] resolutions = new int[]{1000, 2000, 5000, 10000};
     private static boolean skipGlobal = false;
@@ -66,6 +67,8 @@ public class Sieve {
         if (command.contains("skip") && command.contains("global")) {
             skipGlobal = true;
         }
+
+        numThreads = parser.getNumThreads(numThreads);
 
         if (command.contains("post")) {
             // just filter using values in list
@@ -130,7 +133,7 @@ public class Sieve {
         final AtomicInteger currChromPair = new AtomicInteger(0);
         final AtomicInteger numLoopsDone = new AtomicInteger(0);
 
-        ParallelizationTools.launchParallelizedCode(() -> {
+        ParallelizationTools.launchParallelizedCode(numThreads, () -> {
             int threadPair = currChromPair.getAndIncrement();
             while (threadPair < chromosomePairCounter) {
                 RegionConfiguration config = chromosomePairs.get(threadPair);

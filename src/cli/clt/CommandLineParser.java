@@ -57,6 +57,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option isLoopAnalysis = addBooleanOption("loop");
     private final Option thresholdOption = addDoubleOption("threshold");
     private final Option attributeOption = addStringOption("attributes");
+    private final Option numThreadsOption = addIntegerOption("threads");
 
     private boolean optionToBoolean(Option option) {
         Object opt = getOptionValue(option);
@@ -174,5 +175,9 @@ public class CommandLineParser extends CmdLineParser {
 
     public String[] getAttributesOption() {
         return optionToStringArray(attributeOption);
+    }
+
+    public int getNumThreads(int numThreads) {
+        return optionToInteger(numThreadsOption, numThreads);
     }
 }
