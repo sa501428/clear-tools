@@ -30,11 +30,11 @@ public class LoopTools {
     }
 
     public static boolean passesMinLoopSize(Feature2D loop) {
-        return dist(loop) / getResolutionLoopWasCalledAt(loop) > 5;
+        return dist(loop) / Math.max(getResolutionLoopWasCalledAt(loop), 1000) > 5;
     }
 
     public static int getResolutionLoopWasCalledAt(Feature2D loop) {
-        return (int) Math.max(loop.getWidth1(), loop.getWidth2());
+        return (int) Math.max(Math.max(loop.getWidth1(), loop.getWidth2()), 1);
     }
 
     public static int dist(Feature2D loop) {
