@@ -19,7 +19,7 @@ import java.util.*;
 
 public class AnchorFix {
 
-    public static String usage = "anchor-fix[-clean] [-r resolution] <genomeID> <input.bedpe> <output.stem>\n" +
+    public static String usage = "anchorize [-r resolution] <genomeID> <input.bedpe> <output.stem>\n" +
             "\t\tdefault behavior will fix the hi-res shared anchors for loops\n" +
             "\t\tclean avoids saving old attributes";
     private static int resolution = 100;
@@ -30,10 +30,13 @@ public class AnchorFix {
             Main.printGeneralUsageAndExit(57, usage);
         }
         resolution = parser.getResolutionOption(resolution);
+        if (resolution >= MAX_DIST) {
+            MAX_DIST = (int) (2.5 * resolution);
+        }
         String genomeID = args[1];
         String inFile = args[2];
         String outStem = args[3];
-        fixAnchors(inFile, genomeID, outStem, command.contains("clean"));
+        fixAnchors(inFile, genomeID, outStem, false);
     }
 
 

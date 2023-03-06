@@ -12,7 +12,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.108.2";
+    public static final String VERSION_NUM = "0.110.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -61,7 +61,7 @@ public class Main {
             Enhance.run(args, parser);
         } else if (command.equals("pinpoint")) {
             Pinpoint.run(args, parser);
-        } else if (command.startsWith("anchor-fix")) {
+        } else if (command.startsWith("anchor-fix") || command.startsWith("anchorize")) {
             AnchorFix.run(args, parser, command);
         } else if (command.startsWith("clique")) {
             Clique.run(args, parser, command);

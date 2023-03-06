@@ -19,13 +19,32 @@ public class FusionTools {
 
     public static void coalesceFeatures(String[] fileNames, String genomeID, String outFile,
                                         boolean useNMS, boolean noAttributes, boolean useExact, boolean addIDs,
-                                        String[] attributes) {
+                                        String[] attributes, int roundVal) {
         Feature2DList list = combineAll(fileNames, genomeID, noAttributes, addIDs);
+        if (roundVal > 1) {
+            list.filterLists((chr, feature2DList) -> roundValues(feature2DList, roundVal));
+        }
         list.filterLists((chr, feature2DList) -> removeOverlappingPixels(feature2DList, useNMS, useExact));
         if (attributes != null && attributes.length > 0) {
             list.filterLists((chr, feature2DList) -> filterAttributes(feature2DList, attributes));
         }
         list.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
+    }
+
+    private static List<Feature2D> roundValues(List<Feature2D> features, int value) {
+        List<Feature2D> rounded = new ArrayList<>();
+        for (Feature2D feature : features) {
+            long s1 = value * (feature.getStart1() / value);
+            long e1 = Math.max(value * (feature.getEnd1() / value), s1 + value);
+            long s2 = value * (feature.getStart2() / value);
+            long e2 = Math.max(value * (feature.getEnd2() / value), s2 + value);
+            Feature2D newFeature = new Feature2D(feature.getFeatureType(),
+                    feature.getChr1(), s1, e1,
+                    feature.getChr2(), s2, e2,
+                    feature.getColor(), feature.getAttributes());
+            rounded.add(newFeature);
+        }
+        return rounded;
     }
 
     private static List<Feature2D> filterAttributes(List<Feature2D> feature2DList, String[] attributes) {

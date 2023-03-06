@@ -58,6 +58,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option thresholdOption = addDoubleOption("threshold");
     private final Option attributeOption = addStringOption("attributes");
     private final Option numThreadsOption = addIntegerOption("threads");
+    private final Option roundingOption = addIntegerOption("round");
 
     private boolean optionToBoolean(Option option) {
         Object opt = getOptionValue(option);
@@ -179,5 +180,9 @@ public class CommandLineParser extends CmdLineParser {
 
     public int getNumThreads(int numThreads) {
         return optionToInteger(numThreadsOption, numThreads);
+    }
+
+    public int getRoundOption() {
+        return optionToInteger(roundingOption, 1);
     }
 }
