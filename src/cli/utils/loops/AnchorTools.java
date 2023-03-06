@@ -9,9 +9,7 @@ import javastraw.reader.basics.Chromosome;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.tools.ParallelizationTools;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnchorTools {
@@ -72,5 +70,42 @@ public class AnchorTools {
     public static Anchor getAnchor(Feature2D feature, String startPos, String endPos, int chrIndex) {
         return new Anchor(feature.getChr1(), Long.parseLong(feature.getAttribute(startPos)),
                 Long.parseLong(feature.getAttribute(endPos)), chrIndex);
+    }
+
+    public static Map<Integer, List<Anchor>> getAnchorMap(List<Anchor> anchors, int compression) {
+        Map<Integer, List<Anchor>> anchorMap = new HashMap<>();
+        for (Anchor anchor : anchors) {
+            int key = (int) (anchor.getMid() / compression);
+            if (!anchorMap.containsKey(key)) {
+                anchorMap.put(key, new ArrayList<>());
+            }
+            anchorMap.get(key).add(anchor);
+        }
+        return anchorMap;
+    }
+
+    public static List<Anchor> getClosestAnchors(Map<Integer, List<Anchor>> forwardsMap, long start, long end, int compression) {
+        int key = (int) (((start + end) / 2) / compression);
+        List<Anchor> anchors = new ArrayList<>();
+        if (forwardsMap.containsKey(key)) {
+            anchors.addAll(forwardsMap.get(key));
+        }
+        if (forwardsMap.containsKey(key - 1)) {
+            anchors.addAll(forwardsMap.get(key - 1));
+        }
+        if (forwardsMap.containsKey(key + 1)) {
+            anchors.addAll(forwardsMap.get(key + 1));
+        }
+        return anchorsContainedWithinRegion(start, end, anchors);
+    }
+
+    private static List<Anchor> anchorsContainedWithinRegion(long start, long end, List<Anchor> anchors) {
+        List<Anchor> containedAnchors = new ArrayList<>();
+        for (Anchor anchor : anchors) {
+            if (anchor.getMid() >= start && anchor.getEnd() < end) {
+                containedAnchors.add(anchor);
+            }
+        }
+        return containedAnchors;
     }
 }

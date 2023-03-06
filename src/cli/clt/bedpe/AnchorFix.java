@@ -5,8 +5,10 @@ import cli.clt.CommandLineParser;
 import cli.utils.clique.Node95;
 import cli.utils.clique.SimpleClustering;
 import cli.utils.flags.Anchor;
+import cli.utils.general.BedFileParser;
 import cli.utils.general.BedTools;
 import cli.utils.loops.AnchorTools;
+import javastraw.feature1D.GenomeWide1DList;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -20,30 +22,86 @@ import java.util.*;
 public class AnchorFix {
 
     public static String usage = "anchorize [-r resolution] <genomeID> <input.bedpe> <output.stem>\n" +
+            "anchorize2[-unique] [-r resolution] <genomeID> <input.bedpe> <upstream.anchors.bed> " +
+            "<downstream.anchors.bed> <output.bedpe>\n" +
             "\t\tdefault behavior will fix the hi-res shared anchors for loops\n" +
             "\t\tclean avoids saving old attributes";
     private static int resolution = 100;
     public static int MAX_DIST = 250;
 
     public static void run(String[] args, CommandLineParser parser, String command) {
-        if (args.length != 4) {
+        if (args.length != 4 && args.length != 6) {
             Main.printGeneralUsageAndExit(57, usage);
         }
         resolution = parser.getResolutionOption(resolution);
         if (resolution >= MAX_DIST) {
             MAX_DIST = (int) (2.5 * resolution);
         }
-        String genomeID = args[1];
+        ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
         String inFile = args[2];
-        String outStem = args[3];
-        fixAnchors(inFile, genomeID, outStem, false);
+        if (command.contains("2")) {
+            GenomeWide1DList<Anchor> forwardAnchors = BedFileParser.loadFromBEDFile(handler, args[3], -1, false);
+            GenomeWide1DList<Anchor> reverseAnchors = BedFileParser.loadFromBEDFile(handler, args[4], -1, false);
+            assignAnchors(inFile, handler, forwardAnchors, reverseAnchors, args[5], command.contains("unique"));
+        } else {
+            fixAnchors(inFile, handler, args[3]);
+        }
+    }
+
+    private static void assignAnchors(String inputBedpe, ChromosomeHandler handler, GenomeWide1DList<Anchor> forwardAnchors,
+                                      GenomeWide1DList<Anchor> reverseAnchors, String outStem, boolean onlyUnique) {
+        Feature2DList output = new Feature2DList();
+
+        Feature2DList loopList = Feature2DParser.loadFeatures(inputBedpe, handler, false,
+                null, false);
+
+
+        for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
+            if (Main.printVerboseComments) System.out.println("Processing " + chrom.getName());
+            List<Feature2D> loops = loopList.get(chrom.getIndex(), chrom.getIndex());
+            if (loops.size() > 0) {
+                List<Anchor> forwards = forwardAnchors.getFeatures("" + chrom.getIndex());
+                List<Anchor> reverses = reverseAnchors.getFeatures("" + chrom.getIndex());
+                if (forwards.size() > 0 && reverses.size() > 0) {
+                    List<Feature2D> newLoops = determineAnchorizedLoops(loops, forwards, reverses, onlyUnique);
+                    output.addByKey(Feature2DList.getKey(chrom, chrom), newLoops);
+                }
+            }
+        }
+        output.exportFeatureList(new File(outStem), false, Feature2DList.ListFormat.NA);
+
+    }
+
+    private static List<Feature2D> determineAnchorizedLoops(List<Feature2D> loops, List<Anchor> allForwards,
+                                                            List<Anchor> allReverses, boolean onlyUnique) {
+        int compression = 1000;
+        Map<Integer, List<Anchor>> forwardsMap = AnchorTools.getAnchorMap(allForwards, compression);
+        Map<Integer, List<Anchor>> reversesMap = AnchorTools.getAnchorMap(allReverses, compression);
+        List<Feature2D> newLoops = new ArrayList<>();
+        for (Feature2D loop : loops) {
+            List<Anchor> forwards = AnchorTools.getClosestAnchors(forwardsMap, loop.getStart1(), loop.getEnd1(), compression);
+            List<Anchor> reverses = AnchorTools.getClosestAnchors(reversesMap, loop.getStart2(), loop.getEnd2(), compression);
+            if (forwards.size() > 0 && reverses.size() > 0) {
+                if (!onlyUnique || (forwards.size() == 1 && reverses.size() == 1)) {
+                    for (Anchor forward : forwards) {
+                        for (Anchor reverse : reverses) {
+                            Feature2D newLoop = new Feature2D(loop.getFeatureType(),
+                                    loop.getChr1(), forward.getStart(), forward.getEnd(),
+                                    loop.getChr2(), reverse.getStart(), reverse.getEnd(),
+                                    loop.getColor(), loop.getAttributes());
+                            newLoops.add(newLoop);
+                        }
+                    }
+                }
+            }
+        }
+        return newLoops;
     }
 
 
-    private static void fixAnchors(String inputBedpe, String genomeID, String outStem, boolean noAttributes) {
+    private static void fixAnchors(String inputBedpe, ChromosomeHandler handler, String outStem) {
         Feature2DList output = new Feature2DList();
-        ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
-        Feature2DList loopList = Feature2DParser.loadFeatures(inputBedpe, handler, !noAttributes,
+        Feature2DList loopList = Feature2DParser.loadFeatures(inputBedpe, handler, true,
                 null, false);
         for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
             if (Main.printVerboseComments) System.out.println("Processing " + chrom.getName());
