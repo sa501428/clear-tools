@@ -26,17 +26,16 @@ public class AnchorFix {
             "<downstream.anchors.bed> <output.bedpe>\n" +
             "\t\tdefault behavior will fix the hi-res shared anchors for loops\n" +
             "\t\tclean avoids saving old attributes";
-    private static int resolution = 100;
-    public static int MAX_DIST = 250;
+    public static int MAX_DIST = 500;
+    private static int resolution = 200;
 
     public static void run(String[] args, CommandLineParser parser, String command) {
         if (args.length != 4 && args.length != 6) {
             Main.printGeneralUsageAndExit(57, usage);
         }
         resolution = parser.getResolutionOption(resolution);
-        if (resolution >= MAX_DIST) {
-            MAX_DIST = (int) (2.5 * resolution);
-        }
+        MAX_DIST = (int) (2.5 * resolution);
+
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
         String inFile = args[2];
         if (command.contains("2")) {
@@ -51,10 +50,8 @@ public class AnchorFix {
     private static void assignAnchors(String inputBedpe, ChromosomeHandler handler, GenomeWide1DList<Anchor> forwardAnchors,
                                       GenomeWide1DList<Anchor> reverseAnchors, String outStem, boolean onlyUnique) {
         Feature2DList output = new Feature2DList();
-
         Feature2DList loopList = Feature2DParser.loadFeatures(inputBedpe, handler, false,
                 null, false);
-
 
         for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
             if (Main.printVerboseComments) System.out.println("Processing " + chrom.getName());
