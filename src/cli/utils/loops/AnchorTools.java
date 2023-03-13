@@ -84,6 +84,21 @@ public class AnchorTools {
         return anchorMap;
     }
 
+    public static Anchor getClosestAnchor(Map<Integer, List<Anchor>> forwardsMap, long start, long end, int compression) {
+        int key = (int) (((start + end) / 2) / compression);
+        List<Anchor> anchors = new ArrayList<>();
+        if (forwardsMap.containsKey(key)) {
+            anchors.addAll(forwardsMap.get(key));
+        }
+        if (forwardsMap.containsKey(key - 1)) {
+            anchors.addAll(forwardsMap.get(key - 1));
+        }
+        if (forwardsMap.containsKey(key + 1)) {
+            anchors.addAll(forwardsMap.get(key + 1));
+        }
+        return closestAnchorToMid(start, end, anchors);
+    }
+
     public static List<Anchor> getClosestAnchors(Map<Integer, List<Anchor>> forwardsMap, long start, long end, int compression) {
         int key = (int) (((start + end) / 2) / compression);
         List<Anchor> anchors = new ArrayList<>();
@@ -97,6 +112,20 @@ public class AnchorTools {
             anchors.addAll(forwardsMap.get(key + 1));
         }
         return anchorsContainedWithinRegion(start, end, anchors);
+    }
+
+    private static Anchor closestAnchorToMid(long start, long end, List<Anchor> anchors) {
+        long mid = (start + end) / 2;
+        long minDist = Long.MAX_VALUE;
+        Anchor closestAnchor = null;
+        for (Anchor anchor : anchors) {
+            long dist = Math.abs(mid - anchor.getMid());
+            if (dist < minDist) {
+                minDist = dist;
+                closestAnchor = anchor;
+            }
+        }
+        return closestAnchor;
     }
 
     private static List<Anchor> anchorsContainedWithinRegion(long start, long end, List<Anchor> anchors) {

@@ -192,7 +192,7 @@ public class UnWrap {
             return new Feature2D(Feature2D.FeatureType.PEAK, feature2D.getChr1(), start1, end1,
                     feature2D.getChr2(), start2, end2, Color.BLUE, attrs);
         } catch (Exception ignored) {
+            return feature2D;
         }
-        return null;
     }
 }

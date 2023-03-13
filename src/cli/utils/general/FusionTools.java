@@ -21,13 +21,13 @@ public class FusionTools {
                                         boolean useNMS, boolean noAttributes, boolean useExact, boolean addIDs,
                                         String[] attributes, int roundVal) {
         Feature2DList list = combineAll(fileNames, genomeID, noAttributes, addIDs);
+        if (attributes != null && attributes.length > 0) {
+            list.filterLists((chr, feature2DList) -> filterAttributes(feature2DList, attributes));
+        }
         if (roundVal > 1) {
             list.filterLists((chr, feature2DList) -> roundValues(feature2DList, roundVal));
         }
         list.filterLists((chr, feature2DList) -> removeOverlappingPixels(feature2DList, useNMS, useExact));
-        if (attributes != null && attributes.length > 0) {
-            list.filterLists((chr, feature2DList) -> filterAttributes(feature2DList, attributes));
-        }
         list.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
     }
 

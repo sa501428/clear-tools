@@ -50,7 +50,7 @@ public class AnchorFix {
     private static void assignAnchors(String inputBedpe, ChromosomeHandler handler, GenomeWide1DList<Anchor> forwardAnchors,
                                       GenomeWide1DList<Anchor> reverseAnchors, String outStem, boolean onlyUnique) {
         Feature2DList output = new Feature2DList();
-        Feature2DList loopList = Feature2DParser.loadFeatures(inputBedpe, handler, false,
+        Feature2DList loopList = Feature2DParser.loadFeatures(inputBedpe, handler, true,
                 null, false);
 
         for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
@@ -74,7 +74,34 @@ public class AnchorFix {
         int compression = 1000;
         Map<Integer, List<Anchor>> forwardsMap = AnchorTools.getAnchorMap(allForwards, compression);
         Map<Integer, List<Anchor>> reversesMap = AnchorTools.getAnchorMap(allReverses, compression);
-        List<Feature2D> newLoops = new ArrayList<>();
+        Set<Feature2D> newLoops = new HashSet<>();
+        for (Feature2D loop : loops) {
+            Anchor forward = AnchorTools.getClosestAnchor(forwardsMap, loop.getStart1(), loop.getEnd1(), compression);
+            Anchor reverse = AnchorTools.getClosestAnchor(reversesMap, loop.getStart2(), loop.getEnd2(), compression);
+            if (forward != null && reverse != null) {
+                createLoopFromAnchors(newLoops, loop, forward, reverse);
+            }
+        }
+        return new ArrayList<>(newLoops);
+    }
+
+    private static void createLoopFromAnchors(Set<Feature2D> newLoops, Feature2D loop, Anchor forward, Anchor reverse) {
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("localX", "" + forward.getMid());
+        attributes.put("localY", "" + reverse.getMid());
+        Feature2D newLoop = new Feature2D(loop.getFeatureType(),
+                loop.getChr1(), forward.getStart(), forward.getEnd(),
+                loop.getChr2(), reverse.getStart(), reverse.getEnd(),
+                loop.getColor(), attributes);
+        newLoops.add(newLoop);
+    }
+
+    private static List<Feature2D> determineAllAnchorizedLoops(List<Feature2D> loops, List<Anchor> allForwards,
+                                                               List<Anchor> allReverses, boolean onlyUnique) {
+        int compression = 1000;
+        Map<Integer, List<Anchor>> forwardsMap = AnchorTools.getAnchorMap(allForwards, compression);
+        Map<Integer, List<Anchor>> reversesMap = AnchorTools.getAnchorMap(allReverses, compression);
+        Set<Feature2D> newLoops = new HashSet<>();
         for (Feature2D loop : loops) {
             List<Anchor> forwards = AnchorTools.getClosestAnchors(forwardsMap, loop.getStart1(), loop.getEnd1(), compression);
             List<Anchor> reverses = AnchorTools.getClosestAnchors(reversesMap, loop.getStart2(), loop.getEnd2(), compression);
@@ -82,17 +109,13 @@ public class AnchorFix {
                 if (!onlyUnique || (forwards.size() == 1 && reverses.size() == 1)) {
                     for (Anchor forward : forwards) {
                         for (Anchor reverse : reverses) {
-                            Feature2D newLoop = new Feature2D(loop.getFeatureType(),
-                                    loop.getChr1(), forward.getStart(), forward.getEnd(),
-                                    loop.getChr2(), reverse.getStart(), reverse.getEnd(),
-                                    loop.getColor(), loop.getAttributes());
-                            newLoops.add(newLoop);
+                            createLoopFromAnchors(newLoops, loop, forward, reverse);
                         }
                     }
                 }
             }
         }
-        return newLoops;
+        return new ArrayList<>(newLoops);
     }
 
 
