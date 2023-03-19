@@ -6,9 +6,9 @@ import java.util.Objects;
 
 public class Anchor extends Feature1D {
 
-    private final String chromName;
-    private final long start, end, mid;
-    private final int chrIndex;
+    protected final String chromName;
+    protected final long start, end, mid;
+    protected final int chrIndex;
 
     public Anchor(String chromName, long start1, long end1, int chrIndex) {
         if (chromName.startsWith("chr")) {
@@ -27,11 +27,6 @@ public class Anchor extends Feature1D {
         return "" + chrIndex;
     }
 
-    @Override
-    public Feature1D deepClone() {
-        return new Anchor(chromName, start, end, chrIndex);
-    }
-
     public long getStart() {
         return start;
     }
@@ -42,6 +37,11 @@ public class Anchor extends Feature1D {
 
     public long getMid() {
         return mid;
+    }
+
+    @Override
+    public Feature1D deepClone() {
+        return new Anchor(chromName, start, end, chrIndex);
     }
 
     @Override
@@ -61,5 +61,9 @@ public class Anchor extends Feature1D {
     @Override
     public int hashCode() {
         return Objects.hash(chromName, start, end);
+    }
+
+    public int getWidth() {
+        return (int) (end - start);
     }
 }

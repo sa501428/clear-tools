@@ -21,7 +21,8 @@ import java.util.regex.Pattern;
 public class BedFileParser {
 
     public static GenomeWide1DList<Anchor> loadFromBEDFile(ChromosomeHandler handler,
-                                                           String bedFilePath, float cutoff, boolean isPercentile) {
+                                                           String bedFilePath, float cutoff, boolean isPercentile,
+                                                           boolean saveScore) {
         List<Anchor> anchors = new ArrayList<>();
 
         try {
@@ -53,7 +54,9 @@ public class BedFileParser {
             int start1, end1;
 
             if (tokens[0].startsWith("chr") && tokens.length > 2) {
-                // valid line
+                if (tokens[0].equals("chrom") && tokens[1].equals("x1")) continue;
+
+                // valid lines should have at least 3 columns
                 chr1Name = tokens[0];
                 start1 = Integer.parseInt(tokens[1]);
                 end1 = Integer.parseInt(tokens[2]);
@@ -69,19 +72,28 @@ public class BedFileParser {
                     continue;
                 }
 
-                if (useCutoff) {
-                    if (isPercentile) {
-                        float score = Float.parseFloat(tokens[4]);
-                        anchors.add(new AnchorWithScore(chr.getName(), start1, end1, score, chr.getIndex()));
-                        statistics.addValue(score);
-                    } else if (Float.parseFloat(tokens[4]) > scoreCutoff) {
-                        anchors.add(new Anchor(chr.getName(), start1, end1, chr.getIndex()));
-                    }
-                } else {
+                if (tokens.length < 4) {
                     anchors.add(new Anchor(chr.getName(), start1, end1, chr.getIndex()));
+                } else {
+                    String name = tokens[3];
+                    float score = Float.parseFloat(tokens[4]);
+
+                    if (isPercentile) {
+                        statistics.addValue(score);
+                        anchors.add(new AnchorWithScore(chr.getName(), start1, end1, score, chr.getIndex(),
+                                name));
+                    } else if (useCutoff) {
+                        if (score > scoreCutoff) {
+                            anchors.add(new Anchor(chr.getName(), start1, end1, chr.getIndex()));
+                        }
+                    } else {
+                        anchors.add(new AnchorWithScore(chr.getName(), start1, end1, score, chr.getIndex(),
+                                name));
+                    }
                 }
             }
         }
+
         bufferedReader.close();
         if (anchors.size() < 1) System.err.println("BED File empty - file may have problems or error was encountered");
         if (useCutoff && isPercentile) {

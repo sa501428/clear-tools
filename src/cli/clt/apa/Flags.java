@@ -44,7 +44,7 @@ public class Flags {
         }
         System.out.println("Norm being used: " + norm.getLabel());
 
-        GenomeWide1DList<Anchor> anchors = BedFileParser.loadFromBEDFile(handler, bedFile, cutoff, false);
+        GenomeWide1DList<Anchor> anchors = BedFileParser.loadFromBEDFile(handler, bedFile, cutoff, false, false);
         System.out.println("Number of anchors: " + anchors.size());
         FlagsAggregation apa = new FlagsAggregation(ds, outFolder, norm, anchors, resolution);
         apa.run();

@@ -49,8 +49,8 @@ public class GenerateBedpe {
         int resolution = parser.getResolutionOption(0);
         int percentile = parser.getPercentileOption(-1);
 
-        GenomeWide1DList<Anchor> forwardAnchors = BedFileParser.loadFromBEDFile(handler, forwardMotifFile, percentile, true);
-        GenomeWide1DList<Anchor> reverseAnchors = BedFileParser.loadFromBEDFile(handler, reverseMotifFile, percentile, true);
+        GenomeWide1DList<Anchor> forwardAnchors = BedFileParser.loadFromBEDFile(handler, forwardMotifFile, percentile, true, true);
+        GenomeWide1DList<Anchor> reverseAnchors = BedFileParser.loadFromBEDFile(handler, reverseMotifFile, percentile, true, true);
         Feature2DList output = AnchorTools.createLoops(handler, forwardAnchors, reverseAnchors, minDist, maxDist, resolution);
         output.exportFeatureList(new File(outname), false, Feature2DList.ListFormat.NA);
     }

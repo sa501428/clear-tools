@@ -39,8 +39,8 @@ public class AnchorFix {
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(args[1]);
         String inFile = args[2];
         if (command.contains("2")) {
-            GenomeWide1DList<Anchor> forwardAnchors = BedFileParser.loadFromBEDFile(handler, args[3], -1, false);
-            GenomeWide1DList<Anchor> reverseAnchors = BedFileParser.loadFromBEDFile(handler, args[4], -1, false);
+            GenomeWide1DList<Anchor> forwardAnchors = BedFileParser.loadFromBEDFile(handler, args[3], -1, false, false);
+            GenomeWide1DList<Anchor> reverseAnchors = BedFileParser.loadFromBEDFile(handler, args[4], -1, false, false);
             assignAnchors(inFile, handler, forwardAnchors, reverseAnchors, args[5], command.contains("unique"));
         } else {
             fixAnchors(inFile, handler, args[3]);
