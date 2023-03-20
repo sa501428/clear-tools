@@ -46,7 +46,7 @@ public class FilterBedpeByAnchorAPA {
         Feature2DList outputIndeterminate = new Feature2DList();
 
         for (Chromosome chrom : handler.getChromosomeArrayWithoutAllByAll()) {
-            if (true) System.out.println("Processing " + chrom.getName());
+            if (Main.printVerboseComments) System.out.println("Processing " + chrom.getName());
             List<Feature2D> loops = loopList.get(chrom.getIndex(), chrom.getIndex());
             if (loops.size() > 0) {
                 List<Anchor> anchors = allAnchors.getFeatures("" + chrom.getIndex());
@@ -68,9 +68,9 @@ public class FilterBedpeByAnchorAPA {
                 }
             }
         }
-        outputGood.exportFeatureList(new File(outStem + "_anchorAPA_pass.bed"), false, Feature2DList.ListFormat.NA);
-        outputBad.exportFeatureList(new File(outStem + "_anchorAPA_fail.bed"), false, Feature2DList.ListFormat.NA);
-        outputIndeterminate.exportFeatureList(new File(outStem + "_anchorAPA_indeterminate.bed"), false, Feature2DList.ListFormat.NA);
+        outputGood.exportFeatureList(new File(outStem + "_anchorAPA_pass.bedpe"), false, Feature2DList.ListFormat.NA);
+        outputBad.exportFeatureList(new File(outStem + "_anchorAPA_fail.bedpe"), false, Feature2DList.ListFormat.NA);
+        outputIndeterminate.exportFeatureList(new File(outStem + "_anchorAPA_indeterminate.bedpe"), false, Feature2DList.ListFormat.NA);
     }
 
     private static void filterByLoopAnchors(List<Feature2D> loops, List<Anchor> anchors, List<Feature2D> goodLoops,
@@ -96,7 +96,7 @@ public class FilterBedpeByAnchorAPA {
                 } else {
                     indeterminateLoops.add(loop);
                 }
-            } else {
+            } else if (Main.printVerboseComments) {
                 System.err.println("Loop anchors not found - something went wrong... (" + (count++) + ")");
             }
         }
