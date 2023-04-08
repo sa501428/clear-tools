@@ -131,7 +131,7 @@ public class IntersectBedpe {
 
             if (doSubtraction) {
                 if (pixelList.isEmpty()) coalesced.add(pixelA);
-            } else {
+            } else if (pixelList.size() > 0) {
                 if (doBoundingBox) {
                     pixelList.add(pixelA);
                     coalesced.add(FusionTools.getFeatureFromBounds(pixelList));
