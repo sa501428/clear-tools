@@ -114,13 +114,20 @@ public class IntersectBedpe {
     private static void processFeatures(Set<Feature2D> coalesced, List<Feature2D> featuresA, List<Feature2D> featuresB,
                                         boolean doSubtraction, boolean useExactMatch, int window,
                                         boolean doBoundingBox) {
-        for (Feature2D pixelA : featuresA) {
-            List<Feature2D> pixelList;
-            if (useExactMatch) {
-                pixelList = OverlapTools.getExactMatches(pixelA, featuresB);
+        if (useExactMatch) {
+            Set<Feature2D> setA = new HashSet<>(featuresA);
+            if (doSubtraction) {
+                featuresB.forEach(setA::remove);
             } else {
-                pixelList = OverlapTools.getMatchesWithOverlap(pixelA, featuresB, window);
+                setA.retainAll(featuresB);
             }
+            coalesced.addAll(setA);
+            setA.clear();
+            return;
+        }
+
+        for (Feature2D pixelA : featuresA) {
+            List<Feature2D> pixelList = OverlapTools.getMatchesWithOverlap(pixelA, featuresB, window);
 
             if (pixelList.isEmpty()) {
                 if (doSubtraction) coalesced.add(pixelA);
