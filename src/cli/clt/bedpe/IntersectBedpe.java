@@ -129,16 +129,14 @@ public class IntersectBedpe {
         for (Feature2D pixelA : featuresA) {
             List<Feature2D> pixelList = OverlapTools.getMatchesWithOverlap(pixelA, featuresB, window);
 
-            if (pixelList.isEmpty()) {
-                if (doSubtraction) coalesced.add(pixelA);
+            if (doSubtraction) {
+                if (pixelList.isEmpty()) coalesced.add(pixelA);
             } else {
-                if (!doSubtraction) {
-                    if (doBoundingBox) {
-                        pixelList.add(pixelA);
-                        coalesced.add(FusionTools.getFeatureFromBounds(pixelList));
-                    } else {
-                        coalesced.add(pixelA);
-                    }
+                if (doBoundingBox) {
+                    pixelList.add(pixelA);
+                    coalesced.add(FusionTools.getFeatureFromBounds(pixelList));
+                } else {
+                    coalesced.add(pixelA);
                 }
             }
         }
