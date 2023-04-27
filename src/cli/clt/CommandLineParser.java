@@ -59,6 +59,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option attributeOption = addStringOption("attributes");
     private final Option numThreadsOption = addIntegerOption("threads");
     private final Option roundingOption = addIntegerOption("round");
+    private final Option chromosomeOption = addStringOption('c', "chrom");
 
     private boolean optionToBoolean(Option option) {
         Object opt = getOptionValue(option);
@@ -184,5 +185,9 @@ public class CommandLineParser extends CmdLineParser {
 
     public int getRoundOption() {
         return optionToInteger(roundingOption, 1);
+    }
+
+    public String getChromosomeOption() {
+        return optionToString(chromosomeOption);
     }
 }

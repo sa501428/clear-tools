@@ -25,8 +25,6 @@
 package cli.clt.apa;
 
 import cli.clt.CommandLineParser;
-import cli.utils.flags.RegionConfiguration;
-import cli.utils.general.HiCUtils;
 import cli.utils.seer.SeerUtils;
 import javastraw.expected.ExpectedUtils;
 import javastraw.expected.LogExpectedZscoreSpline;
@@ -45,11 +43,10 @@ import javastraw.tools.ParallelizationTools;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnchorStrength {
-    public static String usage = "anchor-strength [-k NORM] " +
+    public static String usage = "anchor-strength [-k NORM] [-c chrom]" +
             "[--min-dist val] [-r resolution] <input.hic> <output.stem>\n" +
             "calculate localized row sums near loops";
     private final String outputPath;
@@ -57,6 +54,7 @@ public class AnchorStrength {
     private final int minPeakDist; // distance between two bins, can be changed in opts
     private final int resolution;
     private NormalizationType norm = NormalizationHandler.VC;
+    private String chrom = null;
 
     public AnchorStrength(String[] args, CommandLineParser parser) {
         if (args.length != 3) {
@@ -66,6 +64,7 @@ public class AnchorStrength {
         resolution = parser.getResolutionOption(2000);
         ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, resolution > 50);
         outputPath = args[2];
+        chrom = parser.getChromosomeOption();
 
         String possibleNorm = parser.getNormalizationStringOption();
         try {
@@ -88,10 +87,7 @@ public class AnchorStrength {
         HiCZoom zoom = new HiCZoom(resolution);
         ChromosomeHandler handler = ds.getChromosomeHandler();
 
-        Map<Integer, RegionConfiguration> chromosomePairs = new ConcurrentHashMap<>();
-        int pairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
-                handler.getChromosomeArrayWithoutAllByAll(), false);
-
+        Chromosome[] chromosomes = getChromosomes(handler);
         final AtomicInteger currChromPair = new AtomicInteger(0);
 
         final Map<Chromosome, float[]> upStreamRowSums = new HashMap<>();
@@ -100,24 +96,21 @@ public class AnchorStrength {
         ParallelizationTools.launchParallelizedCode(() -> {
 
             int threadPair = currChromPair.getAndIncrement();
-            while (threadPair < pairCounter) {
-                RegionConfiguration config = chromosomePairs.get(threadPair);
-                Chromosome chr1 = config.getChr1();
-                Chromosome chr2 = config.getChr2();
-
-                Matrix matrix = ds.getMatrix(chr1, chr2);
+            while (threadPair < chromosomes.length) {
+                Chromosome chrom = chromosomes[threadPair];
+                Matrix matrix = ds.getMatrix(chrom, chrom);
                 if (matrix != null) {
 
                     MatrixZoomData zd = matrix.getZoomData(zoom);
                     if (zd != null) {
                         try {
-                            int numEntries = (int) ((chr1.getLength() / resolution) + 1);
+                            int numEntries = (int) ((chrom.getLength() / resolution) + 1);
                             float[] upStreamSums = new float[numEntries];
                             float[] downStreamSums = new float[numEntries];
                             int[] upStreamCounts = new int[numEntries];
                             int[] downStreamCounts = new int[numEntries];
 
-                            LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chr1, resolution);
+                            LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom, resolution);
 
                             Iterator<ContactRecord> it = ExpectedUtils.getIterator(zd, norm);
                             while (it.hasNext()) {
@@ -140,10 +133,10 @@ public class AnchorStrength {
                             divide(downStreamSums, downStreamCounts);
 
                             synchronized (upStreamRowSums) {
-                                upStreamRowSums.put(chr1, upStreamSums);
+                                upStreamRowSums.put(chrom, upStreamSums);
                             }
                             synchronized (downStreamRowSums) {
-                                downStreamRowSums.put(chr1, downStreamSums);
+                                downStreamRowSums.put(chrom, downStreamSums);
                             }
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
@@ -163,6 +156,18 @@ public class AnchorStrength {
             e.printStackTrace();
         }
         System.out.println("Anchor strengths complete");
+    }
+
+    private Chromosome[] getChromosomes(ChromosomeHandler handler) {
+        Chromosome[] chromosomes = handler.getChromosomeArrayWithoutAllByAll();
+        if (chrom != null && chrom.length() > 0) {
+            String[] chroms = chrom.split(",");
+            chromosomes = new Chromosome[chroms.length];
+            for (int i = 0; i < chroms.length; i++) {
+                chromosomes[i] = handler.getChromosomeFromName(chroms[i]);
+            }
+        }
+        return chromosomes;
     }
 
     private void divide(float[] sums, int[] counts) {
