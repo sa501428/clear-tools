@@ -25,6 +25,8 @@
 package cli.clt.apa;
 
 import cli.clt.CommandLineParser;
+import cli.utils.general.ArrayTools;
+import cli.utils.general.VectorCleaner;
 import cli.utils.seer.SeerUtils;
 import javastraw.expected.ExpectedUtils;
 import javastraw.expected.LogExpectedZscoreSpline;
@@ -112,18 +114,26 @@ public class AnchorStrength {
 
                             LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom, resolution);
 
+                            double[] vector = ArrayTools.copy(ds.getNormalizationVector(chrom.getIndex(), zoom,
+                                    NormalizationHandler.VC).getData().getValues().get(0));
+                            VectorCleaner.inPlaceZscore(vector);
+
                             Iterator<ContactRecord> it = ExpectedUtils.getIterator(zd, norm);
                             while (it.hasNext()) {
                                 ContactRecord cr = it.next();
                                 if (cr.getCounts() > 0) {
-                                    int dist = ExpectedUtils.getDist(cr);
-                                    if (dist > minPeakDist) {
-                                        float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
-                                        if (zscore > 1) {
-                                            upStreamSums[cr.getBinX()] += (dist * zscore);
-                                            upStreamCounts[cr.getBinX()] += dist;
-                                            downStreamSums[cr.getBinY()] += (dist * zscore);
-                                            downStreamCounts[cr.getBinY()] += dist;
+                                    if (vector[cr.getBinX()] > -2 && vector[cr.getBinY()] > -2) {
+                                        int dist = ExpectedUtils.getDist(cr);
+                                        if (dist > minPeakDist) {
+                                            float oe = (float) (cr.getCounts() / poly.getExpectedFromUncompressedBin(dist));
+                                            float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
+                                            if (zscore > 1 && oe > 2) {
+                                                upStreamSums[cr.getBinX()] += (dist * zscore);
+                                                upStreamCounts[cr.getBinX()] += dist;
+
+                                                downStreamSums[cr.getBinY()] += (dist * zscore);
+                                                downStreamCounts[cr.getBinY()] += dist;
+                                            }
                                         }
                                     }
                                 }

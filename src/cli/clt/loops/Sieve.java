@@ -41,6 +41,7 @@ public class Sieve {
             "\t\tsieve-post-filter <loops.bedpe> <out.stem> <genomeID>";
     private static int zLowCutoff = 1;
     public static String GLOBAL_OE = "_sieve_obs_over_global_expected";
+    public static String GLOBAL_PERCENT = "_sieve_global_percent_contact";
     public static String LOCAL_OE = "_sieve_obs_over_local_expected";
     public static String GLOBAL_Z = "_sieve_global_zscore";
     public static String LOCAL_Z = "_sieve_local_zscore";
@@ -190,6 +191,8 @@ public class Sieve {
                                             float globalZScore = (float) poly.getZscoreForObservedUncompressedBin(dist, observed);
                                             loop.addStringAttribute(resolution + GLOBAL_Z, "" + globalZScore);
                                             loop.addStringAttribute(resolution + GLOBAL_OE, "" + globalOE);
+
+                                            loop.addStringAttribute(resolution + GLOBAL_PERCENT, "" + poly.getPercentContact(dist, observed));
                                         }
                                     }
                                     regionMatrix = null;

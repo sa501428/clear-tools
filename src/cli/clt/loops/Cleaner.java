@@ -145,14 +145,14 @@ public class Cleaner {
         return goodLoopsList;
     }
 
-    private static double getZscore(long pos, int resolution, Map<Integer, double[]> vectorMap) {
+    public static double getZscore(long pos, int resolution, Map<Integer, double[]> vectorMap) {
         double[] vector = vectorMap.get(resolution);
         int x = (int) (pos / resolution);
         return vector[x];
     }
 
-    private static Map<Integer, double[]> loadVectors(Dataset dataset, Chromosome chrom, NormalizationType vcNorm,
-                                                      Set<HiCZoom> zooms) {
+    public static Map<Integer, double[]> loadVectors(Dataset dataset, Chromosome chrom, NormalizationType vcNorm,
+                                                     Set<HiCZoom> zooms) {
         Map<Integer, double[]> vectorMap = new HashMap<>();
         for (HiCZoom zoom : zooms) {
             double[] vector = ArrayTools.copy(dataset.getNormalizationVector(chrom.getIndex(), zoom,
