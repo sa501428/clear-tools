@@ -84,17 +84,17 @@ public class AnchorTools {
         return anchorMap;
     }
 
-    public static Anchor getClosestAnchor(Map<Integer, List<Anchor>> forwardsMap, long start, long end, int compression) {
+    public static Anchor getClosestAnchor(Map<Integer, List<Anchor>> anchorMap, long start, long end, int compression) {
         int key = (int) (((start + end) / 2) / compression);
         List<Anchor> anchors = new ArrayList<>();
-        if (forwardsMap.containsKey(key)) {
-            anchors.addAll(forwardsMap.get(key));
+        if (anchorMap.containsKey(key)) {
+            anchors.addAll(anchorMap.get(key));
         }
-        if (forwardsMap.containsKey(key - 1)) {
-            anchors.addAll(forwardsMap.get(key - 1));
+        if (anchorMap.containsKey(key - 1)) {
+            anchors.addAll(anchorMap.get(key - 1));
         }
-        if (forwardsMap.containsKey(key + 1)) {
-            anchors.addAll(forwardsMap.get(key + 1));
+        if (anchorMap.containsKey(key + 1)) {
+            anchors.addAll(anchorMap.get(key + 1));
         }
         return closestAnchorToMid(start, end, anchors);
     }
