@@ -51,30 +51,35 @@ public class LoopDumper {
 
                 int matrixWidth = 2 * window + 1;
 
-                SparseContactMatrixWithMasking scm = new SparseContactMatrixWithMasking(zd,
-                        feature2DList, resolution, window, matrixWidth, norm);
+                try {
+                    SparseContactMatrixWithMasking scm = new SparseContactMatrixWithMasking(zd,
+                            feature2DList, resolution, window, matrixWidth, norm);
 
 
-                AtomicInteger index = new AtomicInteger(0);
+                    AtomicInteger index = new AtomicInteger(0);
 
-                ParallelizationTools.launchParallelizedCode(10, new Runnable() {
-                    @Override
-                    public void run() {
-                        int currIndex = index.getAndIncrement();
+                    ParallelizationTools.launchParallelizedCode(10, new Runnable() {
+                        @Override
+                        public void run() {
+                            int currIndex = index.getAndIncrement();
 
-                        while (currIndex < feature2DList.size()) {
+                            while (currIndex < feature2DList.size()) {
 
-                            Feature2D loop = feature2DList.get(currIndex);
-                            float[][] output = new float[matrixWidth][matrixWidth];
-                            MultiAPAManager.addToMatrix(output, scm, loop, window, resolution, matrixWidth);
-                            String name = loop.getChr1() + "_" + loop.getStart1() + "_" + loop.getEnd1() + "_" +
-                                    loop.getChr2() + "_" + loop.getStart2() + "_" + loop.getEnd2();
-                            String path = new File(folder, name + ".npy").getAbsolutePath();
-                            MatrixTools.saveMatrixTextNumpy(path, output);
-                            currIndex = index.getAndIncrement();
+                                Feature2D loop = feature2DList.get(currIndex);
+                                float[][] output = new float[matrixWidth][matrixWidth];
+                                MultiAPAManager.addToMatrix(output, scm, loop, window, resolution, matrixWidth);
+                                String name = loop.getChr1() + "_" + loop.getStart1() + "_" + loop.getEnd1() + "_" +
+                                        loop.getChr2() + "_" + loop.getStart2() + "_" + loop.getEnd2();
+                                String path = new File(folder, name + ".npy").getAbsolutePath();
+                                MatrixTools.saveMatrixTextNumpy(path, output);
+                                currIndex = index.getAndIncrement();
+                            }
                         }
-                    }
-                });
+                    });
+                } catch (Exception ex) {
+                    System.err.println("Error processing: " + chr);
+                    ex.printStackTrace();
+                }
 
             });
         } catch (Exception ex) {
