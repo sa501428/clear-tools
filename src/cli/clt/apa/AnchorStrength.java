@@ -42,6 +42,7 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -76,8 +77,8 @@ public class AnchorStrength {
             System.err.println(e.getMessage());
         }
         System.out.println("Using normalization: " + norm.getLabel());
-        minPeakDist = parser.getMinDistVal(Math.max(5, 1000 / resolution));
-        maxPeakDist = parser.getMaxDistVal(10000000 / resolution);
+        minPeakDist = parser.getMinDistVal(Math.max(10, 1000 / resolution));
+        maxPeakDist = parser.getMaxDistVal(5000000 / resolution);
     }
 
     private void printUsageAndExit() {
@@ -93,17 +94,10 @@ public class AnchorStrength {
         Chromosome[] chromosomes = getChromosomes(handler);
         final AtomicInteger currChromPair = new AtomicInteger(0);
 
-        final Map<Chromosome, float[]> allUpStreamRowSums = new HashMap<>();
-        final Map<Chromosome, float[]> allDownStreamRowSums = new HashMap<>();
-        final Map<Chromosome, float[]> allUpStreamZscores = new HashMap<>();
-        final Map<Chromosome, float[]> allDownStreamZscores = new HashMap<>();
-        final Map<Chromosome, int[]> allUpStreamDists = new HashMap<>();
-        final Map<Chromosome, int[]> allDownStreamDists = new HashMap<>();
-        final Map<Chromosome, float[]> allUpStreamVals = new HashMap<>();
-        final Map<Chromosome, float[]> allDownStreamVals = new HashMap<>();
-        final Map<Chromosome, int[]> allUpStreamCounts = new HashMap<>();
-        final Map<Chromosome, int[]> allDownStreamCounts = new HashMap<>();
-
+        final Map<Chromosome, double[]> allUpStreamOEProd = new HashMap<>();
+        final Map<Chromosome, double[]> allDownStreamOEProd = new HashMap<>();
+        final Map<Chromosome, double[]> allBothStreamOEProd = new HashMap<>();
+        final Map<Chromosome, float[]> allBothStreamZscores = new HashMap<>();
 
         ParallelizationTools.launchParallelizedCode(() -> {
 
@@ -117,14 +111,15 @@ public class AnchorStrength {
                     if (zd != null) {
                         try {
                             int numEntries = (int) ((chrom.getLength() / resolution) + 1);
-                            float[] upStreamSums = new float[numEntries];
-                            float[] downStreamSums = new float[numEntries];
-                            int[] upStreamDists = new int[numEntries];
-                            int[] downStreamDists = new int[numEntries];
-                            float[] upStreamZscores = new float[numEntries];
-                            float[] downStreamZscores = new float[numEntries];
-                            float[] upStreamVals = new float[numEntries];
-                            float[] downStreamVals = new float[numEntries];
+                            double[] upStreamSums = new double[numEntries];
+                            double[] downStreamSums = new double[numEntries];
+                            double[] bothStreamSums = new double[numEntries];
+                            Arrays.fill(upStreamSums, 1);
+                            Arrays.fill(downStreamSums, 1);
+                            Arrays.fill(bothStreamSums, 1);
+
+                            float[] bothStreamZscores = new float[numEntries];
+
                             int[] upStreamCounts = new int[numEntries];
                             int[] downStreamCounts = new int[numEntries];
 
@@ -143,84 +138,46 @@ public class AnchorStrength {
                                         if (dist > minPeakDist && dist < maxPeakDist) {
                                             float oe = (float) ((cr.getCounts() + 1) / (poly.getExpectedFromUncompressedBin(dist) + 1));
                                             float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
-                                            if (zscore > 1 && oe > 2) {
-                                                /*
-                                                upStreamSums[cr.getBinX()] += (dist * zscore);
-                                                upStreamDists[cr.getBinX()] += dist;
-                                                upStreamZscores[cr.getBinX()] += zscore;
-                                                upStreamVals[cr.getBinX()] += Math.log(1+cr.getCounts());
+                                            if (oe > 2) { // zscore > 1 && oe > 2
+
+                                                upStreamSums[cr.getBinX()] *= oe;
+                                                downStreamSums[cr.getBinY()] *= oe;
+
+                                                bothStreamSums[cr.getBinX()] *= oe;
+                                                bothStreamSums[cr.getBinY()] *= oe;
+
+                                                bothStreamZscores[cr.getBinX()] += zscore;
+                                                bothStreamZscores[cr.getBinY()] += zscore;
+
                                                 upStreamCounts[cr.getBinX()]++;
-
-                                                downStreamSums[cr.getBinY()] += (dist * zscore);
-                                                downStreamDists[cr.getBinY()] += dist;
-                                                downStreamZscores[cr.getBinY()] += zscore;
-                                                downStreamVals[cr.getBinY()] += Math.log(1+cr.getCounts());
                                                 downStreamCounts[cr.getBinY()]++;
-                                                */
-
-                                                upStreamSums[cr.getBinX()] += (dist * (cr.getCounts() + 1));
-                                                upStreamVals[cr.getBinX()] += (dist * (poly.getExpectedFromUncompressedBin(dist) + 1));
-
-                                                downStreamSums[cr.getBinY()] += (dist * (cr.getCounts() + 1));
-                                                downStreamVals[cr.getBinY()] += (dist * (poly.getExpectedFromUncompressedBin(dist) + 1));
-
                                             }
                                         }
                                     }
                                 }
                             }
 
-                            divide(upStreamSums, upStreamVals);
-                            divide(downStreamSums, downStreamVals);
+                            //normalizeByPercentile(upStreamSums, 50);
+                            //normalizeByPercentile(downStreamSums, 50);
+                            int numLoopyEntries = VectorCleaner.getPercentile(upStreamCounts, 50, 2);
+                            takeNthRoot(upStreamSums, numLoopyEntries);
+                            takeNthRoot(downStreamSums, numLoopyEntries);
+                            takeNthRoot(bothStreamSums, numLoopyEntries);
+                            divide(bothStreamZscores, numLoopyEntries);
 
-                            /*
-                            divide(upStreamSums, upStreamCounts);
-                            divide(downStreamSums, downStreamCounts);
-
-                            divide(upStreamZscores, upStreamCounts);
-                            divide(downStreamZscores, downStreamCounts);
-
-                            divide(upStreamVals, upStreamCounts);
-                            divide(downStreamVals, downStreamCounts);
-
-                            divide(upStreamDists, upStreamCounts);
-                            divide(downStreamDists, downStreamCounts);
-                            */
-
-
-                            synchronized (allUpStreamRowSums) {
-                                allUpStreamRowSums.put(chrom, upStreamSums);
+                            synchronized (allUpStreamOEProd) {
+                                allUpStreamOEProd.put(chrom, upStreamSums);
                             }
-                            synchronized (allDownStreamRowSums) {
-                                allDownStreamRowSums.put(chrom, downStreamSums);
+                            synchronized (allDownStreamOEProd) {
+                                allDownStreamOEProd.put(chrom, downStreamSums);
                             }
-                            /*
-                            synchronized (allUpStreamZscores) {
-                                allUpStreamZscores.put(chrom, upStreamZscores);
+                            synchronized (allBothStreamOEProd) {
+                                allBothStreamOEProd.put(chrom, bothStreamSums);
                             }
-                            synchronized (allDownStreamZscores) {
-                                allDownStreamZscores.put(chrom, downStreamZscores);
-                            }
-                            synchronized (allUpStreamDists) {
-                                allUpStreamDists.put(chrom, upStreamDists);
-                            }
-                            synchronized (allDownStreamDists) {
-                                allDownStreamDists.put(chrom, downStreamDists);
-                            }
-                            synchronized (allUpStreamVals) {
-                                allUpStreamVals.put(chrom, upStreamVals);
-                            }
-                            synchronized (allDownStreamVals) {
-                                allDownStreamVals.put(chrom, downStreamVals);
-                            }
-                            synchronized (allUpStreamCounts) {
-                                allUpStreamCounts.put(chrom, upStreamCounts);
-                            }
-                            synchronized (allDownStreamCounts) {
-                                allDownStreamCounts.put(chrom, downStreamCounts);
+                            synchronized (allBothStreamZscores) {
+                                allBothStreamZscores.put(chrom, bothStreamZscores);
                             }
 
- */
 
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
@@ -234,8 +191,13 @@ public class AnchorStrength {
 
         System.out.println("Exporting anchor results...");
         try {
-            SeerUtils.exportRowFloatsToBedgraph(allUpStreamRowSums, outputPath + ".upstream.sums.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allDownStreamRowSums, outputPath + ".downstream.sums.bedgraph", resolution);
+            SeerUtils.exportRowDoublesToBedgraph(allUpStreamOEProd, outputPath + ".upstream.sums.bedgraph", resolution);
+            SeerUtils.exportRowDoublesToBedgraph(allDownStreamOEProd, outputPath + ".downstream.sums.bedgraph", resolution);
+            SeerUtils.exportRowDoublesToBedgraph(allBothStreamOEProd, outputPath + ".bothstream.sums.bedgraph", resolution);
+            SeerUtils.exportRowFloatsToBedgraph(allBothStreamZscores, outputPath + ".bothstream.zscores.bedgraph", resolution);
+
+            //BedTools.exportBedFile(new File(outputPath + ".disoriented.anchors.bed"), getPeaks(resolution, allBothStreamOEProd, allBothStreamZscores));
+
 
             /*
             SeerUtils.exportRowFloatsToBedgraph(allUpStreamZscores, outputPath + ".upstream.zscores.bedgraph", resolution);
@@ -253,6 +215,26 @@ public class AnchorStrength {
             e.printStackTrace();
         }
         System.out.println("Anchor strengths complete");
+    }
+
+    private void divide(float[] vector, int scalar) {
+        for (int k = 0; k < vector.length; k++) {
+            vector[k] /= scalar;
+        }
+    }
+
+    private void takeNthRoot(double[] vector, int n) {
+        for (int k = 0; k < vector.length; k++) {
+            vector[k] = Math.pow(vector[k], 1.0 / n);
+        }
+    }
+
+
+    private void normalizeByPercentile(double[] vector, int percentile) {
+        double perc = VectorCleaner.getPercentile(vector, percentile, 2);
+        for (int k = 0; k < vector.length; k++) {
+            vector[k] /= perc;
+        }
     }
 
     private Chromosome[] getChromosomes(ChromosomeHandler handler) {
