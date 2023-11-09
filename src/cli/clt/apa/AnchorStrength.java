@@ -49,7 +49,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnchorStrength {
-    public static String usage = "anchor-strength [-k NORM] [-c chrom]" +
+    public static String usage = "anchor-strength[-root] [-k NORM] [-c chrom]" +
             "[--min-dist val] [--max-dist val] [-r resolution] <input.hic> <output.stem>\n" +
             "calculate localized row sums near loops";
     private final String outputPath;
@@ -57,12 +57,15 @@ public class AnchorStrength {
     private final int minPeakDist, maxPeakDist; // distance between two bins, can be changed in opts
     private final int resolution;
     private NormalizationType norm = NormalizationHandler.VC;
-    private String chrom = null;
+    private final String chrom;
+    private final boolean useFullRoot;
 
-    public AnchorStrength(String[] args, CommandLineParser parser) {
+    public AnchorStrength(String[] args, CommandLineParser parser, String name) {
         if (args.length != 3) {
             printUsageAndExit();
         }
+
+        useFullRoot = name.contains("root");
 
         resolution = parser.getResolutionOption(2000);
         ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, resolution > 50);
@@ -71,14 +74,16 @@ public class AnchorStrength {
 
         String possibleNorm = parser.getNormalizationStringOption();
         try {
-            norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+            if (possibleNorm != null && possibleNorm.length() > 0) {
+                norm = ds.getNormalizationHandler().getNormTypeFromString(possibleNorm);
+            }
         } catch (Exception e) {
             e.printStackTrace();
             System.err.println(e.getMessage());
         }
         System.out.println("Using normalization: " + norm.getLabel());
-        minPeakDist = parser.getMinDistVal(Math.max(10, 1000 / resolution));
-        maxPeakDist = parser.getMaxDistVal(5000000 / resolution);
+        minPeakDist = parser.getMinDistVal(100000) / resolution;
+        maxPeakDist = parser.getMaxDistVal(5000000) / resolution;
     }
 
     private void printUsageAndExit() {
@@ -155,7 +160,11 @@ public class AnchorStrength {
                                 }
                             }
 
-                            int numLoopyEntries = VectorCleaner.getPercentile(counts, 50, 2);
+                            int numLoopyEntries = maxPeakDist - minPeakDist;
+                            if (!useFullRoot) {
+                                numLoopyEntries = VectorCleaner.getPercentile(counts, 50, 2);
+                            }
+
                             takeNthRoot(upStreamOEP, numLoopyEntries);
                             takeNthRoot(downStreamOEP, numLoopyEntries);
                             takeNthRoot(bothStreamOEP, numLoopyEntries);
