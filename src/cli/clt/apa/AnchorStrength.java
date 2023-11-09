@@ -25,7 +25,9 @@
 package cli.clt.apa;
 
 import cli.clt.CommandLineParser;
+import cli.utils.flags.Anchor;
 import cli.utils.general.ArrayTools;
+import cli.utils.general.BedTools;
 import cli.utils.general.VectorCleaner;
 import cli.utils.seer.SeerUtils;
 import javastraw.expected.ExpectedUtils;
@@ -42,10 +44,8 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.io.File;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnchorStrength {
@@ -111,17 +111,15 @@ public class AnchorStrength {
                     if (zd != null) {
                         try {
                             int numEntries = (int) ((chrom.getLength() / resolution) + 1);
-                            double[] upStreamSums = new double[numEntries];
-                            double[] downStreamSums = new double[numEntries];
-                            double[] bothStreamSums = new double[numEntries];
-                            Arrays.fill(upStreamSums, 1);
-                            Arrays.fill(downStreamSums, 1);
-                            Arrays.fill(bothStreamSums, 1);
+                            double[] upStreamOEP = new double[numEntries];
+                            double[] downStreamOEP = new double[numEntries];
+                            double[] bothStreamOEP = new double[numEntries];
+                            Arrays.fill(upStreamOEP, 1);
+                            Arrays.fill(downStreamOEP, 1);
+                            Arrays.fill(bothStreamOEP, 1);
 
                             float[] bothStreamZscores = new float[numEntries];
-
-                            int[] upStreamCounts = new int[numEntries];
-                            int[] downStreamCounts = new int[numEntries];
+                            int[] counts = new int[numEntries];
 
                             LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom, resolution);
 
@@ -140,39 +138,37 @@ public class AnchorStrength {
                                             float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
                                             if (oe > 2) { // zscore > 1 && oe > 2
 
-                                                upStreamSums[cr.getBinX()] *= oe;
-                                                downStreamSums[cr.getBinY()] *= oe;
+                                                upStreamOEP[cr.getBinX()] *= oe;
+                                                downStreamOEP[cr.getBinY()] *= oe;
 
-                                                bothStreamSums[cr.getBinX()] *= oe;
-                                                bothStreamSums[cr.getBinY()] *= oe;
+                                                bothStreamOEP[cr.getBinX()] *= oe;
+                                                bothStreamOEP[cr.getBinY()] *= oe;
 
                                                 bothStreamZscores[cr.getBinX()] += zscore;
                                                 bothStreamZscores[cr.getBinY()] += zscore;
 
-                                                upStreamCounts[cr.getBinX()]++;
-                                                downStreamCounts[cr.getBinY()]++;
+                                                counts[cr.getBinX()]++;
+                                                counts[cr.getBinY()]++;
                                             }
                                         }
                                     }
                                 }
                             }
 
-                            //normalizeByPercentile(upStreamSums, 50);
-                            //normalizeByPercentile(downStreamSums, 50);
-                            int numLoopyEntries = VectorCleaner.getPercentile(upStreamCounts, 50, 2);
-                            takeNthRoot(upStreamSums, numLoopyEntries);
-                            takeNthRoot(downStreamSums, numLoopyEntries);
-                            takeNthRoot(bothStreamSums, numLoopyEntries);
+                            int numLoopyEntries = VectorCleaner.getPercentile(counts, 50, 2);
+                            takeNthRoot(upStreamOEP, numLoopyEntries);
+                            takeNthRoot(downStreamOEP, numLoopyEntries);
+                            takeNthRoot(bothStreamOEP, numLoopyEntries);
                             divide(bothStreamZscores, numLoopyEntries);
 
                             synchronized (allUpStreamOEProd) {
-                                allUpStreamOEProd.put(chrom, upStreamSums);
+                                allUpStreamOEProd.put(chrom, upStreamOEP);
                             }
                             synchronized (allDownStreamOEProd) {
-                                allDownStreamOEProd.put(chrom, downStreamSums);
+                                allDownStreamOEProd.put(chrom, downStreamOEP);
                             }
                             synchronized (allBothStreamOEProd) {
-                                allBothStreamOEProd.put(chrom, bothStreamSums);
+                                allBothStreamOEProd.put(chrom, bothStreamOEP);
                             }
                             synchronized (allBothStreamZscores) {
                                 allBothStreamZscores.put(chrom, bothStreamZscores);
@@ -191,30 +187,42 @@ public class AnchorStrength {
 
         System.out.println("Exporting anchor results...");
         try {
-            SeerUtils.exportRowDoublesToBedgraph(allUpStreamOEProd, outputPath + ".upstream.sums.bedgraph", resolution);
-            SeerUtils.exportRowDoublesToBedgraph(allDownStreamOEProd, outputPath + ".downstream.sums.bedgraph", resolution);
-            SeerUtils.exportRowDoublesToBedgraph(allBothStreamOEProd, outputPath + ".bothstream.sums.bedgraph", resolution);
+            SeerUtils.exportRowDoublesToBedgraph(allUpStreamOEProd, outputPath + ".upstream.OEprod.bedgraph", resolution);
+            SeerUtils.exportRowDoublesToBedgraph(allDownStreamOEProd, outputPath + ".downstream.OEprod.bedgraph", resolution);
+            SeerUtils.exportRowDoublesToBedgraph(allBothStreamOEProd, outputPath + ".bothstream.OEprod.bedgraph", resolution);
             SeerUtils.exportRowFloatsToBedgraph(allBothStreamZscores, outputPath + ".bothstream.zscores.bedgraph", resolution);
 
-            //BedTools.exportBedFile(new File(outputPath + ".disoriented.anchors.bed"), getPeaks(resolution, allBothStreamOEProd, allBothStreamZscores));
-
-
-            /*
-            SeerUtils.exportRowFloatsToBedgraph(allUpStreamZscores, outputPath + ".upstream.zscores.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allDownStreamZscores, outputPath + ".downstream.zscores.bedgraph", resolution);
-            SeerUtils.exportRowIntsToBedgraph(allUpStreamDists, outputPath + ".upstream.dists.bedgraph", resolution);
-            SeerUtils.exportRowIntsToBedgraph(allDownStreamDists, outputPath + ".downstream.dists.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allUpStreamVals, outputPath + ".upstream.values.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allDownStreamVals, outputPath + ".downstream.values.bedgraph", resolution);
-            SeerUtils.exportRowIntsToBedgraph(allUpStreamCounts, outputPath + ".upstream.counts.bedgraph", resolution);
-            SeerUtils.exportRowIntsToBedgraph(allDownStreamCounts, outputPath + ".downstream.counts.bedgraph", resolution);
-
-             */
+            BedTools.exportBedFile(new File(outputPath + ".oe.anchors.bed"),
+                    getPeaks(resolution, allBothStreamOEProd, allBothStreamZscores));
 
         } catch (Exception e) {
             e.printStackTrace();
         }
         System.out.println("Anchor strengths complete");
+    }
+
+    private Set<Anchor> getPeaks(int resolution, Map<Chromosome, double[]> allBothStreamOEProd,
+                                 Map<Chromosome, float[]> allBothStreamZscores) {
+        Set<Anchor> peaks = new HashSet<>();
+        for (Chromosome chrom : allBothStreamOEProd.keySet()) {
+            double[] prod = allBothStreamOEProd.get(chrom);
+            float[] zscores = allBothStreamZscores.get(chrom);
+            for (int i = 2; i < prod.length - 2; i++) {
+                if (prod[i] > 1 && prod[i - 1] > 1 && prod[i + 1] > 1) {
+                    if (zscores[i] > 0 && zscores[i - 1] > 0 && zscores[i + 1] > 0) {
+                        if (prod[i] > 1.1 * prod[i - 1] && prod[i] > 1.1 * prod[i + 1]
+                                && prod[i - 1] > 1.05 * prod[i - 2] && prod[i + 1] > 1.05 * prod[i + 2]) {
+                            if (zscores[i] > zscores[i - 1] && zscores[i] > zscores[i + 1]) {
+                                peaks.add(new Anchor(chrom.getName(),
+                                        (long) i * resolution, (long) (i + 1) * resolution,
+                                        chrom.getIndex()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return peaks;
     }
 
     private void divide(float[] vector, int scalar) {
