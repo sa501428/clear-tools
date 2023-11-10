@@ -27,7 +27,6 @@ package cli.clt.apa;
 import cli.clt.CommandLineParser;
 import cli.utils.flags.Anchor;
 import cli.utils.general.ArrayTools;
-import cli.utils.general.BedTools;
 import cli.utils.general.VectorCleaner;
 import cli.utils.seer.SeerUtils;
 import javastraw.expected.ExpectedUtils;
@@ -44,7 +43,6 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
-import java.io.File;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -102,10 +100,6 @@ public class AnchorStrength {
         final Map<Chromosome, double[]> allUpStreamOEProd = new HashMap<>();
         final Map<Chromosome, double[]> allDownStreamOEProd = new HashMap<>();
         final Map<Chromosome, double[]> allBothStreamOEProd = new HashMap<>();
-        final Map<Chromosome, float[]> allBothStreamZscores = new HashMap<>();
-        final Map<Chromosome, float[]> allUpStreamOEProdHarmonic = new HashMap<>();
-        final Map<Chromosome, float[]> allDownStreamOEProdHarmonic = new HashMap<>();
-        final Map<Chromosome, float[]> allBothStreamOEProdHarmonic = new HashMap<>();
 
         ParallelizationTools.launchParallelizedCode(() -> {
 
@@ -126,14 +120,8 @@ public class AnchorStrength {
                             Arrays.fill(downStreamOEP, 1);
                             Arrays.fill(bothStreamOEP, 1);
 
-                            float[] upStreamOEPHarmonic = new float[numEntries];
-                            float[] downStreamOEPHarmonic = new float[numEntries];
-                            float[] bothStreamOEPHarmonic = new float[numEntries];
-                            int[] countsHarmonicUpstream = new int[numEntries];
-                            int[] countsHarmonicDownstream = new int[numEntries];
-
-                            float[] bothStreamZscores = new float[numEntries];
-                            int[] counts = new int[numEntries];
+                            int[] countsUpstream = new int[numEntries];
+                            int[] countsDownstream = new int[numEntries];
 
                             LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom, resolution);
 
@@ -158,49 +146,29 @@ public class AnchorStrength {
                                                 bothStreamOEP[cr.getBinX()] *= oe;
                                                 bothStreamOEP[cr.getBinY()] *= oe;
 
-                                                upStreamOEPHarmonic[cr.getBinX()] += 1.0 / oe;
-                                                downStreamOEPHarmonic[cr.getBinY()] += 1.0 / oe;
+                                                countsUpstream[cr.getBinX()]++;
+                                                countsDownstream[cr.getBinY()]++;
 
-                                                bothStreamOEPHarmonic[cr.getBinX()] += 1.0 / oe;
-                                                bothStreamOEPHarmonic[cr.getBinY()] += 1.0 / oe;
-
-                                                countsHarmonicUpstream[cr.getBinX()]++;
-                                                countsHarmonicDownstream[cr.getBinY()]++;
-
-                                                bothStreamZscores[cr.getBinX()] += zscore;
-                                                bothStreamZscores[cr.getBinY()] += zscore;
-
-                                                counts[cr.getBinX()]++;
-                                                counts[cr.getBinY()]++;
                                             }
                                         }
                                     }
                                 }
                             }
 
-                            int numLoopyEntries = VectorCleaner.getPercentile(counts, 50, 2);
+                            //int numLoopyEntries = VectorCleaner.getPercentile(counts, 50, 2);
 
-                            for (int z = 0; z < countsHarmonicUpstream.length; z++) {
-                                if (countsHarmonicUpstream[z] > 0) {
-                                    upStreamOEPHarmonic[z] = countsHarmonicUpstream[z] / upStreamOEPHarmonic[z];
-                                    upStreamOEP[z] = Math.pow(upStreamOEP[z], 1.0 / countsHarmonicUpstream[z]) * Math.sqrt(countsHarmonicUpstream[z]);
+                            for (int z = 0; z < countsUpstream.length; z++) {
+                                if (countsUpstream[z] > 0) {
+                                    upStreamOEP[z] = Math.pow(upStreamOEP[z], 1.0 / countsUpstream[z]) * Math.sqrt(countsUpstream[z]);
                                 }
-                                if (countsHarmonicDownstream[z] > 0) {
-                                    downStreamOEPHarmonic[z] = countsHarmonicDownstream[z] / downStreamOEPHarmonic[z];
-                                    downStreamOEP[z] = Math.pow(downStreamOEP[z], 1.0 / countsHarmonicDownstream[z]) * Math.sqrt(countsHarmonicDownstream[z]);
+                                if (countsDownstream[z] > 0) {
+                                    downStreamOEP[z] = Math.pow(downStreamOEP[z], 1.0 / countsDownstream[z]) * Math.sqrt(countsDownstream[z]);
                                 }
-                                if (countsHarmonicUpstream[z] + countsHarmonicDownstream[z] > 0) {
-                                    bothStreamOEPHarmonic[z] = (countsHarmonicUpstream[z] + countsHarmonicDownstream[z])
-                                            / bothStreamOEPHarmonic[z];
-                                    bothStreamOEP[z] = Math.pow(bothStreamOEP[z], 1.0 / (countsHarmonicUpstream[z] + countsHarmonicDownstream[z]))
-                                            * Math.sqrt(countsHarmonicUpstream[z] + countsHarmonicDownstream[z]);
+                                if (countsUpstream[z] + countsDownstream[z] > 0) {
+                                    bothStreamOEP[z] = Math.pow(bothStreamOEP[z], 1.0 / (countsUpstream[z] + countsDownstream[z]))
+                                            * Math.sqrt(countsUpstream[z] + countsDownstream[z]);
                                 }
                             }
-
-                            //takeNthRoot(upStreamOEP, numLoopyEntries);
-                            //takeNthRoot(downStreamOEP, numLoopyEntries);
-                            //takeNthRoot(bothStreamOEP, numLoopyEntries);
-                            divide(bothStreamZscores, numLoopyEntries);
 
                             synchronized (allUpStreamOEProd) {
                                 allUpStreamOEProd.put(chrom, upStreamOEP);
@@ -210,18 +178,6 @@ public class AnchorStrength {
                             }
                             synchronized (allBothStreamOEProd) {
                                 allBothStreamOEProd.put(chrom, bothStreamOEP);
-                            }
-                            synchronized (allBothStreamZscores) {
-                                allBothStreamZscores.put(chrom, bothStreamZscores);
-                            }
-                            synchronized (allUpStreamOEProdHarmonic) {
-                                allUpStreamOEProdHarmonic.put(chrom, upStreamOEPHarmonic);
-                            }
-                            synchronized (allDownStreamOEProdHarmonic) {
-                                allDownStreamOEProdHarmonic.put(chrom, downStreamOEPHarmonic);
-                            }
-                            synchronized (allBothStreamOEProdHarmonic) {
-                                allBothStreamOEProdHarmonic.put(chrom, bothStreamOEPHarmonic);
                             }
 
                         } catch (Exception e) {
@@ -239,14 +195,6 @@ public class AnchorStrength {
             SeerUtils.exportRowDoublesToBedgraph(allUpStreamOEProd, outputPath + ".upstream.OEprod.bedgraph", resolution);
             SeerUtils.exportRowDoublesToBedgraph(allDownStreamOEProd, outputPath + ".downstream.OEprod.bedgraph", resolution);
             SeerUtils.exportRowDoublesToBedgraph(allBothStreamOEProd, outputPath + ".bothstream.OEprod.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allBothStreamZscores, outputPath + ".bothstream.zscores.bedgraph", resolution);
-
-            SeerUtils.exportRowFloatsToBedgraph(allUpStreamOEProdHarmonic, outputPath + ".upstream.OE.harmonic.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allDownStreamOEProdHarmonic, outputPath + ".downstream.OE.harmonic.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allBothStreamOEProdHarmonic, outputPath + ".bothstream.OE.harmonic.bedgraph", resolution);
-
-            BedTools.exportBedFile(new File(outputPath + ".oe.anchors.bed"),
-                    getPeaks(resolution, allBothStreamOEProd, allBothStreamZscores));
 
         } catch (Exception e) {
             e.printStackTrace();
