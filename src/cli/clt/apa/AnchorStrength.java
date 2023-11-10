@@ -47,7 +47,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnchorStrength {
-    public static String usage = "anchor-strength[-harmonic] [-k NORM] [-c chrom]" +
+    public static String usage = "anchor-strength[-sqrt] [-k NORM] [-c chrom]" +
             "[--min-dist val] [--max-dist val] [-r resolution] <input.hic> <output.stem>\n" +
             "calculate localized row sums near loops";
     private final String outputPath;
@@ -56,14 +56,14 @@ public class AnchorStrength {
     private final int resolution;
     private NormalizationType norm = NormalizationHandler.VC;
     private final String chrom;
-    private final boolean useHarmonic;
+    private final boolean useSqrtScaling;
 
     public AnchorStrength(String[] args, CommandLineParser parser, String name) {
         if (args.length != 3) {
             printUsageAndExit();
         }
 
-        useHarmonic = name.contains("harmonic");
+        useSqrtScaling = name.contains("sqrt");
 
         resolution = parser.getResolutionOption(2000);
         ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, resolution > 50);
@@ -80,7 +80,7 @@ public class AnchorStrength {
             System.err.println(e.getMessage());
         }
         System.out.println("Using normalization: " + norm.getLabel());
-        minPeakDist = parser.getMinDistVal(100000) / resolution;
+        minPeakDist = parser.getMinDistVal(20000) / resolution;
         maxPeakDist = parser.getMaxDistVal(5000000) / resolution;
     }
 
@@ -137,7 +137,7 @@ public class AnchorStrength {
                                         int dist = ExpectedUtils.getDist(cr);
                                         if (dist > minPeakDist && dist < maxPeakDist) {
                                             float oe = (float) ((cr.getCounts() + 1) / (poly.getExpectedFromUncompressedBin(dist) + 1));
-                                            float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
+                                            //float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
                                             if (oe > 2) { // zscore > 1 && oe > 2
 
                                                 upStreamOEP[cr.getBinX()] *= oe;
@@ -159,14 +159,14 @@ public class AnchorStrength {
 
                             for (int z = 0; z < countsUpstream.length; z++) {
                                 if (countsUpstream[z] > 0) {
-                                    upStreamOEP[z] = Math.pow(upStreamOEP[z], 1.0 / countsUpstream[z]) * Math.sqrt(countsUpstream[z]);
+                                    upStreamOEP[z] = Math.pow(upStreamOEP[z], 1.0 / countsUpstream[z]) * scaleBy(countsUpstream[z]);
                                 }
                                 if (countsDownstream[z] > 0) {
-                                    downStreamOEP[z] = Math.pow(downStreamOEP[z], 1.0 / countsDownstream[z]) * Math.sqrt(countsDownstream[z]);
+                                    downStreamOEP[z] = Math.pow(downStreamOEP[z], 1.0 / countsDownstream[z]) * scaleBy(countsDownstream[z]);
                                 }
                                 if (countsUpstream[z] + countsDownstream[z] > 0) {
                                     bothStreamOEP[z] = Math.pow(bothStreamOEP[z], 1.0 / (countsUpstream[z] + countsDownstream[z]))
-                                            * Math.sqrt(countsUpstream[z] + countsDownstream[z]);
+                                            * scaleBy(countsUpstream[z] + countsDownstream[z]);
                                 }
                             }
 
@@ -202,6 +202,14 @@ public class AnchorStrength {
         System.out.println("Anchor strengths complete");
     }
 
+    private double scaleBy(int n) {
+        if (useSqrtScaling) {
+            return Math.sqrt(n);
+        } else {
+            return n;
+        }
+    }
+
     private Set<Anchor> getPeaks(int resolution, Map<Chromosome, double[]> allBothStreamOEProd,
                                  Map<Chromosome, float[]> allBothStreamZscores) {
         Set<Anchor> peaks = new HashSet<>();
@@ -226,26 +234,6 @@ public class AnchorStrength {
         return peaks;
     }
 
-    private void divide(float[] vector, int scalar) {
-        for (int k = 0; k < vector.length; k++) {
-            vector[k] /= scalar;
-        }
-    }
-
-    private void takeNthRoot(double[] vector, int n) {
-        for (int k = 0; k < vector.length; k++) {
-            vector[k] = Math.pow(vector[k], 1.0 / n);
-        }
-    }
-
-
-    private void normalizeByPercentile(double[] vector, int percentile) {
-        double perc = VectorCleaner.getPercentile(vector, percentile, 2);
-        for (int k = 0; k < vector.length; k++) {
-            vector[k] /= perc;
-        }
-    }
-
     private Chromosome[] getChromosomes(ChromosomeHandler handler) {
         Chromosome[] chromosomes = handler.getChromosomeArrayWithoutAllByAll();
         if (chrom != null && chrom.length() > 0) {
@@ -256,29 +244,5 @@ public class AnchorStrength {
             }
         }
         return chromosomes;
-    }
-
-    private void divide(float[] sums, int[] counts) {
-        for (int k = 0; k < sums.length; k++) {
-            if (counts[k] > 0) {
-                sums[k] /= counts[k];
-            }
-        }
-    }
-
-    private void divide(float[] sums, float[] counts) {
-        for (int k = 0; k < sums.length; k++) {
-            if (counts[k] > 0) {
-                sums[k] /= counts[k];
-            }
-        }
-    }
-
-    private void divide(int[] sums, int[] counts) {
-        for (int k = 0; k < sums.length; k++) {
-            if (counts[k] > 0) {
-                sums[k] /= counts[k];
-            }
-        }
     }
 }
