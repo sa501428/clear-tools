@@ -192,9 +192,9 @@ public class AnchorStrength {
 
         System.out.println("Exporting anchor results...");
         try {
-            SeerUtils.exportRowDoublesToBedgraph(allUpStreamOEProd, outputPath + ".upstream.OEprod.bedgraph", resolution);
-            SeerUtils.exportRowDoublesToBedgraph(allDownStreamOEProd, outputPath + ".downstream.OEprod.bedgraph", resolution);
-            SeerUtils.exportRowDoublesToBedgraph(allBothStreamOEProd, outputPath + ".bothstream.OEprod.bedgraph", resolution);
+            SeerUtils.exportRowDoublesToBedgraph(allUpStreamOEProd, outputPath + ".forward.bedgraph", resolution);
+            SeerUtils.exportRowDoublesToBedgraph(allDownStreamOEProd, outputPath + ".reverse.bedgraph", resolution);
+            SeerUtils.exportRowDoublesToBedgraph(allBothStreamOEProd, outputPath + ".mixed.bedgraph", resolution);
 
         } catch (Exception e) {
             e.printStackTrace();
