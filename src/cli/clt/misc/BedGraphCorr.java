@@ -6,10 +6,12 @@ import cli.utils.general.BedGraphParser;
 import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 import javastraw.tools.MatrixTools;
+import javastraw.tools.ParallelizationTools;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class BedGraphCorr {
 
@@ -90,13 +92,19 @@ public class BedGraphCorr {
             System.out.println("Correlation " + accuracy);
         } else {
             double[][] result = new double[files.size()][files.size()];
-            for (int i = 0; i < result.length; i++) {
-                result[i][i] = 1;
-                for (int j = i + 1; j < result.length; j++) {
-                    result[i][j] = getCorrelation(files.get(i), files.get(j), useCosine);
-                    result[j][i] = result[i][j];
+            AtomicInteger currIndex = new AtomicInteger(0);
+            ParallelizationTools.launchParallelizedCode(() -> {
+
+                int i = currIndex.getAndIncrement();
+                while (i < result.length) {
+                    result[i][i] = 1;
+                    for (int j = i + 1; j < result.length; j++) {
+                        result[i][j] = getCorrelation(files.get(i), files.get(j), useCosine);
+                        result[j][i] = result[i][j];
+                    }
+                    i = currIndex.getAndIncrement();
                 }
-            }
+            });
             MatrixTools.saveMatrixTextNumpy(outputName, result);
         }
     }
