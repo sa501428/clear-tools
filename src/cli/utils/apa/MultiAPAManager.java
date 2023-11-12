@@ -79,8 +79,8 @@ public class MultiAPAManager {
         }
     }
 
-    private void addToMatrix(float[][] output, SparseContactMatrixWithMasking scm,
-                             Feature2D loop, int window, int resolution, int matrixWidth) {
+    public static void addToMatrix(float[][] output, SparseContactMatrixWithMasking scm,
+                                   Feature2D loop, int window, int resolution, int matrixWidth) {
         int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
         int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
         scm.addLocalBoundedRegion(output, binXStart, binYStart, matrixWidth);

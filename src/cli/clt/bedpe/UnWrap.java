@@ -17,10 +17,10 @@ import java.util.List;
 import java.util.Map;
 
 public class UnWrap {
-
-    public static String usage = "unwrap[2][-filter][-legacy] [-r resolution] <genomeID> <loops.bedpe> <output_stem_>\n" +
-            "\t\tunwrap localizer output to proper hi-res inverted bounds list\n" +
-            "\t\tlegacy mode will use the old method of unwrapping the combined anchors\n";
+// [-filter]
+public static String usage = "unwrap2[-legacy] [-r resolution] <genomeID> <loops.bedpe> <output_stem_>\n" +
+        "\t\tunwrap localizer output to proper hi-res inverted bounds list\n" +
+        "\t\tlegacy mode will use the old method of unwrapping the combined anchors\n";
     private static final int numLists = 6;
     private static int resolution = 10;
 

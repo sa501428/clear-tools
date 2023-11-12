@@ -6,13 +6,14 @@ import cli.clt.bedpe.*;
 import cli.clt.enhance.Enhance;
 import cli.clt.enhance.Seer;
 import cli.clt.loops.*;
+import cli.clt.misc.BedGraphCorr;
 import cli.clt.misc.Fimo;
 import cli.clt.misc.NormHack;
 import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.124.0";
+    public static final String VERSION_NUM = "0.132.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -66,6 +67,8 @@ public class Main {
             FilterBedpeByAnchorAPA.run(args, parser);
         } else if (command.startsWith("anchor-fix") || command.startsWith("anchorize")) {
             AnchorFix.run(args, parser, command);
+        } else if (command.startsWith("bedgraph-corr")) {
+            BedGraphCorr.run(args, parser, command);
         } else if (command.startsWith("clique")) {
             Clique.run(args, parser, command);
         } else if (command.startsWith("clean")) {
@@ -79,7 +82,7 @@ public class Main {
         } else if (command.startsWith("subtract") && command.contains("anchors")) {
             SubtractSharedAnchors.run(args, command, parser);
         } else if (command.startsWith("anchor") && command.contains("strength")) {
-            AnchorStrength anchorStrength = new AnchorStrength(args, parser);
+            AnchorStrength anchorStrength = new AnchorStrength(args, parser, command);
             anchorStrength.run();
         } else if (command.startsWith("apa") && command.contains("1d")) {
             APA1D apa = new APA1D(args, parser);
@@ -90,6 +93,9 @@ public class Main {
         } else if (command.startsWith("anchor-apa")) {
             AnchorAPA apa = new AnchorAPA(args, parser);
             apa.run();
+        } else if (command.startsWith("grind")) {
+            Grind grind = new Grind(args, parser);
+            grind.run();
         } else if (command.startsWith("apa")) {
             APA apa = new APA(args, parser, false);
             apa.run();

@@ -38,14 +38,24 @@ public class VectorCleaner {
         return stats.getValForZscore(z);
     }
 
-    private static double getPercentile(double[] vec, int percentile) {
+    public static double getPercentile(double[] vec, int percentile, int minVal) {
         DescriptiveStatistics stats = new DescriptiveStatistics();
         for (double v : vec) {
-            if (v > 0) {
+            if (v > minVal) {
                 stats.addValue(v);
             }
         }
         return stats.getPercentile(percentile);
+    }
+
+    public static int getPercentile(int[] vec, int percentile, int minVal) {
+        DescriptiveStatistics stats = new DescriptiveStatistics();
+        for (int v : vec) {
+            if (v > minVal) {
+                stats.addValue(v);
+            }
+        }
+        return (int) stats.getPercentile(percentile);
     }
 
     private static double getLogLowerBound(double[] vec) {
