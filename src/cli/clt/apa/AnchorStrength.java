@@ -25,8 +25,9 @@
 package cli.clt.apa;
 
 import cli.clt.CommandLineParser;
-import cli.utils.flags.Anchor;
+import cli.utils.anchors.AnchorPeakFinder;
 import cli.utils.general.ArrayTools;
+import cli.utils.general.BedTools;
 import cli.utils.general.VectorCleaner;
 import cli.utils.seer.SeerUtils;
 import javastraw.expected.ExpectedUtils;
@@ -43,7 +44,11 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
-import java.util.*;
+import java.io.File;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnchorStrength {
@@ -196,6 +201,10 @@ public class AnchorStrength {
             SeerUtils.exportRowDoublesToBedgraph(allDownStreamOEProd, outputPath + ".reverse.bedgraph", resolution);
             SeerUtils.exportRowDoublesToBedgraph(allBothStreamOEProd, outputPath + ".mixed.bedgraph", resolution);
 
+            BedTools.exportBedFile(new File(outputPath + ".anchors.bed"),
+                    AnchorPeakFinder.getPeaks(resolution, allUpStreamOEProd, allDownStreamOEProd, allBothStreamOEProd));
+
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -208,30 +217,6 @@ public class AnchorStrength {
         } else {
             return n;
         }
-    }
-
-    private Set<Anchor> getPeaks(int resolution, Map<Chromosome, double[]> allBothStreamOEProd,
-                                 Map<Chromosome, float[]> allBothStreamZscores) {
-        Set<Anchor> peaks = new HashSet<>();
-        for (Chromosome chrom : allBothStreamOEProd.keySet()) {
-            double[] prod = allBothStreamOEProd.get(chrom);
-            float[] zscores = allBothStreamZscores.get(chrom);
-            for (int i = 2; i < prod.length - 2; i++) {
-                if (prod[i] > 1 && prod[i - 1] > 1 && prod[i + 1] > 1) {
-                    if (zscores[i] > 0 && zscores[i - 1] > 0 && zscores[i + 1] > 0) {
-                        if (prod[i] > 1.1 * prod[i - 1] && prod[i] > 1.1 * prod[i + 1]
-                                && prod[i - 1] > 1.05 * prod[i - 2] && prod[i + 1] > 1.05 * prod[i + 2]) {
-                            if (zscores[i] > zscores[i - 1] && zscores[i] > zscores[i + 1]) {
-                                peaks.add(new Anchor(chrom.getName(),
-                                        (long) i * resolution, (long) (i + 1) * resolution,
-                                        chrom.getIndex()));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return peaks;
     }
 
     private Chromosome[] getChromosomes(ChromosomeHandler handler) {
