@@ -62,6 +62,7 @@ public class AnchorStrength {
     private NormalizationType norm = NormalizationHandler.VC;
     private final String chrom;
     private final boolean useSqrtScaling;
+    private final boolean useExperimentalVersion;
 
     public AnchorStrength(String[] args, CommandLineParser parser, String name) {
         if (args.length != 3) {
@@ -69,6 +70,7 @@ public class AnchorStrength {
         }
 
         useSqrtScaling = name.contains("sqrt");
+        useExperimentalVersion = name.contains("dev");
 
         resolution = parser.getResolutionOption(2000);
         ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, resolution > 50);
@@ -102,9 +104,16 @@ public class AnchorStrength {
         Chromosome[] chromosomes = getChromosomes(handler);
         final AtomicInteger currChromPair = new AtomicInteger(0);
 
-        final Map<Chromosome, double[]> allUpStreamOEProd = new HashMap<>();
-        final Map<Chromosome, double[]> allDownStreamOEProd = new HashMap<>();
-        final Map<Chromosome, double[]> allBothStreamOEProd = new HashMap<>();
+        final Map<Chromosome, float[]> allUpStreamOEProd = new HashMap<>();
+        final Map<Chromosome, float[]> allDownStreamOEProd = new HashMap<>();
+        final Map<Chromosome, float[]> allBothStreamOEProd = new HashMap<>();
+
+        final Map<Chromosome, float[]> allUpSumProbs = new HashMap<>();
+        final Map<Chromosome, float[]> allDownSumProbs = new HashMap<>();
+        final Map<Chromosome, float[]> allUpSumProbsTimesDist = new HashMap<>();
+        final Map<Chromosome, float[]> allDownSumProbsTimesDist = new HashMap<>();
+        final Map<Chromosome, float[]> allUpScaledPercTotal = new HashMap<>();
+        final Map<Chromosome, float[]> allDownScaledPercTotal = new HashMap<>();
 
         ParallelizationTools.launchParallelizedCode(() -> {
 
@@ -118,15 +127,27 @@ public class AnchorStrength {
                     if (zd != null) {
                         try {
                             int numEntries = (int) ((chrom.getLength() / resolution) + 1);
-                            double[] upStreamOEP = new double[numEntries];
-                            double[] downStreamOEP = new double[numEntries];
-                            double[] bothStreamOEP = new double[numEntries];
+                            float[] upStreamOEP = new float[numEntries];
+                            float[] downStreamOEP = new float[numEntries];
+                            float[] bothStreamOEP = new float[numEntries];
                             Arrays.fill(upStreamOEP, 1);
                             Arrays.fill(downStreamOEP, 1);
                             Arrays.fill(bothStreamOEP, 1);
 
                             int[] countsUpstream = new int[numEntries];
                             int[] countsDownstream = new int[numEntries];
+
+                            float[] upSumProbs = new float[numEntries];
+                            float[] downSumProbs = new float[numEntries];
+                            float[] upSumProbsTimesDist = new float[numEntries];
+                            float[] downSumProbsTimesDist = new float[numEntries];
+                            int[] upDistancesTotal = new int[numEntries];
+                            int[] downDistancesTotal = new int[numEntries];
+
+                            // max p and max d for each locus?
+                            // max p x d and max d for each locus?
+
+                            //sum all (d x p) / (sum d)
 
                             LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom, resolution);
 
@@ -139,8 +160,25 @@ public class AnchorStrength {
                                 ContactRecord cr = it.next();
                                 if (cr.getCounts() > 0) {
                                     if (vector[cr.getBinX()] > -1 && vector[cr.getBinY()] > -1) {
+
                                         int dist = ExpectedUtils.getDist(cr);
                                         if (dist > minPeakDist && dist < maxPeakDist) {
+
+                                            double perc = poly.getPercentContact(cr);
+                                            if (perc > 0) {
+                                                // total percent up/downstream interaction sum(p)
+                                                upSumProbs[cr.getBinX()] += perc;
+                                                downSumProbs[cr.getBinY()] += perc;
+
+                                                //distance of influence
+                                                //proportional distance effect sum(d x p)
+                                                upSumProbsTimesDist[cr.getBinX()] += (perc * dist);
+                                                downSumProbsTimesDist[cr.getBinY()] += (perc * dist);
+
+                                                upDistancesTotal[cr.getBinX()] += dist;
+                                                downDistancesTotal[cr.getBinY()] += dist;
+                                            }
+
                                             float oe = (float) ((cr.getCounts() + 1) / (poly.getExpectedFromUncompressedBin(dist) + 1));
                                             //float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
                                             if (oe > 2) { // zscore > 1 && oe > 2
@@ -162,16 +200,31 @@ public class AnchorStrength {
 
                             //int numLoopyEntries = VectorCleaner.getPercentile(counts, 50, 2);
 
+                            float[] upScaledPerc = new float[numEntries];
+                            float[] downScaledPerc = new float[numEntries];
+
+                            for (int z = 0; z < upSumProbsTimesDist.length; z++) {
+                                if (upDistancesTotal[z] > 0) {
+                                    upScaledPerc[z] = upSumProbsTimesDist[z] / upDistancesTotal[z];
+                                }
+                                if (downDistancesTotal[z] > 0) {
+                                    downScaledPerc[z] = downSumProbsTimesDist[z] / downDistancesTotal[z];
+                                }
+
+                                upSumProbsTimesDist[z] *= resolution;
+                                downSumProbsTimesDist[z] *= resolution;
+                            }
+
                             for (int z = 0; z < countsUpstream.length; z++) {
                                 if (countsUpstream[z] > 0) {
-                                    upStreamOEP[z] = Math.pow(upStreamOEP[z], 1.0 / countsUpstream[z]) * scaleBy(countsUpstream[z]);
+                                    upStreamOEP[z] = (float) (Math.pow(upStreamOEP[z], 1.0 / countsUpstream[z]) * scaleBy(countsUpstream[z]));
                                 }
                                 if (countsDownstream[z] > 0) {
-                                    downStreamOEP[z] = Math.pow(downStreamOEP[z], 1.0 / countsDownstream[z]) * scaleBy(countsDownstream[z]);
+                                    downStreamOEP[z] = (float) (Math.pow(downStreamOEP[z], 1.0 / countsDownstream[z]) * scaleBy(countsDownstream[z]));
                                 }
                                 if (countsUpstream[z] + countsDownstream[z] > 0) {
-                                    bothStreamOEP[z] = Math.pow(bothStreamOEP[z], 1.0 / (countsUpstream[z] + countsDownstream[z]))
-                                            * scaleBy(countsUpstream[z] + countsDownstream[z]);
+                                    bothStreamOEP[z] = (float) (Math.pow(bothStreamOEP[z], 1.0 / (countsUpstream[z] + countsDownstream[z]))
+                                            * scaleBy(countsUpstream[z] + countsDownstream[z]));
                                 }
                             }
 
@@ -183,6 +236,24 @@ public class AnchorStrength {
                             }
                             synchronized (allBothStreamOEProd) {
                                 allBothStreamOEProd.put(chrom, bothStreamOEP);
+                            }
+                            synchronized (allUpSumProbs) {
+                                allUpSumProbs.put(chrom, upSumProbs);
+                            }
+                            synchronized (allDownSumProbs) {
+                                allDownSumProbs.put(chrom, downSumProbs);
+                            }
+                            synchronized (allUpSumProbsTimesDist) {
+                                allUpSumProbsTimesDist.put(chrom, upSumProbsTimesDist);
+                            }
+                            synchronized (allDownSumProbsTimesDist) {
+                                allDownSumProbsTimesDist.put(chrom, downSumProbsTimesDist);
+                            }
+                            synchronized (allUpScaledPercTotal) {
+                                allUpScaledPercTotal.put(chrom, upScaledPerc);
+                            }
+                            synchronized (allDownScaledPercTotal) {
+                                allDownScaledPercTotal.put(chrom, downScaledPerc);
                             }
 
                         } catch (Exception e) {
@@ -197,9 +268,18 @@ public class AnchorStrength {
 
         System.out.println("Exporting anchor results...");
         try {
-            SeerUtils.exportRowDoublesToBedgraph(allUpStreamOEProd, outputPath + ".forward.bedgraph", resolution);
-            SeerUtils.exportRowDoublesToBedgraph(allDownStreamOEProd, outputPath + ".reverse.bedgraph", resolution);
-            SeerUtils.exportRowDoublesToBedgraph(allBothStreamOEProd, outputPath + ".mixed.bedgraph", resolution);
+            SeerUtils.exportRowFloatsToBedgraph(allUpStreamOEProd, outputPath + ".forward.bedgraph", resolution);
+            SeerUtils.exportRowFloatsToBedgraph(allDownStreamOEProd, outputPath + ".reverse.bedgraph", resolution);
+            SeerUtils.exportRowFloatsToBedgraph(allBothStreamOEProd, outputPath + ".mixed.bedgraph", resolution);
+
+            SeerUtils.exportRowFloatsToBedgraph(allUpSumProbs, outputPath + ".upSumProbs.bedgraph", resolution);
+            SeerUtils.exportRowFloatsToBedgraph(allDownSumProbs, outputPath + ".downSumProbs.bedgraph", resolution);
+
+            SeerUtils.exportRowFloatsToBedgraph(allUpSumProbsTimesDist, outputPath + ".upSumProbsTimesDist.bedgraph", resolution);
+            SeerUtils.exportRowFloatsToBedgraph(allDownSumProbsTimesDist, outputPath + ".downSumProbsTimesDist.bedgraph", resolution);
+
+            SeerUtils.exportRowFloatsToBedgraph(allUpScaledPercTotal, outputPath + ".upScaledPercTotal.bedgraph", resolution);
+            SeerUtils.exportRowFloatsToBedgraph(allDownScaledPercTotal, outputPath + ".downScaledPercTotal.bedgraph", resolution);
 
             BedTools.exportBedFile(new File(outputPath + ".anchors.bed"),
                     AnchorPeakFinder.getPeaks(resolution, allUpStreamOEProd, allDownStreamOEProd, allBothStreamOEProd));
