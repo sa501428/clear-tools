@@ -35,7 +35,7 @@ public class SieveBedgraph {
         Map<String, float[]> bedgraphData = BedGraphParser.parse(handler, args[4], resolution);
 
         Feature2DList loopList = Feature2DParser.loadFeatures(loopListPath, handler, true, null, false);
-        Feature2DList result;
+        Feature2DList[] result;
 
         if (args.length == 6) {
             Map<String, float[]> bedgraphData2 = BedGraphParser.parse(handler, args[5], resolution);
@@ -44,17 +44,28 @@ public class SieveBedgraph {
             result = intersect(loopList, bedgraphData, bedgraphData, resolution, outStem);
         }
 
-        result.exportFeatureList(new File(outStem + ".anchor.bedgraph.bedpe"), false, Feature2DList.ListFormat.NA);
+        String outPath = loopListPath.replaceAll(".bedpe", outStem + ".anchor.bedgraph.bedpe");
+        result[0].exportFeatureList(new File(outPath), false, Feature2DList.ListFormat.NA);
+        outPath = loopListPath.replaceAll(".bedpe", outStem + ".good.anchor.bedgraph.bedpe");
+        result[1].exportFeatureList(new File(outPath), false, Feature2DList.ListFormat.NA);
+        outPath = loopListPath.replaceAll(".bedpe", outStem + ".bad.anchor.bedgraph.bedpe");
+        result[2].exportFeatureList(new File(outPath), false, Feature2DList.ListFormat.NA);
 
         System.out.println("sieve-bedgraph complete");
     }
 
-    private Feature2DList intersect(Feature2DList loopList, Map<String, float[]> bedgraphData,
-                                    Map<String, float[]> bedgraphData2, int resolution, String outStem) {
+    private Feature2DList[] intersect(Feature2DList loopList, Map<String, float[]> bedgraphData,
+                                      Map<String, float[]> bedgraphData2, int resolution, String outStem) {
         Feature2DList result = new Feature2DList();
+        Feature2DList good = new Feature2DList();
+        Feature2DList bad = new Feature2DList();
+
+
         loopList.processLists((chromKey, list) -> {
 
             List<Feature2D> outList = new LinkedList<>();
+            List<Feature2D> goodList = new LinkedList<>();
+            List<Feature2D> badList = new LinkedList<>();
 
             for (Feature2D loop : list) {
 
@@ -65,12 +76,19 @@ public class SieveBedgraph {
                 loop.addFloatAttribute(outStem + "_downstream_anchor_score", downVal);
 
                 outList.add(loop);
+                if (upVal > 2 && downVal > 2) {
+                    goodList.add(loop);
+                } else {
+                    badList.add(loop);
+                }
             }
 
             result.addByKey(chromKey, outList);
+            good.addByKey(chromKey, goodList);
+            bad.addByKey(chromKey, badList);
         });
 
-        return result;
+        return new Feature2DList[]{result, good, bad};
     }
 
     private float getValAtMidpoint(float[] data, long start, long end, int resolution) {
