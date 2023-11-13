@@ -108,12 +108,14 @@ public class AnchorStrength {
         final Map<Chromosome, float[]> allDownStreamOEProd = new HashMap<>();
         final Map<Chromosome, float[]> allBothStreamOEProd = new HashMap<>();
 
+        /*
         final Map<Chromosome, float[]> allUpSumProbs = new HashMap<>();
         final Map<Chromosome, float[]> allDownSumProbs = new HashMap<>();
         final Map<Chromosome, float[]> allUpSumProbsTimesDist = new HashMap<>();
         final Map<Chromosome, float[]> allDownSumProbsTimesDist = new HashMap<>();
         final Map<Chromosome, float[]> allUpScaledPercTotal = new HashMap<>();
         final Map<Chromosome, float[]> allDownScaledPercTotal = new HashMap<>();
+        */
 
         ParallelizationTools.launchParallelizedCode(() -> {
 
@@ -137,12 +139,14 @@ public class AnchorStrength {
                             int[] countsUpstream = new int[numEntries];
                             int[] countsDownstream = new int[numEntries];
 
+                            /*
                             float[] upSumProbs = new float[numEntries];
                             float[] downSumProbs = new float[numEntries];
                             float[] upSumProbsTimesDist = new float[numEntries];
                             float[] downSumProbsTimesDist = new float[numEntries];
                             int[] upDistancesTotal = new int[numEntries];
                             int[] downDistancesTotal = new int[numEntries];
+                            */
 
                             // max p and max d for each locus?
                             // max p x d and max d for each locus?
@@ -164,21 +168,6 @@ public class AnchorStrength {
                                         int dist = ExpectedUtils.getDist(cr);
                                         if (dist > minPeakDist && dist < maxPeakDist) {
 
-                                            double perc = poly.getPercentContact(cr);
-                                            if (perc > 0) {
-                                                // total percent up/downstream interaction sum(p)
-                                                upSumProbs[cr.getBinX()] += perc;
-                                                downSumProbs[cr.getBinY()] += perc;
-
-                                                //distance of influence
-                                                //proportional distance effect sum(d x p)
-                                                upSumProbsTimesDist[cr.getBinX()] += (perc * dist);
-                                                downSumProbsTimesDist[cr.getBinY()] += (perc * dist);
-
-                                                upDistancesTotal[cr.getBinX()] += dist;
-                                                downDistancesTotal[cr.getBinY()] += dist;
-                                            }
-
                                             float oe = (float) ((cr.getCounts() + 1) / (poly.getExpectedFromUncompressedBin(dist) + 1));
                                             //float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
                                             if (oe > 2) { // zscore > 1 && oe > 2
@@ -192,6 +181,22 @@ public class AnchorStrength {
                                                 countsUpstream[cr.getBinX()]++;
                                                 countsDownstream[cr.getBinY()]++;
 
+                                                /*
+                                                double perc = poly.getPercentContact(cr);
+                                                if (perc > 0) {
+                                                    // total percent up/downstream interaction sum(p)
+                                                    upSumProbs[cr.getBinX()] += perc;
+                                                    downSumProbs[cr.getBinY()] += perc;
+
+                                                    //distance of influence
+                                                    //proportional distance effect sum(d x p)
+                                                    upSumProbsTimesDist[cr.getBinX()] += (perc * dist);
+                                                    downSumProbsTimesDist[cr.getBinY()] += (perc * dist);
+
+                                                    upDistancesTotal[cr.getBinX()] += dist;
+                                                    downDistancesTotal[cr.getBinY()] += dist;
+                                                }
+                                                */
                                             }
                                         }
                                     }
@@ -200,6 +205,7 @@ public class AnchorStrength {
 
                             //int numLoopyEntries = VectorCleaner.getPercentile(counts, 50, 2);
 
+                            /*
                             float[] upScaledPerc = new float[numEntries];
                             float[] downScaledPerc = new float[numEntries];
 
@@ -214,6 +220,7 @@ public class AnchorStrength {
                                 upSumProbsTimesDist[z] *= resolution;
                                 downSumProbsTimesDist[z] *= resolution;
                             }
+                            */
 
                             for (int z = 0; z < countsUpstream.length; z++) {
                                 if (countsUpstream[z] > 0) {
@@ -237,6 +244,7 @@ public class AnchorStrength {
                             synchronized (allBothStreamOEProd) {
                                 allBothStreamOEProd.put(chrom, bothStreamOEP);
                             }
+                            /*
                             synchronized (allUpSumProbs) {
                                 allUpSumProbs.put(chrom, upSumProbs);
                             }
@@ -255,6 +263,7 @@ public class AnchorStrength {
                             synchronized (allDownScaledPercTotal) {
                                 allDownScaledPercTotal.put(chrom, downScaledPerc);
                             }
+                            */
 
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
@@ -272,6 +281,7 @@ public class AnchorStrength {
             SeerUtils.exportRowFloatsToBedgraph(allDownStreamOEProd, outputPath + ".reverse.bedgraph", resolution);
             SeerUtils.exportRowFloatsToBedgraph(allBothStreamOEProd, outputPath + ".mixed.bedgraph", resolution);
 
+            /*
             SeerUtils.exportRowFloatsToBedgraph(allUpSumProbs, outputPath + ".upSumProbs.bedgraph", resolution);
             SeerUtils.exportRowFloatsToBedgraph(allDownSumProbs, outputPath + ".downSumProbs.bedgraph", resolution);
 
@@ -280,6 +290,7 @@ public class AnchorStrength {
 
             SeerUtils.exportRowFloatsToBedgraph(allUpScaledPercTotal, outputPath + ".upScaledPercTotal.bedgraph", resolution);
             SeerUtils.exportRowFloatsToBedgraph(allDownScaledPercTotal, outputPath + ".downScaledPercTotal.bedgraph", resolution);
+            */
 
             BedTools.exportBedFile(new File(outputPath + ".anchors.bed"),
                     AnchorPeakFinder.getPeaks(resolution, allUpStreamOEProd, allDownStreamOEProd, allBothStreamOEProd));
