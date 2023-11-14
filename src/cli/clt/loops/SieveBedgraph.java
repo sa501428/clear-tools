@@ -76,7 +76,9 @@ public class SieveBedgraph {
                 loop.addFloatAttribute(outStem + "_downstream_anchor_score", downVal);
 
                 outList.add(loop);
-                if (upVal > 2 && downVal > 2) {
+                if (upVal > 2 && downVal > 2
+                        && isEnriched(bedgraphData.get(loop.getChr1()), loop.getStart1(), loop.getEnd1(), resolution)
+                        && isEnriched(bedgraphData2.get(loop.getChr2()), loop.getStart2(), loop.getEnd2(), resolution)) {
                     goodList.add(loop);
                 } else {
                     badList.add(loop);
@@ -89,6 +91,16 @@ public class SieveBedgraph {
         });
 
         return new Feature2DList[]{result, good, bad};
+    }
+
+    private boolean isEnriched(float[] data, long start, long end, int resolution) {
+        if (data != null && data.length > 0) {
+            int index = (int) (((start + end) / 2) / resolution);
+            if (index > 0 && index < data.length - 1) {
+                return data[index] > data[index - 1] && data[index] > data[index + 1];
+            }
+        }
+        return false;
     }
 
     private float getValAtMidpoint(float[] data, long start, long end, int resolution) {
