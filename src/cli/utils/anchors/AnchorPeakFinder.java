@@ -18,9 +18,9 @@ public class AnchorPeakFinder {
             float[] up = allUpStreamOEProd.get(chrom);
             float[] down = allDownStreamOEProd.get(chrom);
 
-            float[] bothSmooth = ConvolutionTools.smooth(both);
-            float[] upSmooth = ConvolutionTools.smooth(up);
-            float[] downSmooth = ConvolutionTools.smooth(down);
+            float[] bothSmooth = Convolution1DTools.smooth(both);
+            float[] upSmooth = Convolution1DTools.smooth(up);
+            float[] downSmooth = Convolution1DTools.smooth(down);
 
             for (int i = 2; i < both.length - 2; i++) {
                 if (elevated5(both, i) && elevated5(bothSmooth, i)) {

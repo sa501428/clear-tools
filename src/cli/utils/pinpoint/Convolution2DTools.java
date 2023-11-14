@@ -2,7 +2,7 @@ package cli.utils.pinpoint;
 
 import cli.utils.general.ArrayTools;
 
-public class ConvolutionTools {
+public class Convolution2DTools {
 
     public static float[][] sparseConvolution(float[][] image, float[][] kernel) {
 

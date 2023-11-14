@@ -7,7 +7,7 @@ import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import cli.utils.general.QuickGrouping;
 import cli.utils.general.Utils;
-import cli.utils.pinpoint.ConvolutionTools;
+import cli.utils.pinpoint.Convolution2DTools;
 import cli.utils.pinpoint.LandScape;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -100,8 +100,8 @@ public class Pinpoint {
         int matrixWidth = 2 * halfMatrixWidth + 1;
 
         //GPUController gpuController = Circe.buildGPUController(kernelSize, matrixWidth, kernelSize / 2 + 1);
-        final float[][] kernel = ConvolutionTools.getManhattanKernel(kernelSize);
-        final float[][] compressedKernel = ConvolutionTools.getManhattanKernel(compressedKernelSize);
+        final float[][] kernel = Convolution2DTools.getManhattanKernel(kernelSize);
+        final float[][] compressedKernel = Convolution2DTools.getManhattanKernel(compressedKernelSize);
 
         HiCZoom zoom = new HiCZoom(resolution);
 
