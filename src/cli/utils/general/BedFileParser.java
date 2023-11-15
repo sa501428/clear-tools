@@ -12,11 +12,7 @@ import org.broad.igv.util.ParsingUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Pattern;
+import java.util.*;
 
 public class BedFileParser {
 
@@ -48,7 +44,7 @@ public class BedFileParser {
 
         int errorCount = 0;
         while ((nextLine = bufferedReader.readLine()) != null) {
-            String[] tokens = Pattern.compile("\t").split(nextLine);
+            String[] tokens = nextLine.split("\\s+");
 
             String chr1Name;
             int start1, end1;
@@ -108,5 +104,34 @@ public class BedFileParser {
             return anchorsThatPass;
         }
         return new ArrayList<>(anchors);
+    }
+
+    public static Map<String, List<int[]>> simpleParser(String anchorsBed) {
+        Map<String, List<int[]>> anchors = new HashMap<>();
+        try {
+            BufferedReader br = new BufferedReader(new InputStreamReader(ParsingUtils.openInputStream(anchorsBed)),
+                    StrawGlobals.bufferSize);
+            String nextLine;
+            while ((nextLine = br.readLine()) != null) {
+                String[] tokens = nextLine.split("\\s+");
+                String chrName;
+                int start, end;
+                if (tokens[0].startsWith("chr") && tokens.length >= 3) {
+                    if (tokens[0].equals("chrom") && tokens[1].equals("x1")) continue;
+                    chrName = tokens[0];
+                    if (!anchors.containsKey(chrName)) {
+                        anchors.put(chrName, new LinkedList<>());
+                    }
+
+                    start = Integer.parseInt(tokens[1]);
+                    end = Integer.parseInt(tokens[2]);
+
+                    anchors.get(chrName).add(new int[]{start, end});
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return anchors;
     }
 }
