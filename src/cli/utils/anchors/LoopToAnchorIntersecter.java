@@ -12,12 +12,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class LoopToAnchorIntersecter {
     public static Feature2DList intersect(List<Feature2DList> loopLists, ChromosomeHandler handler,
-                                          Map<String, float[]> chromToHiResAnchorCounts, int highResolution) {
+                                          Map<String, float[]> chromToHiResAnchorCounts, int highResolution,
+                                          int hiResWindow) {
 
         Map<String, Map<Integer, Set<Integer>>> globalAnswer = new HashMap<>();
         Map<String, String[]> keyToChroms = new HashMap<>();
-
-        int hiResWindow = 5;
 
         AtomicInteger globalIndex = new AtomicInteger(0);
         ParallelizationTools.launchParallelizedCode(() -> {
@@ -121,8 +120,8 @@ public class LoopToAnchorIntersecter {
 
         int startCheckPos = (int) (startLowRes / highResolution);
         int endCheckPos = (int) (endLowRes / highResolution);
-        startCheckPos = Math.max(1, startCheckPos - (2 * hiResWindow));
-        endCheckPos = Math.min(data.length - 1, endCheckPos + (2 * hiResWindow) + 1);
+        startCheckPos = Math.max(1, startCheckPos - hiResWindow);
+        endCheckPos = Math.min(data.length - 1, endCheckPos + hiResWindow + 1);
 
         int pos = getBestPositionInRange(startCheckPos, endCheckPos, data, (startCheckPos + endCheckPos) / 2);
         if (isSimpleLocalMax(pos, data)) {
