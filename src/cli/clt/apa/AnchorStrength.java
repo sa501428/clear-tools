@@ -25,10 +25,13 @@
 package cli.clt.apa;
 
 import cli.clt.CommandLineParser;
-import cli.utils.anchors.AnchorPeakFinder;
 import cli.utils.general.ArrayTools;
-import cli.utils.general.BedTools;
+import cli.utils.general.MapNMS;
+import cli.utils.general.QuadContactRecord;
 import cli.utils.general.VectorCleaner;
+import cli.utils.general.function.OELogMedianFunction;
+import cli.utils.general.function.ScaledGeoMeanFunction;
+import cli.utils.general.function.SimpleDivisionFunction;
 import cli.utils.seer.SeerUtils;
 import javastraw.expected.ExpectedUtils;
 import javastraw.expected.LogExpectedZscoreSpline;
@@ -44,14 +47,12 @@ import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnchorStrength {
+    private static final float Z_TOP_TEN = 1.28f;
     public static String usage = "anchor-strength[-sqrt] [-k NORM] [-c chrom]" +
             "[--min-dist val] [--max-dist val] [-r resolution] <input.hic> <output.stem>\n" +
             "calculate localized row sums near loops";
@@ -63,6 +64,8 @@ public class AnchorStrength {
     private final String chrom;
     private final boolean useSqrtScaling;
     private final boolean useExperimentalVersion;
+    private final int compressionScalar = 5;
+
 
     public AnchorStrength(String[] args, CommandLineParser parser, String name) {
         if (args.length != 3) {
@@ -104,18 +107,11 @@ public class AnchorStrength {
         Chromosome[] chromosomes = getChromosomes(handler);
         final AtomicInteger currChromPair = new AtomicInteger(0);
 
-        final Map<Chromosome, float[]> allUpStreamOEProd = new HashMap<>();
-        final Map<Chromosome, float[]> allDownStreamOEProd = new HashMap<>();
-        final Map<Chromosome, float[]> allBothStreamOEProd = new HashMap<>();
+        final Map<Chromosome, float[][]> allUpMatrices = new HashMap<>();
+        final Map<Chromosome, float[][]> allDownMatrices = new HashMap<>();
 
-        /*
-        final Map<Chromosome, float[]> allUpSumProbs = new HashMap<>();
-        final Map<Chromosome, float[]> allDownSumProbs = new HashMap<>();
-        final Map<Chromosome, float[]> allUpSumProbsTimesDist = new HashMap<>();
-        final Map<Chromosome, float[]> allDownSumProbsTimesDist = new HashMap<>();
-        final Map<Chromosome, float[]> allUpScaledPercTotal = new HashMap<>();
-        final Map<Chromosome, float[]> allDownScaledPercTotal = new HashMap<>();
-        */
+        final Map<Chromosome, float[][]> allUpMatricesWithNMS = new HashMap<>();
+        final Map<Chromosome, float[][]> allDownMatricesWithNMS = new HashMap<>();
 
         ParallelizationTools.launchParallelizedCode(() -> {
 
@@ -129,35 +125,18 @@ public class AnchorStrength {
                     if (zd != null) {
                         try {
                             int numEntries = (int) ((chrom.getLength() / resolution) + 1);
-                            float[] upStreamOEP = new float[numEntries];
-                            float[] downStreamOEP = new float[numEntries];
-                            float[] bothStreamOEP = new float[numEntries];
-                            Arrays.fill(upStreamOEP, 1);
-                            Arrays.fill(downStreamOEP, 1);
-                            Arrays.fill(bothStreamOEP, 1);
 
-                            int[] countsUpstream = new int[numEntries];
-                            int[] countsDownstream = new int[numEntries];
-
-                            /*
-                            float[] upSumProbs = new float[numEntries];
-                            float[] downSumProbs = new float[numEntries];
-                            float[] upSumProbsTimesDist = new float[numEntries];
-                            float[] downSumProbsTimesDist = new float[numEntries];
-                            int[] upDistancesTotal = new int[numEntries];
-                            int[] downDistancesTotal = new int[numEntries];
-                            */
-
-                            // max p and max d for each locus?
-                            // max p x d and max d for each locus?
-
-                            //sum all (d x p) / (sum d)
+                            float[][] upMatrix = new float[MapNMS.NUM_ROWS][numEntries];
+                            float[][] downMatrix = new float[MapNMS.NUM_ROWS][numEntries];
+                            MapNMS.initOERows(upMatrix, downMatrix);
 
                             LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom, resolution);
 
                             double[] vector = ArrayTools.copy(ds.getNormalizationVector(chrom.getIndex(), zoom,
                                     NormalizationHandler.VC).getData().getValues().get(0));
                             VectorCleaner.inPlaceZscore(vector);
+
+                            Map<Integer, Map<Integer, List<QuadContactRecord>>> contactMap = new HashMap<>();
 
                             Iterator<ContactRecord> it = ExpectedUtils.getIterator(zd, norm);
                             while (it.hasNext()) {
@@ -169,101 +148,33 @@ public class AnchorStrength {
                                         if (dist > minPeakDist && dist < maxPeakDist) {
 
                                             float oe = (float) ((cr.getCounts() + 1) / (poly.getExpectedFromUncompressedBin(dist) + 1));
-                                            //float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
-                                            if (oe > 2) { // zscore > 1 && oe > 2
+                                            float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
+                                            float perc = poly.getPercentContact(cr);
+                                            if (perc > 0 && (oe > 2 || zscore > Z_TOP_TEN)) { // zscore > 1 && oe > 2
 
-                                                upStreamOEP[cr.getBinX()] *= oe;
-                                                downStreamOEP[cr.getBinY()] *= oe;
+                                                MapNMS.fillInScoreRows(upMatrix, downMatrix,
+                                                        cr.getBinX(), cr.getBinY(),
+                                                        cr.getCounts(), oe, perc, zscore);
 
-                                                bothStreamOEP[cr.getBinX()] *= oe;
-                                                bothStreamOEP[cr.getBinY()] *= oe;
-
-                                                countsUpstream[cr.getBinX()]++;
-                                                countsDownstream[cr.getBinY()]++;
-
-                                                /*
-                                                double perc = poly.getPercentContact(cr);
-                                                if (perc > 0) {
-                                                    // total percent up/downstream interaction sum(p)
-                                                    upSumProbs[cr.getBinX()] += perc;
-                                                    downSumProbs[cr.getBinY()] += perc;
-
-                                                    //distance of influence
-                                                    //proportional distance effect sum(d x p)
-                                                    upSumProbsTimesDist[cr.getBinX()] += (perc * dist);
-                                                    downSumProbsTimesDist[cr.getBinY()] += (perc * dist);
-
-                                                    upDistancesTotal[cr.getBinX()] += dist;
-                                                    downDistancesTotal[cr.getBinY()] += dist;
-                                                }
-                                                */
+                                                populateMap(contactMap, cr, compressionScalar, oe, perc, zscore);
                                             }
                                         }
                                     }
                                 }
                             }
 
-                            //int numLoopyEntries = VectorCleaner.getPercentile(counts, 50, 2);
+                            float[][] upMatrixWithNMS = new float[MapNMS.NUM_ROWS][numEntries];
+                            float[][] downMatrixWithNMS = new float[MapNMS.NUM_ROWS][numEntries];
 
-                            /*
-                            float[] upScaledPerc = new float[numEntries];
-                            float[] downScaledPerc = new float[numEntries];
+                            MapNMS.populateAfterNonMaxSuppression(upMatrixWithNMS, downMatrixWithNMS, contactMap, numEntries);
+                            clearAll(contactMap);
 
-                            for (int z = 0; z < upSumProbsTimesDist.length; z++) {
-                                if (upDistancesTotal[z] > 0) {
-                                    upScaledPerc[z] = upSumProbsTimesDist[z] / upDistancesTotal[z];
-                                }
-                                if (downDistancesTotal[z] > 0) {
-                                    downScaledPerc[z] = downSumProbsTimesDist[z] / downDistancesTotal[z];
-                                }
-
-                                upSumProbsTimesDist[z] *= resolution;
-                                downSumProbsTimesDist[z] *= resolution;
+                            synchronized (allUpMatrices) {
+                                allUpMatrices.put(chrom, upMatrix);
+                                allDownMatrices.put(chrom, downMatrix);
+                                allUpMatricesWithNMS.put(chrom, upMatrixWithNMS);
+                                allDownMatricesWithNMS.put(chrom, downMatrixWithNMS);
                             }
-                            */
-
-                            for (int z = 0; z < countsUpstream.length; z++) {
-                                if (countsUpstream[z] > 0) {
-                                    upStreamOEP[z] = (float) (Math.pow(upStreamOEP[z], 1.0 / countsUpstream[z]) * scaleBy(countsUpstream[z]));
-                                }
-                                if (countsDownstream[z] > 0) {
-                                    downStreamOEP[z] = (float) (Math.pow(downStreamOEP[z], 1.0 / countsDownstream[z]) * scaleBy(countsDownstream[z]));
-                                }
-                                if (countsUpstream[z] + countsDownstream[z] > 0) {
-                                    bothStreamOEP[z] = (float) (Math.pow(bothStreamOEP[z], 1.0 / (countsUpstream[z] + countsDownstream[z]))
-                                            * scaleBy(countsUpstream[z] + countsDownstream[z]));
-                                }
-                            }
-
-                            synchronized (allUpStreamOEProd) {
-                                allUpStreamOEProd.put(chrom, upStreamOEP);
-                            }
-                            synchronized (allDownStreamOEProd) {
-                                allDownStreamOEProd.put(chrom, downStreamOEP);
-                            }
-                            synchronized (allBothStreamOEProd) {
-                                allBothStreamOEProd.put(chrom, bothStreamOEP);
-                            }
-                            /*
-                            synchronized (allUpSumProbs) {
-                                allUpSumProbs.put(chrom, upSumProbs);
-                            }
-                            synchronized (allDownSumProbs) {
-                                allDownSumProbs.put(chrom, downSumProbs);
-                            }
-                            synchronized (allUpSumProbsTimesDist) {
-                                allUpSumProbsTimesDist.put(chrom, upSumProbsTimesDist);
-                            }
-                            synchronized (allDownSumProbsTimesDist) {
-                                allDownSumProbsTimesDist.put(chrom, downSumProbsTimesDist);
-                            }
-                            synchronized (allUpScaledPercTotal) {
-                                allUpScaledPercTotal.put(chrom, upScaledPerc);
-                            }
-                            synchronized (allDownScaledPercTotal) {
-                                allDownScaledPercTotal.put(chrom, downScaledPerc);
-                            }
-                            */
 
                         } catch (Exception e) {
                             System.err.println(e.getMessage());
@@ -277,24 +188,14 @@ public class AnchorStrength {
 
         System.out.println("Exporting anchor results...");
         try {
-            SeerUtils.exportRowFloatsToBedgraph(allUpStreamOEProd, outputPath + ".forward.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allDownStreamOEProd, outputPath + ".reverse.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allBothStreamOEProd, outputPath + ".mixed.bedgraph", resolution);
 
-            /*
-            SeerUtils.exportRowFloatsToBedgraph(allUpSumProbs, outputPath + ".upSumProbs.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allDownSumProbs, outputPath + ".downSumProbs.bedgraph", resolution);
+            export(allUpMatrices, "forward");
+            export(allDownMatrices, "reverse");
+            export(allUpMatricesWithNMS, "forward.nms");
+            export(allDownMatricesWithNMS, "reverse.nms");
 
-            SeerUtils.exportRowFloatsToBedgraph(allUpSumProbsTimesDist, outputPath + ".upSumProbsTimesDist.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allDownSumProbsTimesDist, outputPath + ".downSumProbsTimesDist.bedgraph", resolution);
-
-            SeerUtils.exportRowFloatsToBedgraph(allUpScaledPercTotal, outputPath + ".upScaledPercTotal.bedgraph", resolution);
-            SeerUtils.exportRowFloatsToBedgraph(allDownScaledPercTotal, outputPath + ".downScaledPercTotal.bedgraph", resolution);
-            */
-
-            BedTools.exportBedFile(new File(outputPath + ".anchors.bed"),
-                    AnchorPeakFinder.getPeaks(resolution, allUpStreamOEProd, allDownStreamOEProd, allBothStreamOEProd));
-
+            //BedTools.exportBedFile(new File(outputPath + ".anchors.bed"),
+            //        AnchorPeakFinder.getPeaks(resolution, countScaledAllUpStreamOEProd, countScaledAllDownStreamOEProd));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -302,12 +203,45 @@ public class AnchorStrength {
         System.out.println("Anchor strengths complete");
     }
 
-    private double scaleBy(int n) {
-        if (useSqrtScaling) {
-            return Math.sqrt(n);
-        } else {
-            return n;
+    private void export(Map<Chromosome, float[][]> allMatrices, String stem) throws IOException {
+
+        SeerUtils.exportRowFloatsToBedgraph(allMatrices, outputPath + ".raw." + stem + ".bedgraph", resolution,
+                MapNMS.COUNT_INDEX, null);
+        SeerUtils.exportRowFloatsToBedgraph(allMatrices, outputPath + ".oe." + stem + ".bedgraph", resolution,
+                MapNMS.OE_INDEX, null);
+        SeerUtils.exportRowFloatsToBedgraph(allMatrices, outputPath + ".perc." + stem + ".bedgraph", resolution,
+                MapNMS.PERC_INDEX, null);
+
+        SeerUtils.exportRowFloatsToBedgraph(allMatrices, outputPath + ".oeLogMed." + stem + ".bedgraph", resolution,
+                MapNMS.OE_INDEX, new OELogMedianFunction());
+        SeerUtils.exportRowFloatsToBedgraph(allMatrices, outputPath + ".zscore." + stem + ".bedgraph", resolution,
+                MapNMS.ZSCORE_INDEX, new SimpleDivisionFunction());
+        SeerUtils.exportRowFloatsToBedgraph(allMatrices, outputPath + ".scaleGeomOE." + stem + ".bedgraph", resolution,
+                MapNMS.OE_INDEX, new ScaledGeoMeanFunction());
+    }
+
+    private void clearAll(Map<Integer, Map<Integer, List<QuadContactRecord>>> contactMap) {
+        for (Map<Integer, List<QuadContactRecord>> map : contactMap.values()) {
+            for (List<QuadContactRecord> list : map.values()) {
+                list.clear();
+            }
+            map.clear();
         }
+        contactMap.clear();
+    }
+
+
+    private void populateMap(Map<Integer, Map<Integer, List<QuadContactRecord>>> contactMap, ContactRecord cr,
+                             int compressionScalar, float oe, float perc, float zscore) {
+        int compressedX = cr.getBinX() / compressionScalar;
+        int compressedY = cr.getBinY() / compressionScalar;
+        if (!contactMap.containsKey(compressedX)) {
+            contactMap.put(compressedX, new HashMap<>());
+        }
+        if (!contactMap.get(compressedX).containsKey(compressedY)) {
+            contactMap.get(compressedX).put(compressedY, new LinkedList<>());
+        }
+        contactMap.get(compressedX).get(compressedY).add(new QuadContactRecord(cr, oe, perc, zscore));
     }
 
     private Chromosome[] getChromosomes(ChromosomeHandler handler) {

@@ -10,28 +10,27 @@ import java.util.Set;
 public class AnchorPeakFinder {
 
     public static Set<Anchor> getPeaks(int resolution, Map<Chromosome, float[]> allUpStreamOEProd,
-                                       Map<Chromosome, float[]> allDownStreamOEProd,
-                                       Map<Chromosome, float[]> allBothStreamOEProd) {
+                                       Map<Chromosome, float[]> allDownStreamOEProd) {
         Set<Anchor> peaks = new HashSet<>();
-        for (Chromosome chrom : allBothStreamOEProd.keySet()) {
-            float[] both = allBothStreamOEProd.get(chrom);
+        for (Chromosome chrom : allUpStreamOEProd.keySet()) {
+            //float[] both = allUpStreamOEProd.get(chrom);
             float[] up = allUpStreamOEProd.get(chrom);
             float[] down = allDownStreamOEProd.get(chrom);
 
-            float[] bothSmooth = Convolution1DTools.smooth(both);
+            //float[] bothSmooth = Convolution1DTools.smooth(both);
             float[] upSmooth = Convolution1DTools.smooth(up);
             float[] downSmooth = Convolution1DTools.smooth(down);
 
-            for (int i = 2; i < both.length - 2; i++) {
-                if (elevated5(both, i) && elevated5(bothSmooth, i)) {
-                    if (elevated5(upSmooth, i) || elevated5(downSmooth, i)) {
-                        if (elevated3(up, i) || elevated3(down, i)) {
-                            peaks.add(new Anchor(chrom.getName(),
-                                    (long) i * resolution, (long) (i + 1) * resolution,
-                                    chrom.getIndex()));
-                        }
+            for (int i = 2; i < up.length - 2; i++) {
+                //if (elevated5(both, i) && elevated5(bothSmooth, i)) {
+                if (elevated5(upSmooth, i) || elevated5(downSmooth, i)) {
+                    if (elevated3(up, i) || elevated3(down, i)) {
+                        peaks.add(new Anchor(chrom.getName(),
+                                (long) i * resolution, (long) (i + 1) * resolution,
+                                chrom.getIndex()));
                     }
                 }
+                //  }
             }
         }
         return peaks;

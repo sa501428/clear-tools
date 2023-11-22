@@ -84,4 +84,40 @@ public class VectorCleaner {
         }
         return welford.getZscore();
     }
+
+    public static float[] logMedianScale(float[] original) {
+        float[] data = new float[original.length];
+        System.arraycopy(original, 0, data, 0, original.length);
+        inPlaceLog(data);
+        cleanNanInfTo(data, 0);
+        double median = getMedian(data, 0);
+        for (int k = 0; k < data.length; k++) {
+            data[k] = (float) (data[k] / median);
+        }
+        return data;
+    }
+
+    private static double getMedian(float[] data, int minVal) {
+        DescriptiveStatistics stats = new DescriptiveStatistics();
+        for (float v : data) {
+            if (v > minVal) {
+                stats.addValue(v);
+            }
+        }
+        return stats.getPercentile(50);
+    }
+
+    private static void inPlaceLog(float[] data) {
+        for (int k = 0; k < data.length; k++) {
+            data[k] = (float) Math.log(data[k]);
+        }
+    }
+
+    private static void cleanNanInfTo(float[] data, int value) {
+        for (int k = 0; k < data.length; k++) {
+            if (Float.isNaN(data[k]) || Float.isInfinite(data[k])) {
+                data[k] = value;
+            }
+        }
+    }
 }

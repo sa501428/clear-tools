@@ -1,5 +1,7 @@
 package cli.utils.seer;
 
+import cli.utils.general.MapNMS;
+import cli.utils.general.function.NormalizationFunction;
 import cli.utils.sift.SimpleLocation;
 import javastraw.reader.basics.Chromosome;
 import javastraw.reader.block.ContactRecord;
@@ -59,14 +61,18 @@ public class SeerUtils {
         bw.close();
     }
 
-    public static void exportRowFloatsToBedgraph(Map<Chromosome, float[]> chromToRowSumsMap,
-                                                 String path, int resolution) throws IOException {
+    public static void exportRowFloatsToBedgraph(Map<Chromosome, float[][]> chromToRowSumsMap,
+                                                 String path, int resolution, int index,
+                                                 NormalizationFunction func) throws IOException {
         File outputFileName = new File(path);
         outputFileName.createNewFile();
         BufferedWriter bw = new BufferedWriter(new FileWriter(outputFileName));
         // write for every chromosome
         for (Chromosome chromosome : chromToRowSumsMap.keySet()) {
-            float[] sums = chromToRowSumsMap.get(chromosome);
+            float[] sums = chromToRowSumsMap.get(chromosome)[index];
+            if (func != null) {
+                sums = func.normalize(sums, chromToRowSumsMap.get(chromosome)[MapNMS.TOTALS_INDEX]);
+            }
             // iterate through bins, write in the format <chr> <start_pos> <end_pos> <value>
             for (int i = 0; i < sums.length; i++) {
                 int startPosition = i * resolution;
