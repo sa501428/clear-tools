@@ -3,6 +3,14 @@ package cli.clt.bedpe;
 import cli.Main;
 import cli.clt.CommandLineParser;
 import cli.utils.general.FusionTools;
+import javastraw.feature2D.Feature2D;
+import javastraw.feature2D.Feature2DList;
+import javastraw.feature2D.Feature2DParser;
+import javastraw.reader.basics.ChromosomeHandler;
+import javastraw.reader.basics.ChromosomeTools;
+
+import java.io.File;
+import java.util.*;
 
 public class Fusion {
     public static String usage = "fuse[-nms][-clean][-exact][-file-id] [--round val] " +
@@ -27,9 +35,38 @@ public class Fusion {
         System.arraycopy(args, 3, bedpeFiles, 0, bedpeFiles.length);
         String[] attributes = parser.getAttributesOption();
         int val = parser.getRoundOption();
-        FusionTools.coalesceFeatures(bedpeFiles, genomeID, outFile,
-                command.contains("nms"), command.contains("clean"), command.contains("exact"),
-                command.contains("file-id"), attributes, val);
+
+        if (command.contains("clean") && command.contains("exact")
+                && (!command.contains("nms")) && (!command.contains("file-id"))) {
+
+            simpleDedup(bedpeFiles, genomeID, outFile);
+
+        } else {
+            FusionTools.coalesceFeatures(bedpeFiles, genomeID, outFile,
+                    command.contains("nms"), command.contains("clean"), command.contains("exact"),
+                    command.contains("file-id"), attributes, val);
+        }
         System.out.println("fusion complete");
+    }
+
+    private static void simpleDedup(String[] bedpeFiles, String genomeID, String outFile) {
+        Map<String, Set<Feature2D>> dedupedMapping = new HashMap<>();
+        ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
+
+        for (String path : bedpeFiles) {
+            Feature2DList loopList = Feature2DParser.loadFeatures(path, handler,
+                    false, null, false);
+            loopList.processLists((key, list) -> {
+                if (!dedupedMapping.containsKey(key)) {
+                    dedupedMapping.put(key, new HashSet<>());
+                }
+                dedupedMapping.get(key).addAll(list);
+            });
+        }
+        Feature2DList deduped = new Feature2DList();
+        for (String key : dedupedMapping.keySet()) {
+            deduped.addByKey(key, new ArrayList<>(dedupedMapping.get(key)));
+        }
+        deduped.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
     }
 }
