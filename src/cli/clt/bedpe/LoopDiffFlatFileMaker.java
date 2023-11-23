@@ -31,7 +31,7 @@ public class LoopDiffFlatFileMaker {
 
         createFlatFile(genomeID, outPath, posSuffix, negSuffix, stems);
 
-        System.out.println("retain complete");
+        System.out.println("flat file complete");
     }
 
     private static void createFlatFile(String genomeID, String outPath, String posSuffix, String negSuffix, String[] stems) {
