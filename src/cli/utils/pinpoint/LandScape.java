@@ -61,7 +61,7 @@ public class LandScape {
             float[] outputR = ArrayTools.getNormedRowSums(output);
             float[] outputC = ArrayTools.getNormedColSums(output);
 
-            float[][] kde = ConvolutionTools.sparseConvolution(output, kernel);
+            float[][] kde = Convolution2DTools.sparseConvolution(output, kernel);
             ArrayTools.saveIfVerbose(saveString + ".kde.c" + counter + ".npy", kde);
             float[] kdeR = ArrayTools.getNormedRowSums(kde);
             float[] kdeC = ArrayTools.getNormedColSums(kde);

@@ -16,7 +16,7 @@ public class BoundingBoxes {
         Utils.fillInMatrixFromRecords(outputD10, records, binXStart, binYStart, scalar);
         ArrayTools.saveIfVerbose(saveString + ".raw.S10.npy", outputD10);
 
-        float[][] kde = ConvolutionTools.sparseConvolution(outputD10, kernel);
+        float[][] kde = Convolution2DTools.sparseConvolution(outputD10, kernel);
         ArrayTools.saveIfVerbose(saveString + ".kde.S10.npy", kde);
         outputD10 = null;
 

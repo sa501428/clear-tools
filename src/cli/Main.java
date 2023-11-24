@@ -8,12 +8,13 @@ import cli.clt.enhance.Seer;
 import cli.clt.loops.*;
 import cli.clt.misc.BedGraphCorr;
 import cli.clt.misc.Fimo;
+import cli.clt.misc.IntersectBedWithBedgraph;
 import cli.clt.misc.NormHack;
 import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.132.0";
+    public static final String VERSION_NUM = "0.145.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -29,7 +30,11 @@ public class Main {
                     Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage, UnWrap.usage,
                     Flags.usage, Sift.usage, NormHack.usage, Recap.usage, HotSpot.usage,
                     AnchorAPA.usage, Expand.usage, Clique.usage, AnchorFix.usage,
-                    FilterBedpeByAnchorAPA.usage}) {
+                    FilterBedpeByAnchorAPA.usage, IntegrateLoopListsAndUnWrap.usage,
+                    IntersectBedWithBedgraph.usage, BedGraphCorr.usage, APA1D.usage,
+                    AnchorStrength.usage, Grind.usage, SubtractByAnchorOverlap.usage,
+                    RetainOverlap.usage, LoopDiffFlatFileMaker.usage
+            }) {
                 System.out.println("\t" + usage + "\n\n");
             }
         } else {
@@ -57,8 +62,16 @@ public class Main {
         }
 
         String command = args[0].toLowerCase();
-        if(command.equals("flags")){
+        if (command.equals("flags")) {
             Flags.run(args, parser);
+        } else if (command.startsWith("create-diff-flat-file")) {
+            LoopDiffFlatFileMaker.run(args, command, parser);
+        } else if (command.startsWith("retain-exact-overlap")) {
+            RetainOverlap.run(args, command, parser);
+        } else if (command.startsWith("subtract-by-anchor-overlap")) {
+            SubtractByAnchorOverlap.run(args, parser, command);
+        } else if (command.startsWith("intersect-bed-bedgraph")) {
+            new IntersectBedWithBedgraph(args, parser, command);
         } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")) {
             Enhance.run(args, parser);
         } else if (command.equals("pinpoint")) {
@@ -67,6 +80,8 @@ public class Main {
             FilterBedpeByAnchorAPA.run(args, parser);
         } else if (command.startsWith("anchor-fix") || command.startsWith("anchorize")) {
             AnchorFix.run(args, parser, command);
+        } else if (command.startsWith("integrate-loops")) {
+            IntegrateLoopListsAndUnWrap.run(args, parser);
         } else if (command.startsWith("bedgraph-corr")) {
             BedGraphCorr.run(args, parser, command);
         } else if (command.startsWith("clique")) {
@@ -107,6 +122,8 @@ public class Main {
             ata.run();
         } else if (command.startsWith("recap") || command.startsWith("compile")) {
             new Recap(args, parser);
+        } else if (command.startsWith("sieve-bedgraph")) {
+            new SieveBedgraph(args, parser, command);
         } else if (command.startsWith("sieve")) {
             new Sieve(args, parser, command);
         } else if (command.startsWith("hotspot")) {
