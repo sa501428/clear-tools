@@ -14,7 +14,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.145.0";
+    public static final String VERSION_NUM = "0.146.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -66,6 +66,8 @@ public class Main {
             Flags.run(args, parser);
         } else if (command.startsWith("create-diff-flat-file")) {
             LoopDiffFlatFileMaker.run(args, command, parser);
+        } else if (command.startsWith("get-diffs-from-flat-file")) {
+            GetDiffsFromFlatFile.run(args, command, parser);
         } else if (command.startsWith("retain-exact-overlap")) {
             RetainOverlap.run(args, command, parser);
         } else if (command.startsWith("subtract-by-anchor-overlap")) {
