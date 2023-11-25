@@ -43,11 +43,14 @@ public class GetDiffsFromFlatFile {
         Feature2DList onlyStem1 = new Feature2DList();
         Feature2DList onlyStem2 = new Feature2DList();
         Feature2DList bothStems = new Feature2DList();
+        Feature2DList neitherStems = new Feature2DList();
 
         flat.processLists((s, list) -> {
             List<Feature2D> only1 = new LinkedList<>();
             List<Feature2D> only2 = new LinkedList<>();
             List<Feature2D> both = new LinkedList<>();
+            List<Feature2D> neither = new LinkedList<>();
+            System.out.println("processing " + s);
 
             for (Feature2D loop : list) {
                 int status1 = Integer.parseInt(loop.getAttribute(stem1));
@@ -59,15 +62,19 @@ public class GetDiffsFromFlatFile {
                     only1.add(loop);
                 } else if (status2 == 1 && status1 == -1) {
                     only2.add(loop);
+                } else if (status1 == -1 && status2 == -1) {
+                    neither.add(loop);
                 }
             }
             onlyStem1.addByKey(s, only1);
             onlyStem2.addByKey(s, only2);
             bothStems.addByKey(s, both);
+            neitherStems.addByKey(s, neither);
         });
 
         onlyStem1.exportFeatureList(new File(folder, "only." + stem1 + ".bedpe"), false, Feature2DList.ListFormat.NA);
         onlyStem2.exportFeatureList(new File(folder, "only." + stem2 + ".bedpe"), false, Feature2DList.ListFormat.NA);
         bothStems.exportFeatureList(new File(folder, "both." + stem1 + "." + stem2 + ".bedpe"), false, Feature2DList.ListFormat.NA);
+        neitherStems.exportFeatureList(new File(folder, "neither." + stem1 + "." + stem2 + ".bedpe"), false, Feature2DList.ListFormat.NA);
     }
 }

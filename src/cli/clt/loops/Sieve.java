@@ -19,6 +19,7 @@ import javastraw.reader.basics.ChromosomeHandler;
 import javastraw.reader.basics.ChromosomeTools;
 import javastraw.reader.mzd.Matrix;
 import javastraw.reader.mzd.MatrixZoomData;
+import javastraw.reader.norm.NormalizationVector;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
@@ -151,9 +152,14 @@ public class Sieve {
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
 
-                            //Set<Feature2D> loopsToAssessThisRound = filterForAppropriateResolution(loopsToAssessGlobal, resolution);
-                            //Set<Feature2D> loopsToAssessThisRound = BinCollisionChecker.ensureOnlyOneLoopPerBin(loopsToAssessGlobal, resolution);
-                            if (loopsToAssessGlobal.size() > 0) {
+                            NormalizationVector nv1 = ds.getNormalizationVector(chrom1.getIndex(), zoom, norm);
+                            NormalizationVector nv2 = ds.getNormalizationVector(chrom2.getIndex(), zoom, norm);
+
+                            if (nv1 == null) {
+                                System.err.println("Error getting normalization " + norm.getLabel() + " for " + chrom1.getName());
+                            } else if (nv2 == null) {
+                                System.err.println("Error getting normalization " + norm.getLabel() + " for " + chrom2.getName());
+                            } else if (loopsToAssessGlobal.size() > 0) {
                                 setDefaultAttributes(loopsToAssessGlobal, resolution);
                                 Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
                                         loopsToAssessGlobal, 500 * resolution).values();
