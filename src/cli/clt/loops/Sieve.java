@@ -146,6 +146,8 @@ public class Sieve {
                 Matrix matrix = ds.getMatrix(chrom1, chrom2);
                 int numLoopsForThisChromosome = loopsToAssessGlobal.size();
 
+                boolean thisChromHadData = true;
+
                 if (matrix != null) {
                     for (int resolution : resolutions) {
                         HiCZoom zoom = new HiCZoom(resolution);
@@ -156,9 +158,11 @@ public class Sieve {
                             NormalizationVector nv2 = ds.getNormalizationVector(chrom2.getIndex(), zoom, norm);
 
                             if (nv1 == null) {
-                                System.err.println("Error getting normalization " + norm.getLabel() + " for " + chrom1.getName());
+                                System.err.println("Error getting normalization " + norm.getLabel() + " for " + chrom1.getName() + " at " + resolution);
+                                thisChromHadData = false;
                             } else if (nv2 == null) {
-                                System.err.println("Error getting normalization " + norm.getLabel() + " for " + chrom2.getName());
+                                System.err.println("Error getting normalization " + norm.getLabel() + " for " + chrom2.getName() + " at " + resolution);
+                                thisChromHadData = false;
                             } else if (loopsToAssessGlobal.size() > 0) {
                                 setDefaultAttributes(loopsToAssessGlobal, resolution);
                                 Collection<List<Feature2D>> loopGroups = QuickGrouping.groupNearbyRecords(
@@ -209,12 +213,15 @@ public class Sieve {
                         matrix.clearCacheForZoom(zoom);
                     }
                     matrix.clearCache();
+
+                    if (thisChromHadData) {
+                        synchronized (newLoopList) {
+                            newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
+                                    new ArrayList<>(loopsToAssessGlobal));
+                        }
+                    }
                 }
 
-                synchronized (newLoopList) {
-                    newLoopList.addByKey(Feature2DList.getKey(chrom1, chrom2),
-                            new ArrayList<>(loopsToAssessGlobal));
-                }
 
                 if (numLoopsForThisChromosome > 0) {
                     int num = numLoopsDone.addAndGet(numLoopsForThisChromosome);

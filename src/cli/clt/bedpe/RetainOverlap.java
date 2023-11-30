@@ -65,7 +65,7 @@ public class RetainOverlap {
         return codes;
     }
 
-    private static String getLoopCode(Feature2D loop) {
+    public static String getLoopCode(Feature2D loop) {
         return loop.getChr1() + "_" + loop.getStart1() + "_" + loop.getEnd1() + "_" +
                 loop.getChr2() + "_" + loop.getStart2() + "_" + loop.getEnd2();
     }
