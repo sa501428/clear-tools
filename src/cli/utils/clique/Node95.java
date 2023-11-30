@@ -1,6 +1,6 @@
 package cli.utils.clique;
 
-import cli.clt.bedpe.AnchorFix;
+import cli.clt.anchor.AnchorFix;
 
 import java.util.ArrayList;
 import java.util.List;

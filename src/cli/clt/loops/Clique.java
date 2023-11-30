@@ -1,4 +1,4 @@
-package cli.clt.bedpe;
+package cli.clt.loops;
 
 import cli.Main;
 import cli.clt.CommandLineParser;

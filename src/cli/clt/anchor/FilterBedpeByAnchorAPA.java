@@ -1,4 +1,4 @@
-package cli.clt.bedpe;
+package cli.clt.anchor;
 
 import cli.Main;
 import cli.clt.CommandLineParser;

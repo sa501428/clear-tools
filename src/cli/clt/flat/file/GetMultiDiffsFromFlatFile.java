@@ -1,4 +1,4 @@
-package cli.clt.bedpe;
+package cli.clt.flat.file;
 
 import cli.Main;
 import cli.clt.CommandLineParser;
@@ -11,7 +11,7 @@ import javastraw.tools.UNIXTools;
 import java.io.File;
 import java.util.*;
 
-import static cli.clt.bedpe.RetainOverlap.getLoopCode;
+import static cli.clt.sieve.RetainOverlap.getLoopCode;
 
 public class GetMultiDiffsFromFlatFile {
     public static String usage = "get-multi-diffs-from-flat-file <genomeID> <flat.file.bedpe> <outfolder> " +

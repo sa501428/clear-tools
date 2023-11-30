@@ -1,4 +1,4 @@
-package cli.clt.loops;
+package cli.clt.sieve;
 
 import cli.Main;
 import cli.clt.CommandLineParser;

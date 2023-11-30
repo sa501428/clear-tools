@@ -1,20 +1,31 @@
 package cli;
 
 import cli.clt.CommandLineParser;
-import cli.clt.apa.*;
+import cli.clt.anchor.*;
+import cli.clt.apa.APA;
+import cli.clt.apa.APA1D;
+import cli.clt.apa.APA2;
+import cli.clt.apa.Flags;
 import cli.clt.bedpe.*;
 import cli.clt.enhance.Enhance;
 import cli.clt.enhance.Seer;
+import cli.clt.flat.file.GetDiffsFromFlatFile;
+import cli.clt.flat.file.GetMultiDiffsFromFlatFile;
+import cli.clt.flat.file.LoopDiffFlatFileMaker;
 import cli.clt.loops.*;
 import cli.clt.misc.BedGraphCorr;
 import cli.clt.misc.Fimo;
 import cli.clt.misc.IntersectBedWithBedgraph;
 import cli.clt.misc.NormHack;
+import cli.clt.sieve.RetainOverlap;
+import cli.clt.sieve.Sieve;
+import cli.clt.sieve.SieveBedgraph;
+import cli.clt.sieve.SubtractByAnchorOverlap;
 import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.149.0";
+    public static final String VERSION_NUM = "0.150.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
