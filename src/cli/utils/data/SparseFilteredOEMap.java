@@ -2,6 +2,7 @@ package cli.utils.data;
 
 import cli.utils.general.ArrayTools;
 import cli.utils.general.VectorCleaner;
+import cli.utils.stripes.StripeUtils;
 import javastraw.expected.ExpectedUtils;
 import javastraw.expected.LogExpectedZscoreSpline;
 import javastraw.feature2D.Feature2D;
@@ -12,10 +13,12 @@ import javastraw.reader.mzd.MatrixZoomData;
 import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
+import javastraw.tools.ParallelizationTools;
 
 import java.awt.*;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SparseFilteredOEMap {
 
@@ -41,8 +44,6 @@ public class SparseFilteredOEMap {
 
         upStreamLogSignal = new float[numEntries];
         downStreamLogSignal = new float[numEntries];
-        //Arrays.fill(upStreamSignal, 1);
-        //Arrays.fill(downStreamSignal, 1);
 
         LogExpectedZscoreSpline poly = new LogExpectedZscoreSpline(zd, norm, chrom, resolution);
 
@@ -76,15 +77,22 @@ public class SparseFilteredOEMap {
         }
     }
 
-    private static boolean elevated5(float[] data, int i) {
+    private static boolean elevated5original(float[] data, int i) {
         return data[i] > 1.1 * data[i - 1]
                 && data[i] > 1.1 * data[i + 1]
-                && data[i - 1] > 1.1 * data[i - 2]
-                && data[i + 1] > 1.1 * data[i + 2]
+                && data[i - 1] > 1.05 * data[i - 2]
+                && data[i + 1] > 1.05 * data[i + 2]
                 && data[i - 2] > 0
                 && data[i + 2] > 0;
         //&& data[i + 1] > 1
         //&& data[i - 1] > 1);
+    }
+
+    private static boolean elevated5(float[] data, int i) {
+        return data[i] > data[i - 1]
+                && data[i] > data[i + 1]
+                && data[i - 1] > data[i - 2]
+                && data[i + 1] > data[i + 2];
     }
 
     private void populateMap(ContactRecord cr, float oe) {
@@ -108,36 +116,7 @@ public class SparseFilteredOEMap {
         contactMap.clear();
     }
 
-    public List<Feature2D> getHorizontalStripes() {
-        List<Integer> localPeaks = getLocalPeaks(upStreamLogSignal);
-        List<Feature2D> stripes = new LinkedList<>();
 
-        for (int i : localPeaks) {
-            int stripeStart = -1;
-            int stripeEnd = -1;
-            int stripeLen = 0;
-            for (int j = i + minPeakDist; j < i + maxPeakDist; j++) {
-                if (enrichedOverHorizontalWindow(i, j)) {
-                    if (stripeStart == -1) {
-                        stripeStart = j;
-                    }
-                    stripeEnd = j;
-                    stripeLen++;
-                } else {
-                    if (stripeLen >= minLengthStripe) {
-                        stripes.add(makeHorizontalStripe(i, stripeStart, stripeEnd, resolution));
-                    }
-                    stripeStart = -1;
-                    stripeEnd = -1;
-                    stripeLen = 0;
-                }
-            }
-            if (stripeLen >= minLengthStripe) {
-                stripes.add(makeHorizontalStripe(i, stripeStart, stripeEnd, resolution));
-            }
-        }
-        return stripes;
-    }
 
     private boolean enrichedOverHorizontalWindow(int i, int j) {
         float currRowOE = getValue(i, j - 1) + getValue(i, j) + getValue(i, j + 1);
@@ -158,37 +137,6 @@ public class SparseFilteredOEMap {
                 chrom.getName(), (long) i * resolution, (long) (i + 1) * resolution,
                 chrom.getName(), (long) stripeStart * resolution, (long) stripeEnd * resolution,
                 Color.MAGENTA, new HashMap<>());
-    }
-
-    public List<Feature2D> getVerticalStripes() {
-        List<Integer> localPeaks = getLocalPeaks(downStreamLogSignal);
-        List<Feature2D> stripes = new LinkedList<>();
-
-        for (int j : localPeaks) {
-            int stripeStart = -1;
-            int stripeEnd = -1;
-            int stripeLen = 0;
-            for (int i = j - maxPeakDist; i < j - minPeakDist; i++) {
-                if (enrichedOverVerticalWindow(i, j)) {
-                    if (stripeStart == -1) {
-                        stripeStart = i;
-                    }
-                    stripeEnd = i;
-                    stripeLen++;
-                } else {
-                    if (stripeLen >= minLengthStripe) {
-                        stripes.add(makeVerticalStripe(j, stripeStart, stripeEnd, resolution));
-                    }
-                    stripeStart = -1;
-                    stripeEnd = -1;
-                    stripeLen = 0;
-                }
-            }
-            if (stripeLen >= minLengthStripe) {
-                stripes.add(makeVerticalStripe(j, stripeStart, stripeEnd, resolution));
-            }
-        }
-        return stripes;
     }
 
     private Feature2D makeVerticalStripe(int j, int stripeStart, int stripeEnd, int resolution) {
@@ -214,5 +162,136 @@ public class SparseFilteredOEMap {
 
     public float[] getVerticalSignal() {
         return downStreamLogSignal;
+    }
+
+    public List<Feature2D> getHorizontalStripes() {
+        List<Integer> localPeaks = getLocalPeaks(upStreamLogSignal);
+
+        List<Feature2D> globalStripes = new LinkedList<>();
+        AtomicInteger index = new AtomicInteger(0);
+        ParallelizationTools.launchParallelizedCode(() -> {
+            List<Feature2D> localStripes = new LinkedList<>();
+            int i = index.getAndIncrement();
+            while (i < localPeaks.size()) {
+                //simpleHorizontalCall(localPeaks.get(i), localStripes);
+                complexHorizontalCall(localPeaks.get(i), localStripes);
+                i = index.getAndIncrement();
+            }
+            synchronized (globalStripes) {
+                globalStripes.addAll(localStripes);
+            }
+        });
+        return globalStripes;
+    }
+
+    public List<Feature2D> getVerticalStripes() {
+        List<Integer> localPeaks = getLocalPeaks(downStreamLogSignal);
+
+        List<Feature2D> globalStripes = new LinkedList<>();
+        AtomicInteger index = new AtomicInteger(0);
+        ParallelizationTools.launchParallelizedCode(() -> {
+            List<Feature2D> localStripes = new LinkedList<>();
+            int i = index.getAndIncrement();
+            while (i < localPeaks.size()) {
+                //simpleVerticalCall(localPeaks.get(i), localStripes);
+                complexVerticalCall(localPeaks.get(i), localStripes);
+                i = index.getAndIncrement();
+            }
+            synchronized (globalStripes) {
+                globalStripes.addAll(localStripes);
+            }
+        });
+        return globalStripes;
+    }
+
+    private void complexHorizontalCall(int i, List<Feature2D> stripes) {
+        float[][] dataSlice = getHorizontalSlice(i);
+        List<int[]> stretches = StripeUtils.findContiguousStretches(dataSlice, minLengthStripe);
+        for (int[] stretch : stretches) {
+            stripes.add(makeHorizontalStripe(i,
+                    i + minPeakDist + stretch[0],
+                    i + minPeakDist + stretch[1], resolution));
+        }
+    }
+
+    private void complexVerticalCall(int j, List<Feature2D> stripes) {
+        float[][] dataSlice = getVerticalSlice(j);
+        List<int[]> stretches = StripeUtils.findContiguousStretches(dataSlice, minLengthStripe);
+        for (int[] stretch : stretches) {
+            stripes.add(makeVerticalStripe(j,
+                    j - maxPeakDist + stretch[0],
+                    j - maxPeakDist + stretch[1], resolution));
+        }
+    }
+
+
+    private float[][] getHorizontalSlice(int i0) {
+        float[][] dataSlice = new float[5][maxPeakDist - minPeakDist];
+        for (int ii = 0; ii < 5; ii++) {
+            for (int j = 0; j < maxPeakDist - minPeakDist; j++) {
+                dataSlice[ii][j] = getValue(i0 - 2 + ii, j + i0 + minPeakDist);
+            }
+        }
+        return dataSlice;
+    }
+
+    private void simpleHorizontalCall(int i, List<Feature2D> stripes) {
+        int stripeStart = -1;
+        int stripeEnd = -1;
+        int stripeLen = 0;
+        for (int j = i + minPeakDist; j < i + maxPeakDist; j++) {
+            if (enrichedOverHorizontalWindow(i, j)) {
+                if (stripeStart == -1) {
+                    stripeStart = j;
+                }
+                stripeEnd = j;
+                stripeLen++;
+            } else {
+                if (stripeLen >= minLengthStripe) {
+                    stripes.add(makeHorizontalStripe(i, stripeStart, stripeEnd, resolution));
+                }
+                stripeStart = -1;
+                stripeEnd = -1;
+                stripeLen = 0;
+            }
+        }
+        if (stripeLen >= minLengthStripe) {
+            stripes.add(makeHorizontalStripe(i, stripeStart, stripeEnd, resolution));
+        }
+    }
+
+    private float[][] getVerticalSlice(int j) {
+        float[][] dataSlice = new float[5][maxPeakDist - minPeakDist];
+        for (int k = 0; k < 5; k++) {
+            for (int i = 0; i < maxPeakDist - minPeakDist; i++) {
+                dataSlice[k][i] = getValue(j - maxPeakDist + i, j - 2 + k);
+            }
+        }
+        return dataSlice;
+    }
+
+    private void simpleVerticalCall(int j, List<Feature2D> stripes) {
+        int stripeStart = -1;
+        int stripeEnd = -1;
+        int stripeLen = 0;
+        for (int i = j - maxPeakDist; i < j - minPeakDist; i++) {
+            if (enrichedOverVerticalWindow(i, j)) {
+                if (stripeStart == -1) {
+                    stripeStart = i;
+                }
+                stripeEnd = i;
+                stripeLen++;
+            } else {
+                if (stripeLen >= minLengthStripe) {
+                    stripes.add(makeVerticalStripe(j, stripeStart, stripeEnd, resolution));
+                }
+                stripeStart = -1;
+                stripeEnd = -1;
+                stripeLen = 0;
+            }
+        }
+        if (stripeLen >= minLengthStripe) {
+            stripes.add(makeVerticalStripe(j, stripeStart, stripeEnd, resolution));
+        }
     }
 }

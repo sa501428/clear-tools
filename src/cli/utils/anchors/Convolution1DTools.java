@@ -22,6 +22,10 @@ public class Convolution1DTools {
         return smooth(data, weights5);
     }
 
+    public static float[] smooth5(float[] data) {
+        return smooth(data, weights5);
+    }
+
     public static float[] smooth(int[] data, float[] weights) {
         float[] smooth = new float[data.length];
 
@@ -34,6 +38,25 @@ public class Convolution1DTools {
         for (int i = data.length - width; i < data.length; i++) {
             smooth[i] = data[i];
         }
+
+        for (int i = width; i < data.length - width; i++) {
+            smooth[i] = 0;
+            for (int j = 0; j < weights.length; j++) {
+                smooth[i] += weights[j] * data[i - width + j];
+            }
+        }
+        return smooth;
+    }
+
+    public static float[] smooth(float[] data, float[] weights) {
+        float[] smooth = new float[data.length];
+
+        int width = weights.length / 2;
+
+        // copy edges
+        System.arraycopy(data, 0, smooth, 0, width);
+        if (data.length - (data.length - width) >= 0)
+            System.arraycopy(data, data.length - width, smooth, data.length - width, data.length - (data.length - width));
 
         for (int i = width; i < data.length - width; i++) {
             smooth[i] = 0;

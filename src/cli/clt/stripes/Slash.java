@@ -53,7 +53,7 @@ public class Slash {
 
     // FISH - Fast Identification of Stripes in Hi-C
     // SLASH - Statistical Localization and Annotation of Stripes in Hi-C
-    public static String usage = "slash [-k NORM] [-c chrom]" +
+    public static String usage = "slash [-k NORM] [-c chrom] [--threads val]" +
             "[--min-dist val] [--max-dist val] [-r resolution] <input.hic> <outfile.bedpe>\n" +
             "find stripes in a Hi-C map";
     private final String outputFile;
@@ -63,6 +63,7 @@ public class Slash {
     private final String chrom;
     private final int minLengthStripe = 10;
     private NormalizationType norm = NormalizationHandler.VC;
+    private int numThreads = 4;
 
     public Slash(String[] args, CommandLineParser parser, String name) {
         if (args.length != 3) {
@@ -73,6 +74,7 @@ public class Slash {
         ds = HiCFileTools.extractDatasetForCLT(args[1], true, false, resolution > 50);
         outputFile = args[2];
         chrom = parser.getChromosomeOption();
+        numThreads = parser.getNumThreads(numThreads);
 
         String possibleNorm = parser.getNormalizationStringOption();
         try {
@@ -109,7 +111,7 @@ public class Slash {
         final Map<Chromosome, float[]> horizontals = new HashMap<>();
         final Map<Chromosome, float[]> verticals = new HashMap<>();
 
-        ParallelizationTools.launchParallelizedCode(() -> {
+        ParallelizationTools.launchParallelizedCode(numThreads, () -> {
 
             int threadPair = currChromPair.getAndIncrement();
             while (threadPair < chromosomes.length) {
