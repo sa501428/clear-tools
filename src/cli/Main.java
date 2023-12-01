@@ -21,11 +21,12 @@ import cli.clt.sieve.RetainOverlap;
 import cli.clt.sieve.Sieve;
 import cli.clt.sieve.SieveBedgraph;
 import cli.clt.sieve.SubtractByAnchorOverlap;
+import cli.clt.stripes.Slash;
 import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.150.0";
+    public static final String VERSION_NUM = "0.151.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -44,7 +45,7 @@ public class Main {
                     FilterBedpeByAnchorAPA.usage, IntegrateLoopListsAndUnWrap.usage,
                     IntersectBedWithBedgraph.usage, BedGraphCorr.usage, APA1D.usage,
                     AnchorStrength.usage, Grind.usage, SubtractByAnchorOverlap.usage,
-                    RetainOverlap.usage, LoopDiffFlatFileMaker.usage
+                    RetainOverlap.usage, LoopDiffFlatFileMaker.usage, Slash.usage
             }) {
                 System.out.println("\t" + usage + "\n\n");
             }
@@ -75,6 +76,9 @@ public class Main {
         String command = args[0].toLowerCase();
         if (command.equals("flags")) {
             Flags.run(args, parser);
+        } else if (command.startsWith("slash")) {
+            Slash slash = new Slash(args, parser, command);
+            slash.run();
         } else if (command.startsWith("create-diff-flat-file")) {
             LoopDiffFlatFileMaker.run(args, command, parser);
         } else if (command.startsWith("get-multi-diffs-from-flat-file")) {

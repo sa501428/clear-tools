@@ -25,6 +25,7 @@
 package cli.clt.anchor;
 
 import cli.clt.CommandLineParser;
+import cli.utils.StrawUtils;
 import cli.utils.general.ArrayTools;
 import cli.utils.general.MapNMS;
 import cli.utils.general.QuadContactRecord;
@@ -104,7 +105,7 @@ public class AnchorStrength {
         HiCZoom zoom = new HiCZoom(resolution);
         ChromosomeHandler handler = ds.getChromosomeHandler();
 
-        Chromosome[] chromosomes = getChromosomes(handler);
+        Chromosome[] chromosomes = StrawUtils.getChromosomes(handler, chrom);
         final AtomicInteger currChromPair = new AtomicInteger(0);
 
         final Map<Chromosome, float[][]> allUpMatrices = new HashMap<>();
@@ -244,15 +245,4 @@ public class AnchorStrength {
         contactMap.get(compressedX).get(compressedY).add(new QuadContactRecord(cr, oe, perc, zscore));
     }
 
-    private Chromosome[] getChromosomes(ChromosomeHandler handler) {
-        Chromosome[] chromosomes = handler.getChromosomeArrayWithoutAllByAll();
-        if (chrom != null && chrom.length() > 0) {
-            String[] chroms = chrom.split(",");
-            chromosomes = new Chromosome[chroms.length];
-            for (int i = 0; i < chroms.length; i++) {
-                chromosomes[i] = handler.getChromosomeFromName(chroms[i]);
-            }
-        }
-        return chromosomes;
-    }
 }

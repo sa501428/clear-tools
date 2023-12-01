@@ -87,6 +87,28 @@ public class SeerUtils {
         bw.close();
     }
 
+    public static void exportRowFloatsToBedgraph(Map<Chromosome, float[]> chromToRowSumsMap,
+                                                 String path, int resolution) throws IOException {
+        File outputFileName = new File(path);
+        outputFileName.createNewFile();
+        BufferedWriter bw = new BufferedWriter(new FileWriter(outputFileName));
+        // write for every chromosome
+        for (Chromosome chromosome : chromToRowSumsMap.keySet()) {
+            float[] sums = chromToRowSumsMap.get(chromosome);
+            // iterate through bins, write in the format <chr> <start_pos> <end_pos> <value>
+            for (int i = 0; i < sums.length; i++) {
+                int startPosition = i * resolution;
+                int endPosition = startPosition + resolution;
+                if (sums[i] > 0) {
+                    bw.write(chromosome.getName() + " " + startPosition + " " + endPosition + " " + sums[i]);
+                    bw.newLine();
+                }
+            }
+        }
+        // close the writer
+        bw.close();
+    }
+
     public static void exportRowIntsToBedgraph(Map<Chromosome, int[]> chromToRowSumsMap, String path, int resolution) throws IOException {
         File outputFileName = new File(path);
         outputFileName.createNewFile();
