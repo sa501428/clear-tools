@@ -36,62 +36,97 @@ public class StripeFinder {
                 && data[i + 1] > data[i + 2];
     }
 
-    public List<Feature2D> getHorizontalStripes() {
+    public List<Feature2D> getHorizontalStripes(List<Feature2D> initialStripes, boolean saveIntermediates) {
         List<Integer> localPeaks = getLocalPeaks(map.getHorizontalSignal());
 
         List<Feature2D> globalStripes = new LinkedList<>();
         AtomicInteger index = new AtomicInteger(0);
         ParallelizationTools.launchParallelizedCode(() -> {
             List<Feature2D> localStripes = new LinkedList<>();
+            List<Feature2D> initial = new LinkedList<>();
             int i = index.getAndIncrement();
             while (i < localPeaks.size()) {
                 //simpleHorizontalCall(localPeaks.get(i), localStripes);
-                complexHorizontalCall(localPeaks.get(i), localStripes);
+                complexHorizontalCall(localPeaks.get(i), localStripes, initial, saveIntermediates);
                 i = index.getAndIncrement();
             }
             synchronized (globalStripes) {
                 globalStripes.addAll(localStripes);
+                initialStripes.addAll(initial);
             }
         });
         return globalStripes;
     }
 
-    public List<Feature2D> getVerticalStripes() {
+    public List<Feature2D> getVerticalStripes(List<Feature2D> initialStripes, boolean saveIntermediates) {
         List<Integer> localPeaks = getLocalPeaks(map.getVerticalSignal());
 
         List<Feature2D> globalStripes = new LinkedList<>();
         AtomicInteger index = new AtomicInteger(0);
         ParallelizationTools.launchParallelizedCode(() -> {
             List<Feature2D> localStripes = new LinkedList<>();
+            List<Feature2D> initial = new LinkedList<>();
             int i = index.getAndIncrement();
             while (i < localPeaks.size()) {
                 //simpleVerticalCall(localPeaks.get(i), localStripes);
-                complexVerticalCall(localPeaks.get(i), localStripes);
+                complexVerticalCall(localPeaks.get(i), localStripes, initial, saveIntermediates);
                 i = index.getAndIncrement();
             }
             synchronized (globalStripes) {
                 globalStripes.addAll(localStripes);
+                initialStripes.addAll(initial);
             }
         });
         return globalStripes;
     }
 
-    private void complexHorizontalCall(int i, List<Feature2D> stripes) {
+    private void complexHorizontalCall(int i, List<Feature2D> stripes, List<Feature2D> initialStripes,
+                                       boolean saveIntermediates) {
         float[][] dataSlice = getHorizontalCountSlice(i);
         float[][] dataOESlice = getHorizontalOESlice(i);
         List<int[]> stretches = StripeUtils.findContiguousStretches(dataSlice, dataOESlice, minLengthStripe);
-        for (int[] stretch : stretches) {
+
+        if (saveIntermediates) {
+            for (int[] stretch : stretches) {
+                if (StripeUtils.hasGeoMeanHigherThanNeighbors(stretch, dataOESlice)) {
+                    if (StripeUtils.isMeanSignificantlyHigherThanNeighbors(stretch, dataSlice, 0)) {
+                        //if(StripeUtils.isMeanSignificantlyHigherThanNeighbors(stretch, dataOESlice, 1)){
+                        initialStripes.add(makeHorizontalStripe(i,
+                                i + minPeakDist + stretch[0],
+                                i + minPeakDist + stretch[1], resolution));
+                        //}
+                    }
+                }
+            }
+        }
+
+        for (int[] stretch : StripeUtils.onlySignificantStretches(stretches, dataSlice, dataOESlice)) {
             stripes.add(makeHorizontalStripe(i,
                     i + minPeakDist + stretch[0],
                     i + minPeakDist + stretch[1], resolution));
         }
     }
 
-    private void complexVerticalCall(int j, List<Feature2D> stripes) {
-        float[][] dataCountSlice = getVerticalCountSlice(j);
+    private void complexVerticalCall(int j, List<Feature2D> stripes, List<Feature2D> initialStripes,
+                                     boolean saveIntermediates) {
+        float[][] dataSlice = getVerticalCountSlice(j);
         float[][] dataOESlice = getVerticalOESlice(j);
-        List<int[]> stretches = StripeUtils.findContiguousStretches(dataCountSlice, dataOESlice, minLengthStripe);
-        for (int[] stretch : stretches) {
+        List<int[]> stretches = StripeUtils.findContiguousStretches(dataSlice, dataOESlice, minLengthStripe);
+
+        if (saveIntermediates) {
+            for (int[] stretch : stretches) {
+                if (StripeUtils.hasGeoMeanHigherThanNeighbors(stretch, dataOESlice)) {
+                    if (StripeUtils.isMeanSignificantlyHigherThanNeighbors(stretch, dataSlice, 0)) {
+                        //if (StripeUtils.isMeanSignificantlyHigherThanNeighbors(stretch, dataOESlice, 1)) {
+                        initialStripes.add(makeVerticalStripe(j,
+                                j - maxPeakDist + stretch[0],
+                                j - maxPeakDist + stretch[1], resolution));
+                        //}
+                    }
+                }
+            }
+        }
+        for (int[] stretch : StripeUtils.onlySignificantStretches(stretches, dataSlice, dataOESlice)) {
             stripes.add(makeVerticalStripe(j,
                     j - maxPeakDist + stretch[0],
                     j - maxPeakDist + stretch[1], resolution));
