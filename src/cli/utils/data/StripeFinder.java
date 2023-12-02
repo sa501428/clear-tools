@@ -36,13 +36,13 @@ public class StripeFinder {
                 && data[i + 1] > data[i + 2];
     }
 
-    public java.util.List<Feature2D> getHorizontalStripes() {
-        java.util.List<Integer> localPeaks = getLocalPeaks(map.getHorizontalSignal());
+    public List<Feature2D> getHorizontalStripes() {
+        List<Integer> localPeaks = getLocalPeaks(map.getHorizontalSignal());
 
-        java.util.List<Feature2D> globalStripes = new LinkedList<>();
+        List<Feature2D> globalStripes = new LinkedList<>();
         AtomicInteger index = new AtomicInteger(0);
         ParallelizationTools.launchParallelizedCode(() -> {
-            java.util.List<Feature2D> localStripes = new LinkedList<>();
+            List<Feature2D> localStripes = new LinkedList<>();
             int i = index.getAndIncrement();
             while (i < localPeaks.size()) {
                 //simpleHorizontalCall(localPeaks.get(i), localStripes);
@@ -56,13 +56,13 @@ public class StripeFinder {
         return globalStripes;
     }
 
-    public java.util.List<Feature2D> getVerticalStripes() {
-        java.util.List<Integer> localPeaks = getLocalPeaks(map.getVerticalSignal());
+    public List<Feature2D> getVerticalStripes() {
+        List<Integer> localPeaks = getLocalPeaks(map.getVerticalSignal());
 
-        java.util.List<Feature2D> globalStripes = new LinkedList<>();
+        List<Feature2D> globalStripes = new LinkedList<>();
         AtomicInteger index = new AtomicInteger(0);
         ParallelizationTools.launchParallelizedCode(() -> {
-            java.util.List<Feature2D> localStripes = new LinkedList<>();
+            List<Feature2D> localStripes = new LinkedList<>();
             int i = index.getAndIncrement();
             while (i < localPeaks.size()) {
                 //simpleVerticalCall(localPeaks.get(i), localStripes);
@@ -76,10 +76,10 @@ public class StripeFinder {
         return globalStripes;
     }
 
-    private void complexHorizontalCall(int i, java.util.List<Feature2D> stripes) {
+    private void complexHorizontalCall(int i, List<Feature2D> stripes) {
         float[][] dataSlice = getHorizontalCountSlice(i);
         float[][] dataOESlice = getHorizontalOESlice(i);
-        java.util.List<int[]> stretches = StripeUtils.findContiguousStretches(dataSlice, dataOESlice, minLengthStripe);
+        List<int[]> stretches = StripeUtils.findContiguousStretches(dataSlice, dataOESlice, minLengthStripe);
         for (int[] stretch : stretches) {
             stripes.add(makeHorizontalStripe(i,
                     i + minPeakDist + stretch[0],
@@ -87,7 +87,7 @@ public class StripeFinder {
         }
     }
 
-    private void complexVerticalCall(int j, java.util.List<Feature2D> stripes) {
+    private void complexVerticalCall(int j, List<Feature2D> stripes) {
         float[][] dataCountSlice = getVerticalCountSlice(j);
         float[][] dataOESlice = getVerticalOESlice(j);
         List<int[]> stretches = StripeUtils.findContiguousStretches(dataCountSlice, dataOESlice, minLengthStripe);
