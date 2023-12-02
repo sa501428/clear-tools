@@ -24,6 +24,7 @@
 
 package cli.clt.stripes;
 
+import cli.Main;
 import cli.clt.CommandLineParser;
 import cli.utils.StrawUtils;
 import cli.utils.data.SparseFilteredOEMap;
@@ -88,7 +89,7 @@ public class Slash {
             e.printStackTrace();
             System.err.println(e.getMessage());
         }
-        System.out.println("Using normalization: " + norm.getLabel());
+        if (Main.printVerboseComments) System.out.println("Using normalization: " + norm.getLabel());
         minPeakDist = parser.getMinDistVal(20000) / resolution;
         maxPeakDist = parser.getMaxDistVal(8000000) / resolution;
     }
@@ -100,7 +101,7 @@ public class Slash {
 
 
     public void run() {
-        System.out.println("Calling stripes for resolution " + resolution);
+        if (Main.printVerboseComments) System.out.println("Calling stripes for resolution " + resolution);
         HiCZoom zoom = new HiCZoom(resolution);
         ChromosomeHandler handler = ds.getChromosomeHandler();
 
@@ -127,19 +128,21 @@ public class Slash {
                     MatrixZoomData zd = matrix.getZoomData(zoom);
                     if (zd != null) {
                         try {
-
-                            System.out.println("creating dataset for " + chrom.getName());
+                            if (Main.printVerboseComments)
+                                System.out.println("creating dataset for " + chrom.getName());
                             SparseFilteredOEMap map = new SparseFilteredOEMap(ds, zd, norm, chrom, resolution,
                                     minPeakDist, maxPeakDist, zoom);
 
                             StripeFinder finder = new StripeFinder(map, chrom, resolution,
                                     minPeakDist, maxPeakDist, minLengthStripe);
-                            System.out.println("Getting horizontal stripes for " + chrom.getName());
+                            if (Main.printVerboseComments)
+                                System.out.println("Getting horizontal stripes for " + chrom.getName());
 
                             List<Feature2D> initialHorizontalStripesForChrom = new LinkedList<>();
                             List<Feature2D> horizontalStripesForChrom = finder.getHorizontalStripes(initialHorizontalStripesForChrom, saveIntermediates);
 
-                            System.out.println("Getting vertical stripes for " + chrom.getName());
+                            if (Main.printVerboseComments)
+                                System.out.println("Getting vertical stripes for " + chrom.getName());
                             List<Feature2D> initialVerticalStripesForChrom = new LinkedList<>();
                             List<Feature2D> verticalStripesForChrom = finder.getVerticalStripes(initialVerticalStripesForChrom, saveIntermediates);
 
@@ -185,7 +188,7 @@ public class Slash {
             }
         });
 
-        System.out.println("Exporting results...");
+        if (Main.printVerboseComments) System.out.println("Exporting results...");
         try {
             SeerUtils.exportRowFloatsToBedgraph(horizontals, outputFile + ".up.bedgraph", resolution);
             SeerUtils.exportRowFloatsToBedgraph(verticals, outputFile + ".down.bedgraph", resolution);
@@ -199,6 +202,6 @@ public class Slash {
             initialHorizontalStripes.exportFeatureList(new File(outputFile.replace(".bedpe", ".initial.horizontal.bedpe")), false, Feature2DList.ListFormat.NA);
             initialVerticalStripes.exportFeatureList(new File(outputFile.replace(".bedpe", ".initial.vertical.bedpe")), false, Feature2DList.ListFormat.NA);
         }
-        System.out.println("SLASH complete");
+        if (Main.printVerboseComments) System.out.println("SLASH complete");
     }
 }

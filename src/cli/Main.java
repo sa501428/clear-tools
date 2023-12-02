@@ -22,11 +22,12 @@ import cli.clt.sieve.Sieve;
 import cli.clt.sieve.SieveBedgraph;
 import cli.clt.sieve.SubtractByAnchorOverlap;
 import cli.clt.stripes.Slash;
+import cli.clt.stripes.SlashLocalize;
 import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.155.0";
+    public static final String VERSION_NUM = "0.156.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -45,7 +46,7 @@ public class Main {
                     FilterBedpeByAnchorAPA.usage, IntegrateLoopListsAndUnWrap.usage,
                     IntersectBedWithBedgraph.usage, BedGraphCorr.usage, APA1D.usage,
                     AnchorStrength.usage, Grind.usage, SubtractByAnchorOverlap.usage,
-                    RetainOverlap.usage, LoopDiffFlatFileMaker.usage, Slash.usage
+                    RetainOverlap.usage, LoopDiffFlatFileMaker.usage, Slash.usage, SlashLocalize.usage
             }) {
                 System.out.println("\t" + usage + "\n\n");
             }
@@ -76,6 +77,8 @@ public class Main {
         String command = args[0].toLowerCase();
         if (command.equals("flags")) {
             Flags.run(args, parser);
+        } else if (command.startsWith("slash-localize")) {
+            SlashLocalize.run(args, parser);
         } else if (command.startsWith("slash")) {
             Slash slash = new Slash(args, parser, command);
             slash.run();
