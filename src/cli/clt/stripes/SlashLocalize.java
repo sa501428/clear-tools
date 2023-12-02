@@ -48,7 +48,7 @@ public class SlashLocalize {
         Feature2DList stripeList = Feature2DParser.loadFeatures(stripeListPath, handler,
                 true, null, false);
 
-        System.out.println("Number of stripes: " + stripeList.getNumTotalFeatures());
+        if (Main.printVerboseComments) System.out.println("Number of stripes: " + stripeList.getNumTotalFeatures());
 
         final Feature2DList horizontalLocalized = new Feature2DList();
         final Feature2DList verticalLocalized = new Feature2DList();
@@ -58,7 +58,7 @@ public class SlashLocalize {
         allLocalized.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
         horizontalLocalized.exportFeatureList(new File(outFile.replaceAll(".bedpe", ".horizontal.bedpe")), false, Feature2DList.ListFormat.NA);
         verticalLocalized.exportFeatureList(new File(outFile.replaceAll(".bedpe", ".vertical.bedpe")), false, Feature2DList.ListFormat.NA);
-        System.out.println("stripe localization complete");
+        if (Main.printVerboseComments) System.out.println("stripe localization complete");
     }
 
     private static void localize(Dataset ds, Feature2DList stripeList, ChromosomeHandler handler,
@@ -85,6 +85,8 @@ public class SlashLocalize {
 
                 Matrix matrix = ds.getMatrix(chr1, chr2);
                 if (matrix != null) {
+                    if (Main.printVerboseComments)
+                        System.out.println("Processing " + chr1.getName() + " " + chr2.getName());
 
                     List<Feature2D> stripes = filterForMinSize(stripeList.get(chr1.getIndex(), chr2.getIndex()),
                             resolution, compressionSize);
@@ -92,46 +94,53 @@ public class SlashLocalize {
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
                             try {
+                                if (Main.printVerboseComments)
+                                    System.out.println("Num loops to process: " + stripes.size());
                                 List<Feature2D> horizontalStripes = new LinkedList<>();
                                 List<Feature2D> verticalStripes = new LinkedList<>();
-
-                                populateHorizontalAndVertical(stripes, horizontalStripes, verticalStripes);
 
                                 SparseContactMatrixOfSpecificRegionsOnly scm = new SparseContactMatrixOfSpecificRegionsOnly(zd,
                                         stripes, resolution, resolution, NONE);
 
-                                for (Feature2D stripe : stripes) {
-                                    int binX1 = (int) (stripe.getStart1() / resolution) - 1;
-                                    int binX2 = (int) (stripe.getEnd1() / resolution) + 1;
-                                    int binY1 = (int) (stripe.getStart2() / resolution) - 1;
-                                    int binY2 = (int) (stripe.getEnd2() / resolution) + 1;
+                                if (Main.printVerboseComments) System.out.println("Sparse data loaded");
+                                try {
 
-                                    float[][] data = scm.getRegion(binX1, binY1, binX2, binY2);
-                                    addToAll(data, getAverage(data));
+                                    for (Feature2D stripe : stripes) {
+                                        int binX1 = (int) (stripe.getStart1() / resolution) - 1;
+                                        int binX2 = (int) (stripe.getEnd1() / resolution) + 1;
+                                        int binY1 = (int) (stripe.getStart2() / resolution) - 1;
+                                        int binY2 = (int) (stripe.getEnd2() / resolution) + 1;
 
-                                    if (stripe.getWidth2() > stripe.getWidth1()) { // horizontal loop
-                                        data = collapseColumns(data, compressionSize);
-                                    } else if (stripe.getWidth1() > stripe.getWidth2()) { // vertical loop
-                                        data = collapseRows(data, compressionSize);
-                                    } else { // should not be happening
-                                        data = null;
-                                    }
+                                        float[][] data = scm.getRegion(binX1, binY1, binX2, binY2);
+                                        addToAll(data, getAverage(data));
 
-                                    data = normalize(data);
-
-                                    if (stripe.getWidth2() > stripe.getWidth1()) { // horizontal loop
-                                        float[] rowSums = getRowSums(data);
-                                        int rowIndex = getBestIndex(rowSums);
-                                        if (rowIndex > 0 && rowIndex < data.length - 1) {
-                                            horizontalStripes.add(makeLocalizedHorizontalStripe(stripe, binX1 + rowIndex, resolution));
+                                        if (stripe.getWidth2() > stripe.getWidth1()) { // horizontal loop
+                                            data = collapseColumns(data, compressionSize);
+                                        } else if (stripe.getWidth1() > stripe.getWidth2()) { // vertical loop
+                                            data = collapseRows(data, compressionSize);
+                                        } else { // should not be happening
+                                            data = null;
                                         }
-                                    } else if (stripe.getWidth1() > stripe.getWidth2()) { // vertical loop
-                                        float[] colSums = getColSums(data);
-                                        int colIndex = getBestIndex(colSums);
-                                        if (colIndex > 0 && colIndex < data[0].length - 1) {
-                                            verticalStripes.add(makeLocalizedVerticalStripe(stripe, binY1 + colIndex, resolution));
+
+                                        data = normalize(data);
+
+                                        if (stripe.getWidth2() > stripe.getWidth1()) { // horizontal loop
+                                            float[] rowSums = getRowSums(data);
+                                            int rowIndex = getBestIndex(rowSums);
+                                            if (rowIndex > 0 && rowIndex < data.length - 1) {
+                                                horizontalStripes.add(makeLocalizedHorizontalStripe(stripe, binX1 + rowIndex, resolution));
+                                            }
+                                        } else if (stripe.getWidth1() > stripe.getWidth2()) { // vertical loop
+                                            float[] colSums = getColSums(data);
+                                            int colIndex = getBestIndex(colSums);
+                                            if (colIndex > 0 && colIndex < data[0].length - 1) {
+                                                verticalStripes.add(makeLocalizedVerticalStripe(stripe, binY1 + colIndex, resolution));
+                                            }
                                         }
                                     }
+                                } catch (Exception e) {
+                                    System.err.println(e.getMessage());
+                                    e.printStackTrace();
                                 }
 
                                 synchronized (horizontalLocalized) {
@@ -224,7 +233,7 @@ public class SlashLocalize {
     }
 
     private static float[][] collapseRows(float[][] data, int compressionSize) {
-        float[][] collapsed = new float[data.length / compressionSize][data[0].length];
+        float[][] collapsed = new float[(data.length / compressionSize) + 1][data[0].length];
         for (int i = 0; i < data.length; i++) {
             for (int j = 0; j < data[0].length; j++) {
                 collapsed[i / compressionSize][j] += data[i][j];
@@ -234,7 +243,7 @@ public class SlashLocalize {
     }
 
     private static float[][] collapseColumns(float[][] data, int compressionSize) {
-        float[][] collapsed = new float[data.length][data[0].length / compressionSize];
+        float[][] collapsed = new float[data.length][(data[0].length / compressionSize) + 1];
         for (int i = 0; i < data.length; i++) {
             for (int j = 0; j < data[0].length; j++) {
                 collapsed[i][j / compressionSize] += data[i][j];
@@ -261,23 +270,15 @@ public class SlashLocalize {
         return (float) (sum / (data.length * data[0].length));
     }
 
-    private static void populateHorizontalAndVertical(List<Feature2D> stripes, List<Feature2D> horizontalStripes, List<Feature2D> verticalStripes) {
-        for (Feature2D loop : stripes) {
-            if (loop.getWidth2() > loop.getWidth1()) {
-                horizontalStripes.add(loop);
-            } else if (loop.getWidth1() > loop.getWidth2()) {
-                verticalStripes.add(loop);
-            }
-        }
-    }
-
     private static List<Feature2D> filterForMinSize(List<Feature2D> feature2DS, int resolution, int compressionSize) {
         List<Feature2D> filteredBySize = new LinkedList<>();
         if (feature2DS != null) {
             for (Feature2D loop : feature2DS) {
-                if (compressedSize(loop.getWidth1(), resolution, compressionSize) > 3
-                        && compressedSize(loop.getWidth2(), resolution, compressionSize) > 3) {
-                    filteredBySize.add(loop);
+                if (loop.getWidth1() != loop.getWidth2()) {
+                    long width = Math.max(loop.getWidth1(), loop.getWidth2());
+                    if (compressedSize(width, resolution, compressionSize) > 1) {
+                        filteredBySize.add(loop);
+                    }
                 }
             }
         }
