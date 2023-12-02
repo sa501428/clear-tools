@@ -27,6 +27,7 @@ package cli.clt.stripes;
 import cli.clt.CommandLineParser;
 import cli.utils.StrawUtils;
 import cli.utils.data.SparseFilteredOEMap;
+import cli.utils.data.StripeFinder;
 import cli.utils.seer.SeerUtils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -125,11 +126,14 @@ public class Slash {
 
                             System.out.println("creating dataset for " + chrom.getName());
                             SparseFilteredOEMap map = new SparseFilteredOEMap(ds, zd, norm, chrom, resolution,
-                                    minPeakDist, maxPeakDist, zoom, minLengthStripe);
+                                    minPeakDist, maxPeakDist, zoom);
+
+                            StripeFinder finder = new StripeFinder(map, chrom, resolution,
+                                    minPeakDist, maxPeakDist, minLengthStripe);
                             System.out.println("Getting horizontal stripes for " + chrom.getName());
-                            List<Feature2D> horizontalStripesForChrom = map.getHorizontalStripes();
+                            List<Feature2D> horizontalStripesForChrom = finder.getHorizontalStripes();
                             System.out.println("Getting vertical stripes for " + chrom.getName());
-                            List<Feature2D> verticalStripesForChrom = map.getVerticalStripes();
+                            List<Feature2D> verticalStripesForChrom = finder.getVerticalStripes();
 
                             synchronized (horizontals) {
                                 horizontals.put(chrom, map.getHorizontalSignal());
