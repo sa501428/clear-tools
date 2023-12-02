@@ -23,7 +23,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SparseFilteredOEMap {
 
     private static final float Z_TOP_TEN = 1.28f;
-    private final Map<Integer, Map<Integer, Float>> contactMap = new HashMap<>();
+    private static final float Z_TOP_FIFTEEN = 1.04f;
+    private static final float Z_1 = 1f;
+
+    private final Map<Integer, Map<Integer, FloatPair>> contactMap = new HashMap<>();
     private final int minPeakDist;
     private final int maxPeakDist;
     private final float[] upStreamLogSignal;
@@ -64,7 +67,7 @@ public class SparseFilteredOEMap {
 
                         float oe = (float) ((cr.getCounts() + 1) / (poly.getExpectedFromUncompressedBin(dist) + 1));
                         float zscore = (float) poly.getZscoreForObservedUncompressedBin(dist, cr.getCounts());
-                        if (oe > 2 || zscore > Z_TOP_TEN) {
+                        if (oe > 1.5 || zscore > Z_1) { // oe > 2 || zscore > Z_TOP_TEN
                             populateMap(cr, cr.getCounts());
                             //upStreamSignal[cr.getBinX()] *= oe;
                             //downStreamSignal[cr.getBinY()] *= oe;
@@ -99,18 +102,25 @@ public class SparseFilteredOEMap {
         if (!contactMap.containsKey(cr.getBinX())) {
             contactMap.put(cr.getBinX(), new HashMap<>());
         }
-        contactMap.get(cr.getBinX()).put(cr.getBinY(), oe);
+        contactMap.get(cr.getBinX()).put(cr.getBinY(), new FloatPair(cr.getCounts(), oe));
     }
 
-    private float getValue(int binX, int binY) {
+    private float getOEValue(int binX, int binY) {
         if (contactMap.containsKey(binX) && contactMap.get(binX).containsKey(binY)) {
-            return contactMap.get(binX).get(binY);
+            return contactMap.get(binX).get(binY).oe;
         }
         return 1;
     }
 
+    private float getCountValue(int binX, int binY) {
+        if (contactMap.containsKey(binX) && contactMap.get(binX).containsKey(binY)) {
+            return contactMap.get(binX).get(binY).count;
+        }
+        return 0;
+    }
+
     public void clear() {
-        for (Map<Integer, Float> map : contactMap.values()) {
+        for (Map<Integer, FloatPair> map : contactMap.values()) {
             map.clear();
         }
         contactMap.clear();
@@ -118,19 +128,7 @@ public class SparseFilteredOEMap {
 
 
 
-    private boolean enrichedOverHorizontalWindow(int i, int j) {
-        float currRowOE = getValue(i, j - 1) + getValue(i, j) + getValue(i, j + 1);
-        float prevRowOE = getValue(i - 1, j - 1) + getValue(i - 1, j) + getValue(i - 1, j + 1);
-        float nextRowOE = getValue(i + 1, j - 1) + getValue(i + 1, j) + getValue(i + 1, j + 1);
-        return currRowOE > 1.25 * prevRowOE && currRowOE > 1.25 * nextRowOE;
-    }
 
-    private boolean enrichedOverVerticalWindow(int i, int j) {
-        float currColOE = getValue(i - 1, j) + getValue(i, j) + getValue(i + 1, j);
-        float prevColOE = getValue(i - 1, j - 1) + getValue(i, j - 1) + getValue(i + 1, j - 1);
-        float nextColOE = getValue(i - 1, j + 1) + getValue(i, j + 1) + getValue(i + 1, j + 1);
-        return currColOE > 1.25 * prevColOE && currColOE > 1.25 * nextColOE;
-    }
 
     private Feature2D makeHorizontalStripe(int i, int stripeStart, int stripeEnd, int resolution) {
         return new Feature2D(Feature2D.FeatureType.NONE,
@@ -205,8 +203,9 @@ public class SparseFilteredOEMap {
     }
 
     private void complexHorizontalCall(int i, List<Feature2D> stripes) {
-        float[][] dataSlice = getHorizontalSlice(i);
-        List<int[]> stretches = StripeUtils.findContiguousStretches(dataSlice, minLengthStripe);
+        float[][] dataSlice = getHorizontalCountSlice(i);
+        float[][] dataOESlice = getHorizontalOESlice(i);
+        List<int[]> stretches = StripeUtils.findContiguousStretches(dataSlice, dataOESlice, minLengthStripe);
         for (int[] stretch : stretches) {
             stripes.add(makeHorizontalStripe(i,
                     i + minPeakDist + stretch[0],
@@ -215,8 +214,9 @@ public class SparseFilteredOEMap {
     }
 
     private void complexVerticalCall(int j, List<Feature2D> stripes) {
-        float[][] dataSlice = getVerticalSlice(j);
-        List<int[]> stretches = StripeUtils.findContiguousStretches(dataSlice, minLengthStripe);
+        float[][] dataCountSlice = getVerticalCountSlice(j);
+        float[][] dataOESlice = getVerticalOESlice(j);
+        List<int[]> stretches = StripeUtils.findContiguousStretches(dataCountSlice, dataOESlice, minLengthStripe);
         for (int[] stretch : stretches) {
             stripes.add(makeVerticalStripe(j,
                     j - maxPeakDist + stretch[0],
@@ -224,74 +224,44 @@ public class SparseFilteredOEMap {
         }
     }
 
-
-    private float[][] getHorizontalSlice(int i0) {
+    private float[][] getHorizontalCountSlice(int i0) {
         float[][] dataSlice = new float[5][maxPeakDist - minPeakDist];
         for (int ii = 0; ii < 5; ii++) {
             for (int j = 0; j < maxPeakDist - minPeakDist; j++) {
-                dataSlice[ii][j] = getValue(i0 - 2 + ii, j + i0 + minPeakDist);
+                dataSlice[ii][j] = getCountValue(i0 - 2 + ii, j + i0 + minPeakDist);
             }
         }
         return dataSlice;
     }
 
-    private void simpleHorizontalCall(int i, List<Feature2D> stripes) {
-        int stripeStart = -1;
-        int stripeEnd = -1;
-        int stripeLen = 0;
-        for (int j = i + minPeakDist; j < i + maxPeakDist; j++) {
-            if (enrichedOverHorizontalWindow(i, j)) {
-                if (stripeStart == -1) {
-                    stripeStart = j;
-                }
-                stripeEnd = j;
-                stripeLen++;
-            } else {
-                if (stripeLen >= minLengthStripe) {
-                    stripes.add(makeHorizontalStripe(i, stripeStart, stripeEnd, resolution));
-                }
-                stripeStart = -1;
-                stripeEnd = -1;
-                stripeLen = 0;
-            }
-        }
-        if (stripeLen >= minLengthStripe) {
-            stripes.add(makeHorizontalStripe(i, stripeStart, stripeEnd, resolution));
-        }
-    }
-
-    private float[][] getVerticalSlice(int j) {
+    private float[][] getVerticalCountSlice(int j) {
         float[][] dataSlice = new float[5][maxPeakDist - minPeakDist];
         for (int k = 0; k < 5; k++) {
             for (int i = 0; i < maxPeakDist - minPeakDist; i++) {
-                dataSlice[k][i] = getValue(j - maxPeakDist + i, j - 2 + k);
+                dataSlice[k][i] = getCountValue(j - maxPeakDist + i, j - 2 + k);
             }
         }
         return dataSlice;
     }
 
-    private void simpleVerticalCall(int j, List<Feature2D> stripes) {
-        int stripeStart = -1;
-        int stripeEnd = -1;
-        int stripeLen = 0;
-        for (int i = j - maxPeakDist; i < j - minPeakDist; i++) {
-            if (enrichedOverVerticalWindow(i, j)) {
-                if (stripeStart == -1) {
-                    stripeStart = i;
-                }
-                stripeEnd = i;
-                stripeLen++;
-            } else {
-                if (stripeLen >= minLengthStripe) {
-                    stripes.add(makeVerticalStripe(j, stripeStart, stripeEnd, resolution));
-                }
-                stripeStart = -1;
-                stripeEnd = -1;
-                stripeLen = 0;
+    private float[][] getHorizontalOESlice(int i0) {
+        float[][] dataSlice = new float[5][maxPeakDist - minPeakDist];
+        for (int ii = 0; ii < 5; ii++) {
+            for (int j = 0; j < maxPeakDist - minPeakDist; j++) {
+                dataSlice[ii][j] = getOEValue(i0 - 2 + ii, j + i0 + minPeakDist);
             }
         }
-        if (stripeLen >= minLengthStripe) {
-            stripes.add(makeVerticalStripe(j, stripeStart, stripeEnd, resolution));
-        }
+        return dataSlice;
     }
+
+    private float[][] getVerticalOESlice(int j) {
+        float[][] dataSlice = new float[5][maxPeakDist - minPeakDist];
+        for (int k = 0; k < 5; k++) {
+            for (int i = 0; i < maxPeakDist - minPeakDist; i++) {
+                dataSlice[k][i] = getOEValue(j - maxPeakDist + i, j - 2 + k);
+            }
+        }
+        return dataSlice;
+    }
+
 }
