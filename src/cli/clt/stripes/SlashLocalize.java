@@ -18,6 +18,7 @@ import javastraw.reader.type.NormalizationHandler;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
+import org.apache.commons.math3.stat.inference.TTest;
 
 import java.io.File;
 import java.util.LinkedList;
@@ -154,6 +155,7 @@ public class SlashLocalize {
                                     allLocalized.addByKey(Feature2DList.getKey(chr1, chr2), verticalStripes);
                                 }
 
+                                currNumDone.addAndGet(stripes.size());
                                 System.out.println(((int) Math.floor((100.0 * currNumDone.get()) / numTotalLoops)) + "% ");
 
                             } catch (Exception e) {
@@ -170,6 +172,8 @@ public class SlashLocalize {
 
     private static int getBestIndex(float[] sums) {
 
+        double[] sumsDoubles = convert(sums);
+
         int bestIndex = -1;
         float bestVal = 0;
         for (int i = 1; i < sums.length - 1; i++) {
@@ -180,7 +184,23 @@ public class SlashLocalize {
             }
         }
 
-        return bestIndex;
+        // one-sample t-test
+        TTest tTest = new TTest();
+        double pValue = tTest.tTest(sumsDoubles[bestIndex], sumsDoubles);
+
+        if (pValue < 0.01) {
+            return bestIndex;
+        }
+
+        return -1;
+    }
+
+    private static double[] convert(float[] floats) {
+        double[] doubles = new double[floats.length];
+        for (int i = 0; i < floats.length; i++) {
+            doubles[i] = floats[i];
+        }
+        return doubles;
     }
 
     private static float getSumOfThree(float[] data, int index) {
