@@ -30,6 +30,7 @@ import cli.utils.StrawUtils;
 import cli.utils.data.SparseFilteredOEMap;
 import cli.utils.data.StripeFinder;
 import cli.utils.seer.SeerUtils;
+import cli.utils.stripes.StripeUtils;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.reader.Dataset;
@@ -46,7 +47,6 @@ import javastraw.tools.ParallelizationTools;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -56,7 +56,7 @@ public class Slash {
 
     // FISH - Fast Identification of Stripes in Hi-C
     // SLASH - Statistical Localization and Annotation of Stripes in Hi-C
-    public static String usage = "slash [-k NORM] [-c chrom] [--threads val]" +
+    public static String usage = "slash[-strict] [-k NORM] [-c chrom] [--threads val]" +
             "[--min-dist val] [--max-dist val] [-r resolution] <input.hic> <outfile.bedpe>\n" +
             "find stripes in a Hi-C map";
     private final String outputFile;
@@ -67,11 +67,17 @@ public class Slash {
     private final int minLengthStripe = 10;
     private NormalizationType norm = NormalizationHandler.VC;
     private int numThreads = 4;
-    private final boolean saveIntermediates = false;
+    private boolean beExtraStrict = false;
 
     public Slash(String[] args, CommandLineParser parser, String name) {
         if (args.length != 3) {
             printUsageAndExit();
+        }
+
+        beExtraStrict = name.contains("strict");
+        if (beExtraStrict) {
+            System.out.println("Running in strict mode");
+            StripeUtils.GEO_ENRICHMENT = 1.1f;
         }
 
         resolution = parser.getResolutionOption(2000);
@@ -112,8 +118,6 @@ public class Slash {
         final Feature2DList stripes = new Feature2DList();
         final Feature2DList horizontalStripes = new Feature2DList();
         final Feature2DList verticalStripes = new Feature2DList();
-        final Feature2DList initialHorizontalStripes = new Feature2DList();
-        final Feature2DList initialVerticalStripes = new Feature2DList();
         final Map<Chromosome, float[]> horizontals = new HashMap<>();
         final Map<Chromosome, float[]> verticals = new HashMap<>();
 
@@ -138,27 +142,17 @@ public class Slash {
                             if (Main.printVerboseComments)
                                 System.out.println("Getting horizontal stripes for " + chrom.getName());
 
-                            List<Feature2D> initialHorizontalStripesForChrom = new LinkedList<>();
-                            List<Feature2D> horizontalStripesForChrom = finder.getHorizontalStripes(initialHorizontalStripesForChrom, saveIntermediates);
+                            List<Feature2D> horizontalStripesForChrom = finder.getHorizontalStripes();
 
                             if (Main.printVerboseComments)
                                 System.out.println("Getting vertical stripes for " + chrom.getName());
-                            List<Feature2D> initialVerticalStripesForChrom = new LinkedList<>();
-                            List<Feature2D> verticalStripesForChrom = finder.getVerticalStripes(initialVerticalStripesForChrom, saveIntermediates);
+                            List<Feature2D> verticalStripesForChrom = finder.getVerticalStripes();
 
                             synchronized (horizontals) {
                                 horizontals.put(chrom, map.getHorizontalSignal());
                             }
                             synchronized (verticals) {
                                 verticals.put(chrom, map.getVerticalSignal());
-                            }
-                            if (saveIntermediates) {
-                                synchronized (initialHorizontalStripes) {
-                                    initialHorizontalStripes.addByKey(Feature2DList.getKey(chrom, chrom), initialHorizontalStripesForChrom);
-                                }
-                                synchronized (initialVerticalStripes) {
-                                    initialVerticalStripes.addByKey(Feature2DList.getKey(chrom, chrom), initialVerticalStripesForChrom);
-                                }
                             }
 
                             map.clear();
@@ -198,10 +192,6 @@ public class Slash {
         stripes.exportFeatureList(new File(outputFile), false, Feature2DList.ListFormat.NA);
         horizontalStripes.exportFeatureList(new File(outputFile.replace(".bedpe", ".horizontal.bedpe")), false, Feature2DList.ListFormat.NA);
         verticalStripes.exportFeatureList(new File(outputFile.replace(".bedpe", ".vertical.bedpe")), false, Feature2DList.ListFormat.NA);
-        if (saveIntermediates) {
-            initialHorizontalStripes.exportFeatureList(new File(outputFile.replace(".bedpe", ".initial.horizontal.bedpe")), false, Feature2DList.ListFormat.NA);
-            initialVerticalStripes.exportFeatureList(new File(outputFile.replace(".bedpe", ".initial.vertical.bedpe")), false, Feature2DList.ListFormat.NA);
-        }
         if (Main.printVerboseComments) System.out.println("SLASH complete");
     }
 }

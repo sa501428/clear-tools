@@ -10,8 +10,9 @@ import java.util.List;
 
 public class StripeUtils {
 
-    final static int MIDPT = 2, PRE = 1, POST = 3;
-    final static float RELATIVE_ENRICHMENT = 1.25f;
+    public final static int MIDPT = 2, PRE = 1, POST = 3;
+    public final static float RELATIVE_ENRICHMENT = 1.25f;
+    public static float GEO_ENRICHMENT = 1f;
 
     public static List<int[]> findContiguousStretches(float[][] dataSlice, float[][] dataOESlice, int minLength) {
         float[][] smooth = smoothen(dataSlice);
@@ -76,7 +77,7 @@ public class StripeUtils {
         double prevMean = getGeometricMean(stretch, dataOESlice[PRE], 1);
         double nextMean = getGeometricMean(stretch, dataOESlice[POST], 1);
         // RELATIVE_ENRICHMENT *
-        return geoMean > 1.5 && geoMean > prevMean && geoMean > nextMean;
+        return geoMean > 1.5 && geoMean > GEO_ENRICHMENT * prevMean && geoMean > GEO_ENRICHMENT * nextMean;
     }
 
     public static boolean isMeanSignificantlyHigherThanNeighbors(int[] stretch, float[][] data, int minVal) {
