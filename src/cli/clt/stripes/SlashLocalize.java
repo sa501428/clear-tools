@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SlashLocalize {
     private static final NormalizationType NONE = NormalizationHandler.NONE;
     public static String usage = "slash-localize [--res int] <input.hic> <stripes.bedpe> <outfile.bedpe>";
+    private static final int maxNumThreads = Runtime.getRuntime().availableProcessors();
 
     public static void run(String[] args, CommandLineParser parser) {
         if (args.length != 4) {
@@ -54,8 +55,10 @@ public class SlashLocalize {
         final Feature2DList horizontalLocalized = new Feature2DList();
         final Feature2DList verticalLocalized = new Feature2DList();
         final Feature2DList allLocalized = new Feature2DList();
+        int numThreads = parser.getNumThreads(maxNumThreads);
 
-        localize(dataset, stripeList, handler, resolution, horizontalLocalized, verticalLocalized, allLocalized, window);
+        localize(dataset, stripeList, handler, resolution, horizontalLocalized, verticalLocalized, allLocalized,
+                window, numThreads);
         allLocalized.exportFeatureList(new File(outFile), false, Feature2DList.ListFormat.NA);
         horizontalLocalized.exportFeatureList(new File(outFile.replaceAll(".bedpe", ".horizontal.bedpe")), false, Feature2DList.ListFormat.NA);
         verticalLocalized.exportFeatureList(new File(outFile.replaceAll(".bedpe", ".vertical.bedpe")), false, Feature2DList.ListFormat.NA);
@@ -64,7 +67,7 @@ public class SlashLocalize {
 
     private static void localize(Dataset ds, Feature2DList stripeList, ChromosomeHandler handler,
                                  int resolution, Feature2DList horizontalLocalized, Feature2DList verticalLocalized,
-                                 Feature2DList allLocalized, int compressionSize) {
+                                 Feature2DList allLocalized, int compressionSize, int numThreads) {
 
         HiCZoom zoom = new HiCZoom(resolution);
 
@@ -76,7 +79,7 @@ public class SlashLocalize {
         final AtomicInteger currChromPair = new AtomicInteger(0);
         final AtomicInteger currNumDone = new AtomicInteger(0);
 
-        ParallelizationTools.launchParallelizedCode(() -> {
+        ParallelizationTools.launchParallelizedCode(numThreads, () -> {
 
             int threadPair = currChromPair.getAndIncrement();
             while (threadPair < chromosomePairCounter) {
