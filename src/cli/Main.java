@@ -13,10 +13,7 @@ import cli.clt.flat.file.GetDiffsFromFlatFile;
 import cli.clt.flat.file.GetMultiDiffsFromFlatFile;
 import cli.clt.flat.file.LoopDiffFlatFileMaker;
 import cli.clt.loops.*;
-import cli.clt.misc.BedGraphCorr;
-import cli.clt.misc.Fimo;
-import cli.clt.misc.IntersectBedWithBedgraph;
-import cli.clt.misc.NormHack;
+import cli.clt.misc.*;
 import cli.clt.sieve.RetainOverlap;
 import cli.clt.sieve.Sieve;
 import cli.clt.sieve.SieveBedgraph;
@@ -27,7 +24,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.159.0";
+    public static final String VERSION_NUM = "0.160.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -46,7 +43,8 @@ public class Main {
                     FilterBedpeByAnchorAPA.usage, IntegrateLoopListsAndUnWrap.usage,
                     IntersectBedWithBedgraph.usage, BedGraphCorr.usage, APA1D.usage,
                     AnchorStrength.usage, Grind.usage, SubtractByAnchorOverlap.usage,
-                    RetainOverlap.usage, LoopDiffFlatFileMaker.usage, Slash.usage, SlashLocalize.usage
+                    RetainOverlap.usage, LoopDiffFlatFileMaker.usage, Slash.usage, SlashLocalize.usage,
+                    MergeBedFiles.usage
             }) {
                 System.out.println("\t" + usage + "\n\n");
             }
@@ -92,6 +90,8 @@ public class Main {
             RetainOverlap.run(args, command, parser);
         } else if (command.startsWith("subtract-by-anchor-overlap")) {
             SubtractByAnchorOverlap.run(args, parser, command);
+        } else if (command.startsWith("merge-bed-files")) {
+            new MergeBedFiles(args, parser, command);
         } else if (command.startsWith("intersect-bed-bedgraph")) {
             new IntersectBedWithBedgraph(args, parser, command);
         } else if (command.equals("enhance") || command.equals("amplifi") || command.equals("amplify")) {

@@ -106,10 +106,10 @@ public class BedFileParser {
         return new ArrayList<>(anchors);
     }
 
-    public static Map<String, List<int[]>> simpleParser(String anchorsBed) {
+    public static Map<String, List<int[]>> simpleParser(String filepath) {
         Map<String, List<int[]>> anchors = new HashMap<>();
         try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(ParsingUtils.openInputStream(anchorsBed)),
+            BufferedReader br = new BufferedReader(new InputStreamReader(ParsingUtils.openInputStream(filepath)),
                     StrawGlobals.bufferSize);
             String nextLine;
             while ((nextLine = br.readLine()) != null) {
