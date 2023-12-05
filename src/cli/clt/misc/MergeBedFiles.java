@@ -16,8 +16,10 @@ import java.util.Map;
 
 public class MergeBedFiles {
 
-    public static String usage = "merge-bed-files <genomeID> <out.bed> <file1.bed> <file2.bed> ...";
-    private final int resolution = 50;
+    public static String usage = "merge-bed-files [-r res] [--window max_window_input] <genomeID> <out.bed> <file1.bed> <file2.bed> ...";
+    private final int minCountNeeded = 3;
+    private int resolution = 10;
+    private int maxAllowedWidth = 400;
 
     public MergeBedFiles(String[] args, CommandLineParser parser, String command) {
         // merge-bed-files <genomeID> <out.bed> <file1.bed> <file2.bed> ...
@@ -28,6 +30,9 @@ public class MergeBedFiles {
 
         String genomeID = args[1];
         String outPath = args[2];
+
+        resolution = parser.getResolutionOption(resolution);
+        maxAllowedWidth = parser.getWindowSizeOption(maxAllowedWidth);
 
         String[] bedFiles = new String[args.length - 3];
         System.arraycopy(args, 3, bedFiles, 0, bedFiles.length);
@@ -41,7 +46,7 @@ public class MergeBedFiles {
         ChromosomeHandler handler = ChromosomeTools.loadChromosomes(genomeID);
         Map<String, int[]> globalResults = createInitialMapping(handler);
         populateGlobalResults(globalResults, bedFiles);
-        threshold(globalResults, 3);
+        threshold(globalResults, minCountNeeded);
         Map<String, List<int[]>> listOfBedFileRegions = extractBounds(globalResults);
         exportToBed(outPath, listOfBedFileRegions);
     }
@@ -104,13 +109,20 @@ public class MergeBedFiles {
 
     private void populateGlobalResults(Map<String, int[]> globalResults, String[] bedFiles) {
         for (String bedFile : bedFiles) {
+            System.out.print(".");
             Map<String, List<int[]>> anchors = BedFileParser.simpleParser(bedFile);
             for (Map.Entry<String, List<int[]>> entry : anchors.entrySet()) {
-                int[] global = globalResults.get(entry.getKey());
-                for (int[] interval : entry.getValue()) {
-                    for (int i = interval[0] / resolution; i < (interval[1] / resolution) + 1; i++) {
-                        global[i]++;
+                if (globalResults.containsKey(entry.getKey())) {
+                    int[] global = globalResults.get(entry.getKey());
+                    for (int[] interval : entry.getValue()) {
+                        if (interval[1] - interval[0] < maxAllowedWidth) {
+                            for (int i = interval[0] / resolution; i < (interval[1] / resolution) + 1; i++) {
+                                global[i]++;
+                            }
+                        }
                     }
+                } else {
+                    System.err.println("Chromosome " + entry.getKey() + " not found in genome??");
                 }
             }
         }
