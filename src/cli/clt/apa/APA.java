@@ -82,6 +82,7 @@ public class APA {
     private final ChromosomeHandler handler;
     private final Feature2DList loopList;
     private final int numTotalLoops;
+    private int numThreads = Runtime.getRuntime().availableProcessors();
 
     public APA(String[] args, CommandLineParser parser, boolean loadAllBlockIndices) {
         if (args.length != 4) {
@@ -106,6 +107,8 @@ public class APA {
                 tempNorm = NormalizationPicker.getFirstValidNormInThisOrder(ds, new String[]{possibleNorm, "SCALE", "KR", "NONE"});
             }
         }
+
+        numThreads = parser.getNumThreads(numThreads);
 
         norm = tempNorm;
         System.out.println("Using normalization: " + norm.getLabel());
@@ -150,7 +153,7 @@ public class APA {
         int pairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
                 handler.getChromosomeArrayWithoutAllByAll(), includeInterChr);
 
-        ParallelizationTools.launchParallelizedCode(() -> {
+        ParallelizationTools.launchParallelizedCode(numThreads, () -> {
 
             float[][] output = new float[matrixWidthL][matrixWidthL];
             double[] rowSum = new double[matrixWidthL];
