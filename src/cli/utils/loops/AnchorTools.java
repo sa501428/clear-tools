@@ -16,7 +16,8 @@ public class AnchorTools {
 
     public static Feature2DList createLoops(ChromosomeHandler handler, GenomeWide1DList<Anchor> forwardAnchors,
                                             GenomeWide1DList<Anchor> reverseAnchors,
-                                            long minDist, long maxDist, int resolution) {
+                                            long minDist, long maxDist, int resolution,
+                                            boolean makeIntra, boolean makeInter) {
         System.out.println("Number of anchors: " + forwardAnchors.size() + " - " + reverseAnchors.size());
 
         Feature2DList output = new Feature2DList();
@@ -27,7 +28,7 @@ public class AnchorTools {
             int currIndex = index.getAndIncrement();
             while (currIndex < chromosomes.length) {
                 Chromosome chromosome = chromosomes[currIndex];
-                if (forwardAnchors.size() > 0 && reverseAnchors.size() > 0) {
+                if (makeIntra && forwardAnchors.size() > 0 && reverseAnchors.size() > 0) {
                     List<Feature2D> newLoops = generate(chromosome, forwardAnchors, reverseAnchors, minDist, maxDist, resolution);
                     if (newLoops.size() > 0) {
                         synchronized (output) {
@@ -35,6 +36,19 @@ public class AnchorTools {
                         }
                     }
                 }
+                if (makeInter) {
+                    for (int j = currIndex + 1; j < chromosomes.length; j++) {
+                        Chromosome chromosome2 = chromosomes[j];
+                        List<Feature2D> newLoops = generateForInter(chromosome, chromosome2,
+                                forwardAnchors, reverseAnchors);
+                        if (newLoops.size() > 0) {
+                            synchronized (output) {
+                                output.addByKey(Feature2DList.getKey(chromosome, chromosome2), newLoops);
+                            }
+                        }
+                    }
+                }
+
                 currIndex = index.getAndIncrement();
             }
         });
@@ -45,13 +59,10 @@ public class AnchorTools {
                                            GenomeWide1DList<Anchor> reverseAnchors, long minGenomeDist,
                                            long maxGenomeDist, int resolution) {
 
-        List<Anchor> forwards = forwardAnchors.getFeatures("" + chromosome.getIndex());
-        forwards.sort(Comparator.comparingLong(Anchor::getMid));
+        List<Anchor> forwards = getSortedAnchors(forwardAnchors, "" + chromosome.getIndex());
+        List<Anchor> reverses = getSortedAnchors(reverseAnchors, "" + chromosome.getIndex());
 
-        List<Anchor> reverses = reverseAnchors.getFeatures("" + chromosome.getIndex());
-        reverses.sort(Comparator.comparingLong(Anchor::getMid));
-
-        List<Feature2D> results = new ArrayList<>();
+        List<Feature2D> results = new LinkedList<>();
 
         for (Anchor forward : forwards) {
             for (Anchor reverse : reverses) {
@@ -65,6 +76,29 @@ public class AnchorTools {
             }
         }
         return results;
+    }
+
+    public static List<Feature2D> generateForInter(Chromosome chromosome1, Chromosome chromosome2,
+                                                   GenomeWide1DList<Anchor> forwardAnchors,
+                                                   GenomeWide1DList<Anchor> reverseAnchors) {
+
+        List<Anchor> forwards = getSortedAnchors(forwardAnchors, "" + chromosome1.getIndex());
+        List<Anchor> reverses = getSortedAnchors(reverseAnchors, "" + chromosome2.getIndex());
+
+        List<Feature2D> results = new LinkedList<>();
+
+        for (Anchor forward : forwards) {
+            for (Anchor reverse : reverses) {
+                results.add(LoopGenerator.createFeature(chromosome1, forward, chromosome2, reverse));
+            }
+        }
+        return results;
+    }
+
+    private static List<Anchor> getSortedAnchors(GenomeWide1DList<Anchor> allAnchors, String key) {
+        List<Anchor> anchors = allAnchors.getFeatures(key);
+        anchors.sort(Comparator.comparingLong(Anchor::getMid));
+        return anchors;
     }
 
     public static Anchor getAnchor(Feature2D feature, String startPos, String endPos, int chrIndex) {

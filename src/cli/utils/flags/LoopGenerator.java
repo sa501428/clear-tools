@@ -67,7 +67,7 @@ public class LoopGenerator {
         return (number / resolution) * resolution;
     }
 
-    private static Feature2D createFeature(Chromosome chrom1, Anchor a1, Chromosome chrom2, Anchor a2) {
+    public static Feature2D createFeature(Chromosome chrom1, Anchor a1, Chromosome chrom2, Anchor a2) {
         return new Feature2D(Feature2D.FeatureType.PEAK, chrom1.getName(), a1.getStart(), a1.getEnd(),
                 chrom2.getName(), a2.getStart(), a2.getEnd(), Color.BLACK, new HashMap<>(0));
     }

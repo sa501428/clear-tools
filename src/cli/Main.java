@@ -9,6 +9,7 @@ import cli.clt.apa.Flags;
 import cli.clt.bedpe.*;
 import cli.clt.enhance.Enhance;
 import cli.clt.enhance.Seer;
+import cli.clt.flat.file.GetCommonVsVariableDiffsFromFlatFile;
 import cli.clt.flat.file.GetDiffsFromFlatFile;
 import cli.clt.flat.file.GetMultiDiffsFromFlatFile;
 import cli.clt.flat.file.LoopDiffFlatFileMaker;
@@ -24,7 +25,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.162.0";
+    public static final String VERSION_NUM = "0.164.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -44,7 +45,7 @@ public class Main {
                     IntersectBedWithBedgraph.usage, BedGraphCorr.usage, APA1D.usage,
                     AnchorStrength.usage, Grind.usage, SubtractByAnchorOverlap.usage,
                     RetainOverlap.usage, LoopDiffFlatFileMaker.usage, Slash.usage, SlashLocalize.usage,
-                    MergeBedFiles.usage
+                    MergeBedFiles.usage, GetCommonVsVariableDiffsFromFlatFile.usage
             }) {
                 System.out.println("\t" + usage + "\n\n");
             }
@@ -84,6 +85,8 @@ public class Main {
             LoopDiffFlatFileMaker.run(args, command, parser);
         } else if (command.startsWith("get-multi-diffs-from-flat-file")) {
             GetMultiDiffsFromFlatFile.run(args, command, parser);
+        } else if (command.startsWith("get-common-vs-variable-from-flat-file")) {
+            GetCommonVsVariableDiffsFromFlatFile.run(args, command, parser);
         } else if (command.startsWith("get-diffs-from-flat-file")) {
             GetDiffsFromFlatFile.run(args, command, parser);
         } else if (command.startsWith("retain-exact-overlap")) {

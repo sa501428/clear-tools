@@ -17,15 +17,20 @@ import java.io.File;
 
 public class GenerateBedpe {
 
-    public static String usage = "generate-from-anchors <forward.bed> <reverse.bed> " +
+    public static String usage = "generate-from-anchors[-both-intra-inter][-only-inter] <forward.bed> <reverse.bed> " +
             "<min_genome_dist> <max_genome_dist> <genomeID> <output.bedpe>\n" +
-            "\t\tcreate potential loop locations using the anchors\n\n" +
+            "\t\tcreate potential loop locations using the anchors\n" +
+            "\t\t\twhen making from anchors, default is intra-chromosomal only features get created\n\n" +
+            "\t\t\tif only-inter, then only inter-chromosomal features will get made\n\n" +
+            "\t\t\tif both, then both intra- and inter-chromosomal features will get made\n\n" +
+            "\t\t\twhen making from anchors, default is intra only features get created\n\n" +
             "\t\tgenerate-from-domains <genomeID> <domains.bedpe> <output_>\n\n" +
             "\t\tgenerate-from-offsets <genomeID> <loops.bedpe> <output.bedpe> <+-offset>";
 
     public static void run(String[] args, CommandLineParser parser, String command) {
         if (command.contains("anchors")) {
-            buildFromAnchors(args, parser);
+            buildFromAnchors(args, parser, command.contains("both") &&
+                    command.contains("intra") && command.contains("inter"), command.contains("only-inter"));
         } else if (command.contains("domains")) {
             buildFromDomains(args, parser);
         } else if (command.contains("offset")) {
@@ -34,7 +39,8 @@ public class GenerateBedpe {
         System.out.println("generation complete");
     }
 
-    public static void buildFromAnchors(String[] args, CommandLineParser parser) {
+    public static void buildFromAnchors(String[] args, CommandLineParser parser,
+                                        boolean makeBoth, boolean interOnly) {
 
         if (args.length != 7) {
             Main.printGeneralUsageAndExit(4, usage);
@@ -49,9 +55,20 @@ public class GenerateBedpe {
         int resolution = parser.getResolutionOption(0);
         int percentile = parser.getPercentileOption(-1);
 
+        boolean makeIntra = true, makeInter = false;
+        if (interOnly) {
+            makeIntra = false;
+            makeInter = true;
+        }
+        if (makeBoth) {
+            makeIntra = true;
+            makeInter = true;
+        }
+
         GenomeWide1DList<Anchor> forwardAnchors = BedFileParser.loadFromBEDFile(handler, forwardMotifFile, percentile, true, true);
         GenomeWide1DList<Anchor> reverseAnchors = BedFileParser.loadFromBEDFile(handler, reverseMotifFile, percentile, true, true);
-        Feature2DList output = AnchorTools.createLoops(handler, forwardAnchors, reverseAnchors, minDist, maxDist, resolution);
+        Feature2DList output = AnchorTools.createLoops(handler, forwardAnchors, reverseAnchors, minDist, maxDist, resolution,
+                makeIntra, makeInter);
         output.exportFeatureList(new File(outname), false, Feature2DList.ListFormat.NA);
     }
 
