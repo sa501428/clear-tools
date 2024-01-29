@@ -153,6 +153,8 @@ public class Main {
             new Sieve(args, parser, command);
         } else if (command.startsWith("hotspot")) {
             HotSpot.run(args, parser);
+        } else if (command.startsWith("inter-sift")) {
+            new Sift2(args, parser);
         } else if (command.startsWith("sift")) {
             new Sift(args, parser);
         } else if (command.startsWith("fuse") || command.startsWith("fusion") || command.startsWith("join") || command.startsWith("union")) {
