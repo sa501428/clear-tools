@@ -83,7 +83,7 @@ public class APA3 {
     private int numThreads = Runtime.getRuntime().availableProcessors();
 
     public APA3(String[] args, CommandLineParser parser) {
-        if (args.length != 4) {
+        if (args.length < 4) {
             printUsageAndExit();
         }
 
@@ -94,9 +94,11 @@ public class APA3 {
         numOutputs = (args.length - 2) / 2;
         String[] loopListPaths = new String[numOutputs];
         outputFilePaths = new String[numOutputs];
+        int counter = 0;
         for (int i = 2; i < args.length - 1; i += 2) {
-            loopListPaths[i] = args[i];
-            outputFilePaths[i] = args[i + 1];
+            loopListPaths[counter] = args[i];
+            outputFilePaths[counter] = args[i + 1];
+            counter++;
             // HiCFileTools.createValidDirectory(args[3]);
         }
 
