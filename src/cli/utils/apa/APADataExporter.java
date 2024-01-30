@@ -35,6 +35,20 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class APADataExporter {
 
+    public static void simpleExportGenomeWideData(String outpath, boolean useAgNorm, float[][] globalOutput, double[] globalRowSum,
+                                                  double[] globalColSum) {
+
+        float[][] finalResult;
+        if (useAgNorm) {
+            normalizeBySum(globalRowSum);
+            normalizeBySum(globalColSum);
+            finalResult = normedCopyFloats(globalOutput, globalRowSum, globalColSum);
+        } else {
+            finalResult = globalOutput;
+        }
+        MatrixTools.saveMatrixTextNumpy(outpath, finalResult);
+    }
+
     public static void exportGenomeWideData(AtomicInteger[] gwPeakNumbers, File dataDirectory,
                                             boolean useAgNorm, float[][] globalOutput,
                                             double[] globalRowSum, double[] globalColSum) {

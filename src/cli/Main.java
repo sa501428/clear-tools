@@ -2,10 +2,7 @@ package cli;
 
 import cli.clt.CommandLineParser;
 import cli.clt.anchor.*;
-import cli.clt.apa.APA;
-import cli.clt.apa.APA1D;
-import cli.clt.apa.APA2;
-import cli.clt.apa.Flags;
+import cli.clt.apa.*;
 import cli.clt.bedpe.*;
 import cli.clt.enhance.Enhance;
 import cli.clt.enhance.Seer;
@@ -25,7 +22,7 @@ import jargs.gnu.CmdLineParser;
 
 public class Main {
 
-    public static final String VERSION_NUM = "0.164.0";
+    public static final String VERSION_NUM = "0.165.0";
     public static boolean printVerboseComments = false;
 
     public static void printGeneralUsageAndExit(int exitCode, String cUsage) {
@@ -36,7 +33,7 @@ public class Main {
         System.out.println("\t" + "-V, --version print version");
         System.out.println("Commands:");
         if (cUsage == null || cUsage.length() < 1) {
-            for (String usage : new String[]{APA2.usage, ATA.usage, Cleaner.usage, Fusion.usage,
+            for (String usage : new String[]{APA2.usage, APA3.usage, ATA.usage, Cleaner.usage, Fusion.usage,
                     GenerateBedpe.usage, Split.usage, IntersectBedpe.usage, FilterBedpe.usage,
                     Pinpoint.usage, Sieve.usage, SimplePeak.usage, SimpleMax.usage, UnWrap.usage,
                     Flags.usage, Sift.usage, NormHack.usage, Recap.usage, HotSpot.usage,
@@ -126,6 +123,9 @@ public class Main {
             anchorStrength.run();
         } else if (command.startsWith("apa") && command.contains("1d")) {
             APA1D apa = new APA1D(args, parser);
+            apa.run();
+        } else if (command.startsWith("apa3")) {
+            APA3 apa = new APA3(args, parser);
             apa.run();
         } else if (command.startsWith("apa2")) {
             APA2 apa = new APA2(args, parser);
