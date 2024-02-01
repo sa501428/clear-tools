@@ -1,16 +1,20 @@
 package cli.clt.apa;
 
-import cli.utils.data.BoundsInfo;
+import cli.utils.data.Bounds2DInfo;
+import cli.utils.data.CompressedGridMapForBounds2D;
 import javastraw.feature2D.Feature2D;
 import javastraw.reader.block.ContactRecord;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class RegionsOfInterests {
     private final int resolution;
     private final int window;
     private final int matrixWidthL;
-    private final List<Map<Integer, List<BoundsInfo>>> loopListsAsMaps;
+    private final List<CompressedGridMapForBounds2D> loopListsAsMaps;
     private final Set<Integer> allRowIndices = new HashSet<>();
     private final Set<Integer> allColIndices = new HashSet<>();
 
@@ -21,43 +25,21 @@ public class RegionsOfInterests {
         loopListsAsMaps = convertToMaps(allLoops);
     }
 
-    private List<Map<Integer, List<BoundsInfo>>> convertToMaps(List<List<Feature2D>> allLoops) {
-        List<Map<Integer, List<BoundsInfo>>> loopListsAsMaps = new ArrayList<>(allLoops.size());
+    private List<CompressedGridMapForBounds2D> convertToMaps(List<List<Feature2D>> allLoops) {
+        List<CompressedGridMapForBounds2D> loopListsAsMaps = new ArrayList<>(allLoops.size());
         for (List<Feature2D> loops : allLoops) {
-            loopListsAsMaps.add(convertToMap(loops));
+            loopListsAsMaps.add(new CompressedGridMapForBounds2D(loops, resolution, window, matrixWidthL,
+                    allRowIndices, allColIndices));
         }
         return loopListsAsMaps;
     }
 
-    private Map<Integer, List<BoundsInfo>> convertToMap(List<Feature2D> loops) {
-        Map<Integer, List<BoundsInfo>> loopListAsMap = new HashMap<>();
-        for (Feature2D loop : loops) {
-            int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
-            int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
-            int binXEnd = binXStart + matrixWidthL;
-            int binYEnd = binYStart + matrixWidthL;
-
-            for (int r = binXStart; r < binXEnd; r++) {
-                allRowIndices.add(r);
-                if (!loopListAsMap.containsKey(r)) {
-                    loopListAsMap.put(r, new LinkedList<>());
-                }
-                loopListAsMap.get(r).add(new BoundsInfo(binYStart, binYEnd, binXStart));
-            }
-
-            for (int c = binYStart; c < binYEnd; c++) {
-                allColIndices.add(c);
-            }
-        }
-        return loopListAsMap;
-    }
-
     public boolean containsRecord(ContactRecord cr, int i) {
-        return loopListsAsMaps.get(i).containsKey(cr.getBinX());
+        return loopListsAsMaps.get(i).contains(cr.getBinX(), cr.getBinY());
     }
 
-    public List<BoundsInfo> getBoundsInfo(ContactRecord cr, int i) {
-        return loopListsAsMaps.get(i).get(cr.getBinX());
+    public List<Bounds2DInfo> getBoundsInfo(ContactRecord cr, int i) {
+        return loopListsAsMaps.get(i).get(cr.getBinX(), cr.getBinY());
     }
 
     public boolean probablyContainsRecord(ContactRecord cr) {

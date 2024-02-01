@@ -27,7 +27,7 @@ package cli.clt.apa;
 import cli.clt.CommandLineParser;
 import cli.utils.apa.APADataExporter;
 import cli.utils.apa.APAUtils;
-import cli.utils.data.BoundsInfo;
+import cli.utils.data.Bounds2DInfo;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
 import javastraw.expected.ExpectedUtils;
@@ -279,9 +279,10 @@ public class APA3 {
         roi.clear();
     }
 
-    private void populateMatrixIfApplicable(float[][] matrix, ContactRecord cr, List<BoundsInfo> allBounds) {
-        for (BoundsInfo bound : allBounds) {
-            if (bound.contains(cr.getBinY())) {
+    private void populateMatrixIfApplicable(float[][] matrix, ContactRecord cr,
+                                            List<Bounds2DInfo> allBounds) {
+        for (Bounds2DInfo bound : allBounds) {
+            if (bound.contains(cr.getBinX(), cr.getBinY())) {
                 int relativeX = cr.getBinX() - bound.getBinXStart();
                 int relativeY = cr.getBinY() - bound.getBinYStart();
                 matrix[relativeX][relativeY] += cr.getCounts();
