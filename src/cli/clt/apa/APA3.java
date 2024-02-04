@@ -256,7 +256,7 @@ public class APA3 {
 
     protected void processLoopsForRegion(MatrixZoomData zd, List<List<Feature2D>> allLoops,
                                          List<float[][]> outputs) {
-        RegionsOfInterests roi = new RegionsOfInterests(resolution, window, matrixWidthL, allLoops);
+        RegionsOfInterest roi = new RegionsOfInterest(resolution, window, matrixWidthL, allLoops);
         int counter = 0;
 
         Iterator<ContactRecord> it = ExpectedUtils.getIterator(zd, norm);

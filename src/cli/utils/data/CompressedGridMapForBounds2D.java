@@ -19,12 +19,11 @@ public class CompressedGridMapForBounds2D {
         this.window = window;
         this.matrixWidthL = matrixWidthL;
 
-
         for (Feature2D loop : loops) {
-            int binXStart = (int) ((loop.getMidPt1() / resolution) - window);
-            int binYStart = (int) ((loop.getMidPt2() / resolution) - window);
-            int binXEnd = binXStart + matrixWidthL;
-            int binYEnd = binYStart + matrixWidthL;
+            int binXStart = Math.max(0, (int) ((loop.getMidPt1() / resolution) - window));
+            int binYStart = Math.max(0, (int) ((loop.getMidPt2() / resolution) - window));
+            int binXEnd = Math.min(binXStart + matrixWidthL, Integer.MAX_VALUE);
+            int binYEnd = Math.min(binYStart + matrixWidthL, Integer.MAX_VALUE);
             Bounds2DInfo bounds2DInfo = new Bounds2DInfo(binXStart, binXEnd, binYStart, binYEnd);
 
             int compressedBinXStart = binXStart / compression;
@@ -34,10 +33,8 @@ public class CompressedGridMapForBounds2D {
 
             for (int r = compressedBinXStart; r <= compressedBinXEnd; r++) {
                 for (int c = compressedBinYStart; c <= compressedBinYEnd; c++) {
-                    if (!loopListAsMap.containsKey(new Point2D(r, c))) {
-                        loopListAsMap.put(new Point2D(r, c), new LinkedList<>());
-                    }
-                    loopListAsMap.get(new Point2D(r, c)).add(bounds2DInfo);
+                    Point2D point = new Point2D(r, c);
+                    loopListAsMap.computeIfAbsent(point, k -> new LinkedList<>()).add(bounds2DInfo);
                 }
             }
 
@@ -54,9 +51,13 @@ public class CompressedGridMapForBounds2D {
     public boolean contains(int binX, int binY) {
         int cX = binX / compression;
         int cY = binY / compression;
-        for (Bounds2DInfo bounds2DInfo : loopListAsMap.get(new Point2D(cX, cY))) {
-            if (bounds2DInfo.contains(binX, binY)) {
-                return true;
+        Point2D point = new Point2D(cX, cY);
+        List<Bounds2DInfo> boundsList = loopListAsMap.get(point);
+        if (boundsList != null) {
+            for (Bounds2DInfo bounds2DInfo : boundsList) {
+                if (bounds2DInfo.contains(binX, binY)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -65,17 +66,16 @@ public class CompressedGridMapForBounds2D {
     public List<Bounds2DInfo> get(int binX, int binY) {
         int cX = binX / compression;
         int cY = binY / compression;
+        Point2D point = new Point2D(cX, cY);
         List<Bounds2DInfo> result = new LinkedList<>();
-        for (Bounds2DInfo bounds2DInfo : loopListAsMap.get(new Point2D(cX, cY))) {
-            if (bounds2DInfo.contains(binX, binY)) {
-                result.add(bounds2DInfo);
+        List<Bounds2DInfo> boundsList = loopListAsMap.get(point);
+        if (boundsList != null) {
+            for (Bounds2DInfo bounds2DInfo : boundsList) {
+                if (bounds2DInfo.contains(binX, binY)) {
+                    result.add(bounds2DInfo);
+                }
             }
         }
         return result;
     }
-
-
-    // Map<Integer, List<BoundsInfo>>
-
-
 }

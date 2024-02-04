@@ -10,7 +10,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class RegionsOfInterests {
+/**
+ * Class to manage regions of interest with respect to a grid map and contact records.
+ */
+public class RegionsOfInterest {
+    private final int maxNumForIndices;
     private final int resolution;
     private final int window;
     private final int matrixWidthL;
@@ -18,7 +22,9 @@ public class RegionsOfInterests {
     private final Set<Integer> allRowIndices = new HashSet<>();
     private final Set<Integer> allColIndices = new HashSet<>();
 
-    public RegionsOfInterests(int resolution, int window, int matrixWidthL, List<List<Feature2D>> allLoops) {
+    public RegionsOfInterest(int resolution, int window, int matrixWidthL,
+                             List<List<Feature2D>> allLoops) {
+        maxNumForIndices = allLoops.size();
         this.resolution = resolution;
         this.window = window;
         this.matrixWidthL = matrixWidthL;
@@ -35,10 +41,12 @@ public class RegionsOfInterests {
     }
 
     public boolean containsRecord(ContactRecord cr, int i) {
+        validateIndex(i);
         return loopListsAsMaps.get(i).contains(cr.getBinX(), cr.getBinY());
     }
 
     public List<Bounds2DInfo> getBoundsInfo(ContactRecord cr, int i) {
+        validateIndex(i);
         return loopListsAsMaps.get(i).get(cr.getBinX(), cr.getBinY());
     }
 
@@ -46,10 +54,15 @@ public class RegionsOfInterests {
         return allRowIndices.contains(cr.getBinX()) && allColIndices.contains(cr.getBinY());
     }
 
-
     public void clear() {
         loopListsAsMaps.clear();
         allRowIndices.clear();
         allColIndices.clear();
+    }
+
+    private void validateIndex(int i) {
+        if (i < 0 || i >= maxNumForIndices) {
+            throw new IndexOutOfBoundsException("Index " + i + " is out of bounds. Valid indices are 0 to " + (loopListsAsMaps.size() - 1));
+        }
     }
 }
