@@ -27,6 +27,7 @@ package cli.clt.apa;
 import cli.clt.CommandLineParser;
 import cli.utils.apa.APADataExporter;
 import cli.utils.apa.APAUtils;
+import cli.utils.apa.DistanceBoundCalculator;
 import cli.utils.data.Bounds2DInfo;
 import cli.utils.flags.RegionConfiguration;
 import cli.utils.general.HiCUtils;
@@ -186,10 +187,11 @@ public class APA3 {
                 if (matrix != null) {
                     List<List<Feature2D>> loops = getRelevantLoopLists(allLoopLists, chr1.getIndex(), chr2.getIndex());
                     if (loops != null && loops.size() > 0) {
+                        DistanceBoundCalculator distanceBoundCalculator = new DistanceBoundCalculator(loops, window, resolution);
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
                             try {
-                                processLoopsForRegion(zd, loops, outputs);
+                                processLoopsForRegion(zd, loops, outputs, distanceBoundCalculator);
                                 if (useAgNorm) {
                                     doAggregateNormalization(chr1, chr2, zoom, vcNorm, loops, rowSums, colSums);
                                 }
@@ -255,7 +257,7 @@ public class APA3 {
     }
 
     protected void processLoopsForRegion(MatrixZoomData zd, List<List<Feature2D>> allLoops,
-                                         List<float[][]> outputs) {
+                                         List<float[][]> outputs, DistanceBoundCalculator distanceBoundCalculator) {
         RegionsOfInterest roi = new RegionsOfInterest(resolution, window, matrixWidthL, allLoops);
         int counter = 0;
 
@@ -263,14 +265,16 @@ public class APA3 {
         while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > 0) {
-                if (roi.probablyContainsRecord(cr)) {
-                    for (int i = 0; i < allLoops.size(); i++) {
-                        if (roi.containsRecord(cr, i)) {
-                            populateMatrixIfApplicable(outputs.get(i), cr, roi.getBoundsInfo(cr, i));
+                if (distanceBoundCalculator.inDistanceRange(cr)) {
+                    if (roi.probablyContainsRecord(cr)) {
+                        for (int i = 0; i < allLoops.size(); i++) {
+                            if (roi.containsRecord(cr, i)) {
+                                populateMatrixIfApplicable(outputs.get(i), cr, roi.getBoundsInfo(cr, i));
+                            }
                         }
-                    }
-                    if (counter++ % 10000 == 0) {
-                        System.out.print(".");
+                        if (counter++ % 10000 == 0) {
+                            System.out.print(".");
+                        }
                     }
                 }
             }
