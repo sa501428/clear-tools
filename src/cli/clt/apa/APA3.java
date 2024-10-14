@@ -187,7 +187,8 @@ public class APA3 {
                 if (matrix != null) {
                     List<List<Feature2D>> loops = getRelevantLoopLists(allLoopLists, chr1.getIndex(), chr2.getIndex());
                     if (loops != null && loops.size() > 0) {
-                        DistanceBoundCalculator distanceBoundCalculator = new DistanceBoundCalculator(loops, window, resolution);
+                        DistanceBoundCalculator distanceBoundCalculator = new DistanceBoundCalculator(loops, window,
+                                resolution, chr1.getIndex() == chr2.getIndex());
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
                             try {
