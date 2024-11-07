@@ -51,6 +51,7 @@ public class CommandLineParser extends CmdLineParser {
     private final Option minDisValOption = addIntegerOption("min-dist");
     private final Option maxDistValOption = addIntegerOption("max-dist");
     private final Option interChromosomalOption = addBooleanOption("include-inter");
+    private final Option buildVCNorms = addBooleanOption("local-vc");
     private final Option onlyOneOption = addBooleanOption("only-one");
     private final Option noOrientationOption = addBooleanOption("no-orientation");
     private final Option aggregateNormalization = addBooleanOption("ag-norm");
@@ -152,6 +153,10 @@ public class CommandLineParser extends CmdLineParser {
 
     public boolean getIncludeInterChromosomal() {
         return optionToBoolean(interChromosomalOption);
+    }
+
+    public boolean getBuildCustomVCNorms() {
+        return optionToBoolean(buildVCNorms);
     }
 
     public int getPercentileOption(int val) {

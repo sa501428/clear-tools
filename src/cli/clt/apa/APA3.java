@@ -66,6 +66,7 @@ public class APA3 {
     private final int minPeakDist; // distance between two bins, can be changed in opts
     private final int maxPeakDist;
     private final boolean includeInterChr;
+    private final boolean useCustomBuiltNorms;
     private final boolean useAgNorm;
     private final int numOutputs;
 
@@ -75,7 +76,6 @@ public class APA3 {
     private final List<double[]> globalRowSums;
     private final List<double[]> globalColSums;
 
-    private final AtomicInteger currChromPair = new AtomicInteger(0);
     private final NormalizationType vcNorm = NormalizationHandler.VC;
     private final Object key = new Object();
     private final HiCZoom zoom;
@@ -126,6 +126,7 @@ public class APA3 {
         minPeakDist = parser.getMinDistVal(2 * window);
         maxPeakDist = parser.getMaxDistVal(Integer.MAX_VALUE);
         includeInterChr = parser.getIncludeInterChromosomal();
+        useCustomBuiltNorms = parser.getBuildCustomVCNorms();
 
         matrixWidthL = 2 * window + 1;
         globalAPAMatrices = initializeMatrices(numOutputs, matrixWidthL);
@@ -170,6 +171,7 @@ public class APA3 {
         Map<Integer, RegionConfiguration> chromosomePairs = new HashMap<>();
         int pairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
                 handler.getChromosomeArrayWithoutAllByAll(), includeInterChr);
+        final AtomicInteger currChromPair = new AtomicInteger(0);
 
         ParallelizationTools.launchParallelizedCode(numThreads, () -> {
 
@@ -192,9 +194,16 @@ public class APA3 {
                         MatrixZoomData zd = matrix.getZoomData(zoom);
                         if (zd != null) {
                             try {
-                                processLoopsForRegion(zd, loops, outputs, distanceBoundCalculator);
+                                double[] customVCNormVector1 = new double[(int) (chr1.getLength() / resolution) + 1];
+                                double[] customVCNormVector2 = new double[(int) (chr2.getLength() / resolution) + 1];
+                                processLoopsForRegion(zd, loops, outputs, distanceBoundCalculator,
+                                        customVCNormVector1, customVCNormVector2);
                                 if (useAgNorm) {
-                                    doAggregateNormalization(chr1, chr2, zoom, vcNorm, loops, rowSums, colSums);
+                                    if (useCustomBuiltNorms) {
+                                        doAggregateNormalization(loops, rowSums, colSums, customVCNormVector1, customVCNormVector2);
+                                    } else {
+                                        doAggregateNormalization(chr1, chr2, zoom, vcNorm, loops, rowSums, colSums);
+                                    }
                                 }
                                 System.out.println("Completed " + chr1.getName() + "_" + chr2.getName());
                             } catch (Exception e) {
@@ -243,6 +252,12 @@ public class APA3 {
             vector2 = ds.getNormalizationVector(chr2.getIndex(), zoom, vcNorm).getData().getValues().get(0);
         }
 
+        doAggregateNormalization(cloops, rowSums, colSums, vector1, vector2);
+    }
+
+    private void doAggregateNormalization(List<List<Feature2D>> cloops, List<double[]> rowSums, List<double[]> colSums,
+                                          double[] vector1, double[] vector2) {
+
         for (int i = 0; i < cloops.size(); i++) {
             List<Feature2D> loops = cloops.get(i);
             double[] rowSum = rowSums.get(i);
@@ -258,7 +273,8 @@ public class APA3 {
     }
 
     protected void processLoopsForRegion(MatrixZoomData zd, List<List<Feature2D>> allLoops,
-                                         List<float[][]> outputs, DistanceBoundCalculator distanceBoundCalculator) {
+                                         List<float[][]> outputs, DistanceBoundCalculator distanceBoundCalculator,
+                                         double[] customVCNormVector1, double[] customVCNormVector2) {
         RegionsOfInterest roi = new RegionsOfInterest(resolution, window, matrixWidthL, allLoops);
         int counter = 0;
 
@@ -266,6 +282,8 @@ public class APA3 {
         while (it.hasNext()) {
             ContactRecord cr = it.next();
             if (cr.getCounts() > 0) {
+                customVCNormVector1[cr.getBinX()] += cr.getCounts();
+                customVCNormVector2[cr.getBinY()] += cr.getCounts();
                 if (distanceBoundCalculator.inDistanceRange(cr)) {
                     if (roi.probablyContainsRecord(cr)) {
                         for (int i = 0; i < allLoops.size(); i++) {
