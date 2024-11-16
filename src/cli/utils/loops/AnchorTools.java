@@ -2,6 +2,8 @@ package cli.utils.loops;
 
 import cli.utils.flags.Anchor;
 import cli.utils.flags.LoopGenerator;
+import cli.utils.flags.RegionConfiguration;
+import cli.utils.general.HiCUtils;
 import javastraw.feature1D.GenomeWide1DList;
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
@@ -24,34 +26,52 @@ public class AnchorTools {
         Chromosome[] chromosomes = handler.getChromosomeArrayWithoutAllByAll();
 
         AtomicInteger index = new AtomicInteger(0);
-        ParallelizationTools.launchParallelizedCode(() -> {
-            int currIndex = index.getAndIncrement();
-            while (currIndex < chromosomes.length) {
-                Chromosome chromosome = chromosomes[currIndex];
-                if (makeIntra && forwardAnchors.size() > 0 && reverseAnchors.size() > 0) {
-                    List<Feature2D> newLoops = generate(chromosome, forwardAnchors, reverseAnchors, minDist, maxDist, resolution);
-                    if (newLoops.size() > 0) {
-                        synchronized (output) {
-                            output.addByKey(Feature2DList.getKey(chromosome, chromosome), newLoops);
-                        }
-                    }
-                }
-                if (makeInter) {
-                    for (int j = currIndex + 1; j < chromosomes.length; j++) {
-                        Chromosome chromosome2 = chromosomes[j];
-                        List<Feature2D> newLoops = generateForInter(chromosome, chromosome2,
-                                forwardAnchors, reverseAnchors);
-                        if (newLoops.size() > 0) {
+        if (makeIntra) {
+            ParallelizationTools.launchParallelizedCode(() -> {
+                int currIndex = index.getAndIncrement();
+                while (currIndex < chromosomes.length) {
+                    Chromosome chromosome = chromosomes[currIndex];
+                    if (forwardAnchors.size() > 0 && reverseAnchors.size() > 0) {
+                        List<Feature2D> newLoops = generate(chromosome, forwardAnchors, reverseAnchors, minDist, maxDist, resolution);
+                        if (!newLoops.isEmpty()) {
                             synchronized (output) {
-                                output.addByKey(Feature2DList.getKey(chromosome, chromosome2), newLoops);
+                                output.addByKey(Feature2DList.getKey(chromosome, chromosome), newLoops);
                             }
                         }
                     }
+                    currIndex = index.getAndIncrement();
                 }
+            });
+        }
 
-                currIndex = index.getAndIncrement();
-            }
-        });
+        if (makeInter) {
+            index.set(0);
+            Map<Integer, RegionConfiguration> chromosomePairs = new HashMap<>();
+            int pairCounter = HiCUtils.populateChromosomePairs(chromosomePairs,
+                    handler.getChromosomeArrayWithoutAllByAll(), true);
+
+            ParallelizationTools.launchParallelizedCode(() -> {
+                int currIndex = index.getAndIncrement();
+                while (currIndex < pairCounter) {
+                    RegionConfiguration config = chromosomePairs.get(currIndex);
+                    Chromosome chr1 = config.getChr1();
+                    Chromosome chr2 = config.getChr2();
+
+                    if (chr1.getIndex() != chr2.getIndex()) { // only inter in this loop
+                        List<Feature2D> newLoops = generateForInter(chr1, chr2,
+                                forwardAnchors, reverseAnchors);
+                        if (!newLoops.isEmpty()) {
+                            synchronized (output) {
+                                output.addByKey(Feature2DList.getKey(chr1, chr2), newLoops);
+                            }
+                        }
+                    }
+
+                    currIndex = index.getAndIncrement();
+                }
+            });
+        }
+
         return output;
     }
 
@@ -82,8 +102,8 @@ public class AnchorTools {
                                                    GenomeWide1DList<Anchor> forwardAnchors,
                                                    GenomeWide1DList<Anchor> reverseAnchors) {
 
-        List<Anchor> forwards = getSortedAnchors(forwardAnchors, "" + chromosome1.getIndex());
-        List<Anchor> reverses = getSortedAnchors(reverseAnchors, "" + chromosome2.getIndex());
+        List<Anchor> forwards = new ArrayList<>(getSortedAnchors(forwardAnchors, "" + chromosome1.getIndex()));
+        List<Anchor> reverses = new ArrayList<>(getSortedAnchors(reverseAnchors, "" + chromosome2.getIndex()));
 
         List<Feature2D> results = new LinkedList<>();
 

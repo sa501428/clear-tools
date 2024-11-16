@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class APA3 {
     public static String usage = "apa3 [--ag-norm] [-k NORM] [--window val]" +
-            " [--min-dist val] [--max-dist val] [--include-inter] [-r resolution]" +
+            " [--min-dist val] [--max-dist val] [--include-inter] [-r resolution] [--local-vc]" +
             " <input.hic> <loops1.bedpe> <output1.npy> [<loops2.bedpe> <output2.npy> ...]";
     protected final NormalizationType norm;
     protected final int window;
