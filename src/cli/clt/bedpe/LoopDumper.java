@@ -53,7 +53,7 @@ public class LoopDumper {
 
                 try {
                     SparseContactMatrixWithMasking scm = new SparseContactMatrixWithMasking(zd,
-                            feature2DList, resolution, window, matrixWidth, norm);
+                            feature2DList, resolution, window, matrixWidth, norm, true); // intra here
 
 
                     AtomicInteger index = new AtomicInteger(0);

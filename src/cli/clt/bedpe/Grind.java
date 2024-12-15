@@ -3,11 +3,9 @@ package cli.clt.bedpe;
 import cli.clt.CommandLineParser;
 import cli.utils.apa.MultiAPAManager;
 import cli.utils.data.SparseContactMatrixWithMasking;
-
 import io.jhdf.HdfFile;
 import io.jhdf.WritableHdfFile;
 import io.jhdf.api.WritableGroup;
-
 import javastraw.feature2D.Feature2D;
 import javastraw.feature2D.Feature2DList;
 import javastraw.feature2D.Feature2DParser;
@@ -21,8 +19,6 @@ import javastraw.reader.type.HiCZoom;
 import javastraw.reader.type.NormalizationType;
 import javastraw.tools.HiCFileTools;
 import javastraw.tools.ParallelizationTools;
-
-
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -142,7 +138,7 @@ public class Grind {
 
                 try {
                     SparseContactMatrixWithMasking scm = new SparseContactMatrixWithMasking(zd,
-                            feature2DList, resolution, matrixHalfWidth, matrixWidth, norm);
+                            feature2DList, resolution, matrixHalfWidth, matrixWidth, norm, true); // intra here
 
                     AtomicInteger index = new AtomicInteger(0);
 

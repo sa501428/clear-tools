@@ -173,7 +173,8 @@ public class Sieve {
                                     poly = new LogExpectedZscoreSpline(zd, norm, chrom1, resolution);
                                 }
                                 SparseContactMatrixWithMasking sparseMatrix = new SparseContactMatrixWithMasking(zd,
-                                        loopsToAssessGlobal, resolution, buffer, 2 * buffer + 1, norm);
+                                        loopsToAssessGlobal, resolution, buffer, 2 * buffer + 1, norm,
+                                        chrom1.getIndex() == chrom2.getIndex());
 
                                 for (List<Feature2D> group : loopGroups) {
                                     int minR = (int) ((FeatureStats.minStart1(group) / resolution) - buffer);

@@ -134,7 +134,7 @@ public class AnchorAPA {
                                         vcNorm).getData().getValues().get(0);
 
                                 SparseContactMatrixWithMasking scm = new SparseContactMatrixWithMasking(zd,
-                                        loops, resolution, window, matrixWidthL, norm);
+                                        loops, resolution, window, matrixWidthL, norm, true);// always intra here
 
                                 MultiAPAManager manager = new MultiAPAManager(loops, window, resolution,
                                         matrixWidthL, scm, vector, useAgNorm, dontUseOrientation);
