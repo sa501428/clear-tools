@@ -10,7 +10,26 @@ Faster version of APA specifically for larger loop lists (>10k loops)
 
 ## ATA:
 
-Aggregate Track Analysis
+Aggregate Track Analysis (ATA) is designed for analyzing genomic signal data around defined DNA loci/peaks. This tool
+reads signal data from a BigWig file, narrow peak data from a BED file, and aggregates the signal values (e.g.,
+ChIP-seq) around the midpoints of peaks to generate a normalized output. The output is saved in a .npy format for
+downstream analysis.
+
+```
+ata [--res int] <signal.bw> <peaks.bed> <outfile> <genome>
+
+java -jar clear-tools.jar ata --window 1000 --res 1 signal.bw peaks.bed output.npy hg38
+```
+
+This aggregates the signal data from `signal.bw` around peaks in `peaks.bed` and saves the results as `output.npy`,
+using the `hg38` genome.
+
+`--res` int: (Optional) Resolution of signal aggregation. Defaults to `1` (and primarily designed and tested for 1 bp
+analysis)
+`signal.bw`: input BigWig file containing signal data.
+`peaks.bed`: input BED file containing peak regions.
+`outfile`: Output file prefix for aggregated results (saved as .npy).
+`genome`: Genome assembly (e.g., `hg19`, `hg38`) used to map chromosomes.
 
 ## FUSE
 

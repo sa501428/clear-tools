@@ -102,8 +102,7 @@ public class Grind {
             System.out.println("Using Numpy file type");
              LoopDumper.dump(ds, loopList, outputDirectory, handler, norm,
                     useObservedOverExpected, resolution, matrixHalfWidth);
-        }
-        else{
+        } else {
         System.out.println("Using HDF5 file type");
         String resolutionGroupName = String.valueOf(resolution);
 
